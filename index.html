@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lien Ket TikTok</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #010101;
+      --white: #ffffff;
+      --tiktok-red: #FE2C55;
+      --tiktok-cyan: #25F4EE;
+      --gray-100: #f7f7f7;
+      --gray-400: #999;
+      --gray-600: #555;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--black);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      position: relative;
+    }
+    .logo-icon svg { width: 100%; height: 100%; }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--tiktok-red);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* HERO */
+    .hero {
+      max-width: 760px;
+      margin: 100px auto 80px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--tiktok-cyan);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -1.5px;
+      margin-bottom: 24px;
+    }
+    .hero h1 span {
+      /* TikTok double-exposure effect */
+      background: linear-gradient(90deg, var(--tiktok-red), var(--tiktok-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--gray-400);
+      line-height: 1.7;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* FEATURES */
+    .features {
+      max-width: 960px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1px;
+      background: #1a1a1a;
+      border: 1px solid #1a1a1a;
+    }
+    .feature-card {
+      background: var(--black);
+      padding: 36px 32px;
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: -0.2px;
+    }
+    .feature-card p {
+      font-size: 14px;
+      color: var(--gray-400);
+      line-height: 1.6;
+    }
+
+    /* SCOPES */
+    .scopes-section {
+      max-width: 760px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+    .scopes-section h2 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 24px;
+    }
+    .scope-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid #1a1a1a;
+    }
+    .scope-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .scope-item:last-child { border-bottom: none; }
+    .scope-name {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: var(--tiktok-cyan);
+    }
+    .scope-desc {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid #1a1a1a;
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    footer p {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    footer nav {
+      display: flex;
+      gap: 24px;
+    }
+    footer nav a {
+      font-size: 13px;
+      color: var(--gray-600);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    footer nav a:hover { color: var(--white); }
+
+    @media (max-width: 600px) {
+      header { padding: 16px 20px; }
+      footer { padding: 24px 20px; flex-direction: column; }
+      .scope-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <!-- TikTok-style double-note icon -->
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 4v16a6 6 0 1 1-4-5.66V8.2A10 10 0 1 0 26 18V4h-4z" fill="white"/>
+          <!-- cyan shadow -->
+          <path d="M20 2v16a6 6 0 1 1-4-5.66V6.2A10 10 0 1 0 24 16V2h-4z" fill="#25F4EE" opacity="0.5"/>
+          <!-- red shadow -->
+          <path d="M24 4v16a6 6 0 1 1-4-5.66V8.2A10 10 0 1 0 28 18V4h-4z" fill="#FE2C55" opacity="0.5"/>
+        </svg>
+      </div>
+      Lien Ket TikTok
+    </div>
+    <span class="badge">API App</span>
+  </header>
+
+  <section class="hero">
+    <p class="hero-eyebrow">TikTok Developer Integration</p>
+    <h1>Kết nối & quản lý<br/><span>TikTok</span> qua API</h1>
+    <p>Ứng dụng web hỗ trợ truy xuất thông tin người dùng, thống kê và danh sách video từ TikTok thông qua TikTok API chính thức.</p>
+  </section>
+
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="#25F4EE" stroke-width="1.5"/>
+          <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="#25F4EE" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>Thông tin người dùng</h3>
+      <p>Đọc thông tin hồ sơ công khai của tài khoản TikTok đã xác thực.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="#FE2C55" stroke-width="1.5"/>
+          <path d="M8 12h8M8 8h5M8 16h3" stroke="#FE2C55" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>Thống kê tài khoản</h3>
+      <p>Truy cập dữ liệu số liệu: lượt xem, follower, lượt thích tổng hợp.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="4" width="20" height="16" rx="2" stroke="#25F4EE" stroke-width="1.5"/>
+          <path d="M10 9l5 3-5 3V9z" fill="#25F4EE"/>
+        </svg>
+      </div>
+      <h3>Danh sách video</h3>
+      <p>Lấy danh sách video đã đăng của tài khoản kèm metadata chi tiết.</p>
+    </div>
+  </section>
+
+  <section class="scopes-section">
+    <h2>Quyền truy cập (Scopes)</h2>
+    <div class="scope-list">
+      <div class="scope-item">
+        <span class="scope-name">user.info.profile</span>
+        <span class="scope-desc">Đọc thông tin hồ sơ</span>
+      </div>
+      <div class="scope-item">
+        <span class="scope-name">user.info.stats</span>
+        <span class="scope-desc">Xem thống kê tài khoản</span>
+      </div>
+      <div class="scope-item">
+        <span class="scope-name">video.list</span>
+        <span class="scope-desc">Lấy danh sách video</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 Lien Ket TikTok. Ứng dụng tích hợp TikTok API.</p>
+    <nav>
+      <a href="/privacy.html">Chính sách bảo mật</a>
+      <a href="/tos.html">Điều khoản dịch vụ</a>
+    </nav>
+  </footer>
+
+</body>
+</html>
