@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cẩm Nang Đào Tạo Nhân Viên Bán Hàng | Lien Ket TikTok</title>
+  <meta name="description" content="Cẩm nang đào tạo nhân viên bán hàng: kỹ năng bán hàng, quy trình 7 bước, chiến lược bán hàng và cách tăng số lượng đơn hàng hiệu quả."/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #010101;
+      --white: #ffffff;
+      --tiktok-red: #FE2C55;
+      --tiktok-cyan: #25F4EE;
+      --gray-100: #f7f7f7;
+      --gray-400: #999;
+      --gray-600: #555;
+      --line: #1a1a1a;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--black);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--line);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .logo-icon { width: 32px; height: 32px; }
+    .logo-icon svg { width: 100%; height: 100%; }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--tiktok-red);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* HERO */
+    .hero {
+      max-width: 760px;
+      margin: 80px auto 64px;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--tiktok-cyan);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5.5vw, 56px);
+      font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: -1.5px;
+      margin-bottom: 24px;
+    }
+    .hero h1 span {
+      background: linear-gradient(90deg, var(--tiktok-red), var(--tiktok-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 17px;
+      color: var(--gray-400);
+      line-height: 1.7;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* SECTION LAYOUT */
+    .section {
+      max-width: 860px;
+      margin: 0 auto 88px;
+      padding: 0 24px;
+    }
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 12px;
+    }
+    .section h2 {
+      font-size: clamp(24px, 3.5vw, 32px);
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 16px;
+    }
+    .section > .section-intro {
+      font-size: 15px;
+      color: var(--gray-400);
+      line-height: 1.7;
+      max-width: 640px;
+      margin-bottom: 36px;
+    }
+
+    /* CARD GRID */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+    }
+    .card {
+      background: var(--black);
+      padding: 32px 28px;
+    }
+    .card .num {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: var(--tiktok-cyan);
+      display: block;
+      margin-bottom: 14px;
+    }
+    .card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: -0.2px;
+    }
+    .card p {
+      font-size: 14px;
+      color: var(--gray-400);
+      line-height: 1.65;
+    }
+    .card ul {
+      margin-top: 10px;
+      padding-left: 18px;
+    }
+    .card ul li {
+      font-size: 14px;
+      color: var(--gray-400);
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+    .card ul li strong { color: var(--white); font-weight: 600; }
+
+    /* STEP LIST (quy trình bán hàng) */
+    .step-list { border: 1px solid var(--line); }
+    .step {
+      display: flex;
+      gap: 24px;
+      padding: 26px 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--tiktok-red);
+      min-width: 36px;
+      padding-top: 2px;
+    }
+    .step-body h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .step-body p {
+      font-size: 14px;
+      color: var(--gray-400);
+      line-height: 1.7;
+    }
+    .step-body .tip {
+      display: block;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--tiktok-cyan);
+      line-height: 1.6;
+    }
+
+    /* QUOTE / HIGHLIGHT */
+    .highlight {
+      border-left: 3px solid var(--tiktok-red);
+      padding: 20px 24px;
+      margin: 32px 0;
+      background: #0a0a0a;
+    }
+    .highlight p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--gray-100);
+    }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 560px;
+    }
+    th, td {
+      text-align: left;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      line-height: 1.6;
+      vertical-align: top;
+    }
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+    }
+    td:first-child { color: var(--tiktok-cyan); font-weight: 600; white-space: nowrap; }
+    td { color: var(--gray-400); }
+    tr:last-child td { border-bottom: none; }
+
+    /* CHECKLIST */
+    .checklist { border: 1px solid var(--line); }
+    .check-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      color: var(--gray-400);
+      line-height: 1.65;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-item::before {
+      content: "✓";
+      color: var(--tiktok-cyan);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .check-item strong { color: var(--white); font-weight: 600; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    footer p { font-size: 13px; color: var(--gray-600); }
+    footer nav { display: flex; gap: 24px; }
+    footer nav a {
+      font-size: 13px;
+      color: var(--gray-600);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    footer nav a:hover { color: var(--white); }
+
+    @media (max-width: 600px) {
+      header { padding: 16px 20px; }
+      footer { padding: 24px 20px; flex-direction: column; }
+      .step { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="logo" href="/index.html">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 4v16a6 6 0 1 1-4-5.66V8.2A10 10 0 1 0 26 18V4h-4z" fill="white"/>
+          <path d="M20 2v16a6 6 0 1 1-4-5.66V6.2A10 10 0 1 0 24 16V2h-4z" fill="#25F4EE" opacity="0.5"/>
+          <path d="M24 4v16a6 6 0 1 1-4-5.66V8.2A10 10 0 1 0 28 18V4h-4z" fill="#FE2C55" opacity="0.5"/>
+        </svg>
+      </div>
+      Lien Ket TikTok
+    </a>
+    <span class="badge">Đào tạo</span>
+  </header>
+
+  <section class="hero">
+    <p class="hero-eyebrow">Cẩm nang bán hàng</p>
+    <h1>Đào tạo nhân viên<br/><span>bán hàng</span> chuyên nghiệp</h1>
+    <p>Bộ tài liệu tổng hợp dành cho đội ngũ bán hàng: kỹ năng cốt lõi, quy trình bán hàng 7 bước, chiến lược bán hàng hiệu quả và cách tăng số lượng đơn hàng mỗi ngày.</p>
+  </section>
+
+  <!-- 1. LỘ TRÌNH ĐÀO TẠO -->
+  <section class="section">
+    <p class="section-label">Phần 1</p>
+    <h2>Lộ trình đào tạo nhân viên bán hàng mới</h2>
+    <p class="section-intro">Một nhân viên bán hàng giỏi không tự nhiên mà có — họ được đào tạo bài bản theo lộ trình rõ ràng. Dưới đây là khung đào tạo 4 giai đoạn trong 30 ngày đầu tiên.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="num">Tuần 01</span>
+        <h3>Hiểu sản phẩm &amp; khách hàng</h3>
+        <ul>
+          <li>Học thuộc <strong>tính năng – lợi ích – điểm khác biệt</strong> của từng sản phẩm.</li>
+          <li>Nắm chân dung khách hàng mục tiêu: họ là ai, cần gì, sợ gì.</li>
+          <li>Tự trả lời: "Vì sao khách nên mua của mình mà không mua chỗ khác?"</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Tuần 02</span>
+        <h3>Học quy trình &amp; kịch bản</h3>
+        <ul>
+          <li>Học quy trình bán hàng 7 bước (Phần 3).</li>
+          <li>Luyện <strong>kịch bản tư vấn</strong> cho 5 tình huống thường gặp nhất.</li>
+          <li>Học cách xử lý 10 lời từ chối phổ biến của khách.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Tuần 03</span>
+        <h3>Thực hành có kèm cặp</h3>
+        <ul>
+          <li><strong>Role-play</strong> (đóng vai) với quản lý mỗi ngày 30 phút.</li>
+          <li>Ngồi nghe / quan sát nhân viên giỏi nhất tư vấn thật.</li>
+          <li>Tự tư vấn khách thật, có người kèm và sửa ngay sau mỗi đơn.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Tuần 04</span>
+        <h3>Bán độc lập &amp; đo lường</h3>
+        <ul>
+          <li>Giao chỉ tiêu nhỏ, tăng dần theo tuần.</li>
+          <li>Review cuối tuần: nghe lại hội thoại, chấm điểm theo checklist.</li>
+          <li>Xác định điểm yếu lớn nhất và kế hoạch cải thiện tuần sau.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight">
+      <p><strong>Nguyên tắc vàng khi đào tạo:</strong> 20% lý thuyết – 80% thực hành. Nhân viên chỉ thực sự biết bán hàng khi được luyện tập tình huống thật, được sửa lỗi ngay và lặp lại đủ nhiều.</p>
+    </div>
+  </section>
+
+  <!-- 2. KỸ NĂNG CỐT LÕI -->
+  <section class="section">
+    <p class="section-label">Phần 2</p>
+    <h2>7 kỹ năng bán hàng cốt lõi</h2>
+    <p class="section-intro">Đây là bộ kỹ năng nền tảng mà mọi nhân viên bán hàng cần rèn luyện liên tục, xếp theo thứ tự quan trọng.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>Lắng nghe chủ động</h3>
+        <p>Nghe để hiểu nhu cầu thật, không phải nghe để chờ đến lượt nói. Quy tắc: khách nói 70% – bạn nói 30%. Ghi chú lại từ khóa khách nhắc đi nhắc lại.</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>Đặt câu hỏi khai thác</h3>
+        <p>Dùng câu hỏi mở: "Anh/chị đang gặp khó khăn gì?", "Điều gì quan trọng nhất với anh/chị khi chọn sản phẩm này?". Ai đặt câu hỏi, người đó dẫn dắt cuộc trò chuyện.</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>Trình bày theo lợi ích</h3>
+        <p>Khách không mua tính năng, khách mua lợi ích. Công thức FAB: <strong>Feature</strong> (tính năng) → <strong>Advantage</strong> (ưu điểm) → <strong>Benefit</strong> (lợi ích cụ thể cho chính khách).</p>
+      </div>
+      <div class="card">
+        <span class="num">04</span>
+        <h3>Xử lý từ chối</h3>
+        <p>Từ chối không phải là "không mua" mà là "chưa đủ lý do để mua". Công thức: Đồng cảm → Làm rõ → Giải đáp → Xác nhận. Không bao giờ tranh cãi với khách.</p>
+      </div>
+      <div class="card">
+        <span class="num">05</span>
+        <h3>Chốt đơn</h3>
+        <p>Chủ động đề nghị mua khi thấy tín hiệu: khách hỏi giá, hỏi bảo hành, hỏi giao hàng. Dùng câu chốt giả định: "Anh/chị lấy màu đen hay trắng ạ?" thay vì "Anh/chị có mua không?".</p>
+      </div>
+      <div class="card">
+        <span class="num">06</span>
+        <h3>Xây dựng niềm tin</h3>
+        <p>Đúng hẹn, nói thật về sản phẩm, dám nhận điểm yếu. Một khách hàng tin bạn sẽ mua nhiều lần và giới thiệu thêm khách mới — đó là nguồn đơn rẻ nhất.</p>
+      </div>
+      <div class="card">
+        <span class="num">07</span>
+        <h3>Quản lý cảm xúc</h3>
+        <p>Bị từ chối 10 lần vẫn tư vấn khách thứ 11 với 100% năng lượng. Bán hàng là trò chơi xác suất: càng tiếp cận nhiều, tỷ lệ chốt càng ổn định.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. QUY TRÌNH 7 BƯỚC -->
+  <section class="section">
+    <p class="section-label">Phần 3</p>
+    <h2>Quy trình bán hàng 7 bước</h2>
+    <p class="section-intro">Quy trình chuẩn giúp nhân viên mới bán được hàng ngay và nhân viên cũ bán ổn định, không phụ thuộc cảm hứng.</p>
+    <div class="step-list">
+      <div class="step">
+        <span class="step-num">B1</span>
+        <div class="step-body">
+          <h3>Chuẩn bị</h3>
+          <p>Nắm rõ sản phẩm, giá, khuyến mãi hiện hành và thông tin khách (nếu có). Chuẩn bị sẵn câu trả lời cho các câu hỏi thường gặp.</p>
+          <span class="tip">Mẹo: 5 phút chuẩn bị kỹ tăng đáng kể tỷ lệ chốt so với tư vấn "chay".</span>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B2</span>
+        <div class="step-body">
+          <h3>Tiếp cận &amp; tạo thiện cảm</h3>
+          <p>Chào hỏi thân thiện, giới thiệu ngắn gọn. 30 giây đầu quyết định khách có muốn nghe tiếp hay không — hãy nói về khách, đừng nói về mình.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B3</span>
+        <div class="step-body">
+          <h3>Khai thác nhu cầu</h3>
+          <p>Đặt 3–5 câu hỏi mở để hiểu: khách cần gì, dùng cho ai, ngân sách bao nhiêu, điều gì khiến khách chưa quyết định. Đây là bước quan trọng nhất và hay bị bỏ qua nhất.</p>
+          <span class="tip">Mẹo: Đừng giới thiệu sản phẩm khi chưa hiểu nhu cầu — tư vấn sai nhu cầu là lý do mất đơn số 1.</span>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B4</span>
+        <div class="step-body">
+          <h3>Trình bày giải pháp</h3>
+          <p>Chỉ giới thiệu 1–2 sản phẩm phù hợp nhất với nhu cầu vừa khai thác (nhiều lựa chọn quá khiến khách khó quyết). Trình bày theo công thức FAB, nhấn vào đúng vấn đề khách quan tâm.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B5</span>
+        <div class="step-body">
+          <h3>Xử lý từ chối</h3>
+          <p>"Để em suy nghĩ thêm", "Giá cao quá", "Để hỏi vợ/chồng đã"… là những phản xạ tự nhiên. Đồng cảm trước, hỏi rõ lý do thật, rồi giải đáp bằng bằng chứng: đánh giá của khách cũ, chính sách đổi trả, so sánh giá trị.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B6</span>
+        <div class="step-body">
+          <h3>Chốt đơn</h3>
+          <p>Khi khách hết thắc mắc, chủ động chốt: xác nhận sản phẩm, số lượng, địa chỉ, phương thức thanh toán. Tạo lý do quyết định ngay: ưu đãi có hạn, quà tặng kèm, miễn phí giao hàng hôm nay.</p>
+          <span class="tip">Mẹo: Sau khi đưa ra câu chốt — im lặng và chờ. Ai nói trước, người đó nhượng bộ.</span>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B7</span>
+        <div class="step-body">
+          <h3>Chăm sóc sau bán</h3>
+          <p>Nhắn cảm ơn, xác nhận giao hàng, hỏi thăm trải nghiệm sau 3–7 ngày. Xin đánh giá và chủ động đề nghị giới thiệu bạn bè. Khách cũ quay lại có chi phí thấp hơn nhiều so với tìm khách mới.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. CHIẾN LƯỢC BÁN HÀNG -->
+  <section class="section">
+    <p class="section-label">Phần 4</p>
+    <h2>Chiến lược bán hàng hiệu quả</h2>
+    <p class="section-intro">Kỹ năng giúp bạn chốt từng đơn — chiến lược giúp cả đội tăng doanh số bền vững. Áp dụng tùy giai đoạn và mô hình kinh doanh.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Chiến lược</th>
+            <th>Cách làm</th>
+            <th>Phù hợp khi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bán thêm (Upsell)</td>
+            <td>Gợi ý phiên bản cao cấp hơn với lợi ích rõ ràng: "Thêm 100k anh/chị được bản dung lượng gấp đôi, dùng thoải mái hơn nhiều."</td>
+            <td>Khách đã quyết định mua, đang chốt đơn.</td>
+          </tr>
+          <tr>
+            <td>Bán kèm (Cross-sell)</td>
+            <td>Gợi ý sản phẩm bổ trợ: mua điện thoại kèm ốp + cường lực. Tạo combo giá tốt hơn mua lẻ.</td>
+            <td>Sản phẩm có phụ kiện / đồ dùng kèm tự nhiên.</td>
+          </tr>
+          <tr>
+            <td>Khan hiếm &amp; khẩn cấp</td>
+            <td>Ưu đãi có thời hạn, số lượng giới hạn — nhưng phải là thật. Khan hiếm giả làm mất niềm tin vĩnh viễn.</td>
+            <td>Khách quan tâm nhưng chần chừ quyết định.</td>
+          </tr>
+          <tr>
+            <td>Bằng chứng xã hội</td>
+            <td>Dùng đánh giá thật, ảnh feedback, số lượng đã bán: "Mẫu này tuần rồi bên em bán hơn 200 đơn."</td>
+            <td>Khách mới, chưa có niềm tin với thương hiệu.</td>
+          </tr>
+          <tr>
+            <td>Nuôi dưỡng khách cũ</td>
+            <td>Lưu thông tin khách, nhắn ưu đãi riêng dịp sinh nhật/lễ, chương trình tích điểm — khách quay lại thường có giá trị đơn cao hơn khách mới.</td>
+            <td>Đã có tệp khách hàng, muốn tăng doanh thu không tăng chi phí quảng cáo.</td>
+          </tr>
+          <tr>
+            <td>Bán theo gói / combo</td>
+            <td>Đóng gói 2–3 sản phẩm thành giải pháp trọn bộ, định giá combo thấp hơn tổng giá lẻ 10–15%.</td>
+            <td>Muốn tăng giá trị trung bình mỗi đơn (AOV).</td>
+          </tr>
+          <tr>
+            <td>Giới thiệu (Referral)</td>
+            <td>Tặng ưu đãi cho cả người giới thiệu và người được giới thiệu. Chủ động xin giới thiệu ngay khi khách vừa khen sản phẩm.</td>
+            <td>Sản phẩm/dịch vụ có mức độ hài lòng cao.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5. TĂNG ĐƠN HÀNG -->
+  <section class="section">
+    <p class="section-label">Phần 5</p>
+    <h2>Làm sao để bán nhiều đơn hơn?</h2>
+    <p class="section-intro">Doanh số = Số khách tiếp cận × Tỷ lệ chốt × Giá trị trung bình mỗi đơn × Tần suất mua lại. Muốn tăng đơn, hãy cải thiện từng biến số một cách có chủ đích.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="num">Biến số 1</span>
+        <h3>Tăng số khách tiếp cận</h3>
+        <ul>
+          <li>Đặt chỉ tiêu hoạt động hằng ngày: số cuộc gọi, tin nhắn, khách tư vấn.</li>
+          <li>Trả lời tin nhắn nhanh — phản hồi trong 5 phút đầu có tỷ lệ chốt cao hơn hẳn phản hồi sau 1 giờ.</li>
+          <li>Theo dõi lại (follow-up) khách chưa chốt sau 1–3 ngày; phần lớn đơn hàng đến từ lần liên hệ thứ 2 trở đi.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Biến số 2</span>
+        <h3>Tăng tỷ lệ chốt</h3>
+        <ul>
+          <li>Luyện kịch bản xử lý 10 từ chối phổ biến đến mức phản xạ.</li>
+          <li>Luôn kết thúc tư vấn bằng một câu chốt hoặc một bước tiếp theo cụ thể.</li>
+          <li>Nghe lại hội thoại thất bại mỗi tuần để tìm điểm rơi đơn.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Biến số 3</span>
+        <h3>Tăng giá trị mỗi đơn</h3>
+        <ul>
+          <li>Luôn có 1 câu upsell/cross-sell trong kịch bản chốt đơn.</li>
+          <li>Thiết kế combo và mức freeship theo ngưỡng: "Mua thêm 50k để được miễn phí giao hàng."</li>
+          <li>Gợi ý số lượng: "Nhiều khách lấy 2 hộp dùng cho tiện, bên em đang có giá tốt hơn khi mua 2."</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">Biến số 4</span>
+        <h3>Tăng tần suất mua lại</h3>
+        <ul>
+          <li>Nhắn chăm sóc sau 3–7 ngày, xin feedback và tặng mã giảm giá cho lần sau.</li>
+          <li>Nhắc lại đúng chu kỳ sử dụng: sản phẩm dùng 30 ngày thì nhắn lại ngày 25.</li>
+          <li>Xây nhóm khách hàng thân thiết với ưu đãi riêng.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <p><strong>Ví dụ sức mạnh của cải thiện đồng thời:</strong> chỉ cần tăng mỗi biến số 10% — khách tiếp cận, tỷ lệ chốt, giá trị đơn, tần suất mua — doanh số tổng tăng ~46%, không phải 10%. Cải thiện nhỏ ở nhiều khâu tạo ra kết quả lớn.</p>
+    </div>
+
+    <h2 style="margin-top:56px;">Checklist hằng ngày của nhân viên bán hàng giỏi</h2>
+    <p class="section-intro" style="margin-bottom:24px;">In ra và tự chấm mỗi cuối ngày. Làm đủ checklist đều đặn 30 ngày, kết quả sẽ tự nói.</p>
+    <div class="checklist">
+      <div class="check-item"><span><strong>Đầu ngày:</strong> xem lại chỉ tiêu, danh sách khách cần follow-up, khuyến mãi đang chạy.</span></div>
+      <div class="check-item"><span><strong>Phản hồi mọi tin nhắn/cuộc gọi của khách trong vòng 5 phút</strong> trong giờ làm việc.</span></div>
+      <div class="check-item"><span><strong>Khai thác nhu cầu trước khi báo giá</strong> — tối thiểu 3 câu hỏi mở cho mỗi khách mới.</span></div>
+      <div class="check-item"><span><strong>Mỗi đơn chốt đều có 1 câu upsell hoặc cross-sell.</strong></span></div>
+      <div class="check-item"><span><strong>Follow-up toàn bộ khách hôm qua chưa chốt</strong> — không bỏ sót khách nào quá 3 ngày.</span></div>
+      <div class="check-item"><span><strong>Nhắn cảm ơn + xác nhận đơn</strong> cho mọi khách vừa mua trong ngày.</span></div>
+      <div class="check-item"><span><strong>Cuối ngày:</strong> ghi lại số liệu (khách tư vấn, đơn chốt, doanh thu) và 1 bài học rút ra.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 Lien Ket TikTok. Ứng dụng tích hợp TikTok API.</p>
+    <nav>
+      <a href="/index.html">Trang chủ</a>
+      <a href="/privacy.html">Chính sách bảo mật</a>
+      <a href="/tos.html">Điều khoản dịch vụ</a>
+    </nav>
+  </footer>
+
+</body>
+</html>
