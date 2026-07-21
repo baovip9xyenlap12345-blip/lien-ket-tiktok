@@ -62,7 +62,7 @@ lines = [
     ("   • Sheet 'BÁO CÁO NĂM': tự động tính doanh thu theo NGÀY - TUẦN - THÁNG - QUÝ - NĂM, không cần nhập gì thêm.", False),
     ("", False),
     ("2. CÁCH NHẬP LIỆU (trong các sheet tháng)", True),
-    ("   • Chỉ nhập vào các cột: NGÀY ĐẶT, TÊN KHÁCH HÀNG, CÔNG TY, MÃ SỐ THUẾ, SỐ ĐIỆN THOẠI, TÊN SẢN PHẨM, SỐ LƯỢNG, ĐƠN GIÁ, HÌNH ẢNH, TÌNH TRẠNG CHUYỂN KHOẢN, GHI CHÚ.", False),
+    ("   • Chỉ nhập vào các cột: NGÀY ĐẶT, TÊN KHÁCH HÀNG, CÔNG TY, MÃ SỐ THUẾ, SỐ ĐIỆN THOẠI, TÊN SẢN PHẨM, SỐ LƯỢNG, ĐƠN GIÁ, HÌNH ẢNH, TÌNH TRẠNG CHUYỂN KHOẢN, ĐỊA CHỈ GIAO HÀNG, GHI CHÚ.", False),
     ("   • Cột STT và THÀNH TIỀN tự tính, KHÔNG sửa (Thành tiền = Số lượng × Đơn giá).", False),
     ("   • NGÀY ĐẶT nhập dạng dd/mm/yyyy (ví dụ 05/07/2026) — bắt buộc đúng định dạng thì báo cáo mới tính được.", False),
     ("   • TÌNH TRẠNG CHUYỂN KHOẢN: bấm vào ô sẽ có danh sách chọn 'Đã chuyển khoản' / 'Chưa chuyển khoản' (ô tự đổi màu xanh/đỏ).", False),
@@ -74,7 +74,8 @@ lines = [
     ("   • Hoặc dán công thức =IMAGE(\"link ảnh\") nếu ảnh có đường link trên mạng (Google Sheets).", False),
     ("", False),
     ("4. BẢNG DOANH THU THEO NGÀY (bên phải mỗi sheet tháng)", True),
-    ("   • Cột O-P của mỗi sheet tháng tự cộng doanh thu của từng ngày trong tháng đó.", False),
+    ("   • Cột P-Q của mỗi sheet tháng tự cộng doanh thu của từng ngày trong tháng đó.", False),
+    ("   • File 'thông tin khách hàng đặt hàng' (file riêng) tự kéo NGÀY ĐẶT - TÊN - SĐT - ĐỊA CHỈ từ file này sang, không cần nhập lại.", False),
     ("", False),
     ("5. SHEET 'BÁO CÁO NĂM'", True),
     ("   • TRA CỨU THEO NGÀY: gõ 1 ngày bất kỳ vào ô màu VÀNG → ô bên cạnh hiện doanh thu của đúng ngày đó.", False),
@@ -98,16 +99,28 @@ for text, bold in lines:
 # ---------------------------------------------------------------- SHEET THANG
 HEADERS = ["STT", "NGÀY ĐẶT", "TÊN KHÁCH HÀNG", "CÔNG TY", "MÃ SỐ THUẾ",
            "SỐ ĐIỆN THOẠI", "TÊN SẢN PHẨM", "SỐ LƯỢNG", "ĐƠN GIÁ (đ)",
-           "THÀNH TIỀN (đ)", "HÌNH ẢNH SẢN PHẨM", "TÌNH TRẠNG CHUYỂN KHOẢN", "GHI CHÚ"]
-WIDTHS = [5, 12, 20, 26, 14, 14, 24, 10, 12, 14, 18, 20, 18]
+           "THÀNH TIỀN (đ)", "HÌNH ẢNH SẢN PHẨM", "TÌNH TRẠNG CHUYỂN KHOẢN",
+           "ĐỊA CHỈ GIAO HÀNG", "GHI CHÚ"]
+WIDTHS = [5, 12, 20, 26, 14, 14, 24, 10, 12, 14, 18, 20, 26, 18]
+LAST_COL = 14  # cot N
 
 EXAMPLES = [  # chi dat o sheet Thang 6 — du lieu vi du, nguoi dung thay bang du lieu that
     [dt.date(2026, 6, 3), "Nguyễn Văn An", "Công ty TNHH Thương Mại ABC", "0312345678",
-     "0901234567", "Bình giữ nhiệt in logo", 100, 85000, "Đã chuyển khoản", "Giao đợt 1 (VÍ DỤ MẪU)"],
+     "0901234567", "Bình giữ nhiệt in logo", 100, 85000, "Đã chuyển khoản",
+     "12 Nguyễn Trãi, Thanh Xuân, Hà Nội", "Giao đợt 1 (VÍ DỤ MẪU)"],
     [dt.date(2026, 6, 10), "Trần Thị Bích", "Công ty CP Đầu Tư XYZ", "0109876543",
-     "0987654321", "Sổ tay da in logo", 50, 120000, "Chưa chuyển khoản", "(VÍ DỤ MẪU)"],
+     "0987654321", "Sổ tay da in logo", 50, 120000, "Chưa chuyển khoản",
+     "45 Lê Lợi, Quận 1, TP.HCM", "(VÍ DỤ MẪU)"],
     [dt.date(2026, 6, 15), "Lê Minh Cường", "Công ty TNHH DEF", "0301122334",
-     "0912345678", "Bút ký khắc tên", 200, 35000, "Đã chuyển khoản", "Khách quen (VÍ DỤ MẪU)"],
+     "0912345678", "Bút ký khắc tên", 200, 35000, "Đã chuyển khoản",
+     "88 Trần Phú, Hải Châu, Đà Nẵng", "Khách quen (VÍ DỤ MẪU)"],
+]
+
+REAL_T7 = [  # 2 don that nguoi dung da nhap trong ban truoc — giu nguyen
+    [dt.date(2026, 7, 21), "cty flc", "ctyflc", "2500740944",
+     "0866688324", "tedy 25cm", 1000, 50000, "Đã chuyển khoản", "", "khách cũ"],
+    [dt.date(2026, 7, 21), "flc 1", "nvk", "",
+     "0866688324", "tedty 30", 1000, 47000, "Chưa chuyển khoản", "", ""],
 ]
 
 def month_sheet(m):
@@ -115,11 +128,11 @@ def month_sheet(m):
     ws = wb.create_sheet(name)
     for i, w in enumerate(WIDTHS, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
-    ws.column_dimensions["N"].width = 3
-    ws.column_dimensions["O"].width = 12
-    ws.column_dimensions["P"].width = 16
+    ws.column_dimensions["O"].width = 3
+    ws.column_dimensions["P"].width = 12
+    ws.column_dimensions["Q"].width = 16
 
-    ws.merge_cells("A1:M1")
+    ws.merge_cells("A1:N1")
     c = ws["A1"]
     c.value = f"BÁO CÁO DOANH THU THÁNG {m}/{YEAR}"
     c.font = f_title; c.fill = fill_title; c.alignment = center
@@ -159,7 +172,8 @@ def month_sheet(m):
         "J": dict(font=f_norm, number_format=VND, alignment=right),
         "K": dict(font=f_norm, alignment=center),
         "L": dict(font=f_norm, alignment=center),
-        "M": dict(font=f_norm),
+        "M": dict(font=f_norm, alignment=left),   # dia chi giao hang
+        "N": dict(font=f_norm),
     }
     for colL, props in col_styles.items():
         d = ws.column_dimensions[colL]
@@ -173,15 +187,18 @@ def month_sheet(m):
         jc = ws.cell(row=rr, column=10, value=f'=IF($H{rr}="","",$H{rr}*$I{rr})')
         jc.font = f_norm; jc.number_format = VND; jc.alignment = right
 
-    # vi du mau (chi Thang 6)
-    if m == 6:
-        for i, row in enumerate(EXAMPLES):
-            rr = DATA_FIRST + i
-            vals = {2: row[0], 3: row[1], 4: row[2], 5: row[3], 6: row[4],
-                    7: row[5], 8: row[6], 9: row[7], 12: row[8], 13: row[9]}
-            for col, v in vals.items():
-                c = ws.cell(row=rr, column=col, value=v)
-                c.font = f_blue
+    # vi du mau (Thang 6) + 2 don that nguoi dung da nhap (Thang 7)
+    rows_to_fill = EXAMPLES if m == 6 else (REAL_T7 if m == 7 else [])
+    for i, row in enumerate(rows_to_fill):
+        rr = DATA_FIRST + i
+        vals = {2: row[0], 3: row[1], 4: row[2], 5: row[3], 6: row[4],
+                7: row[5], 8: row[6], 9: row[7], 12: row[8], 13: row[9], 14: row[10]}
+        for col, v in vals.items():
+            if v == "":
+                continue
+            c = ws.cell(row=rr, column=col, value=v)
+            c.font = f_blue
+        if m == 6:
             ws.cell(row=rr, column=11, value="(chèn ảnh vào ô này)").font = f_note
 
     # dropdown tinh trang chuyen khoan
@@ -198,25 +215,25 @@ def month_sheet(m):
     ws.conditional_formatting.add(rng, CellIsRule(operator="equal",
         formula=['"Chưa chuyển khoản"'], fill=fill_red))
 
-    # bang doanh thu theo ngay
-    ws.merge_cells("O6:P6")
-    c = ws["O6"]; c.value = "DOANH THU THEO NGÀY"
+    # bang doanh thu theo ngay (cot P-Q)
+    ws.merge_cells("P6:Q6")
+    c = ws["P6"]; c.value = "DOANH THU THEO NGÀY"
     c.font = f_head; c.fill = fill_head; c.alignment = center
-    ws["O7"] = "NGÀY"; ws["P7"] = "DOANH THU (đ)"
-    for cc in ("O7", "P7"):
+    ws["P7"] = "NGÀY"; ws["Q7"] = "DOANH THU (đ)"
+    for cc in ("P7", "Q7"):
         ws[cc].font = f_head; ws[cc].fill = fill_head
         ws[cc].alignment = center; ws[cc].border = border
     ndays = calendar.monthrange(YEAR, m)[1]
     for d in range(1, ndays + 1):
         rr = 7 + d
-        dc = ws.cell(row=rr, column=15, value=dt.date(YEAR, m, d))
+        dc = ws.cell(row=rr, column=16, value=dt.date(YEAR, m, d))
         dc.number_format = DATE_FMT; dc.border = border; dc.font = f_norm; dc.alignment = center
-        vc = ws.cell(row=rr, column=16,
-                     value=f"=SUMIF($B${DATA_FIRST}:$B${DATA_LAST},$O{rr},$J${DATA_FIRST}:$J${DATA_LAST})")
+        vc = ws.cell(row=rr, column=17,
+                     value=f"=SUMIF($B${DATA_FIRST}:$B${DATA_LAST},$P{rr},$J${DATA_FIRST}:$J${DATA_LAST})")
         vc.number_format = VND; vc.border = border; vc.font = f_norm; vc.alignment = right
     tr = 7 + ndays + 1
-    tc = ws.cell(row=tr, column=15, value="CỘNG THÁNG"); tc.font = f_bold; tc.border = border
-    vc = ws.cell(row=tr, column=16, value=f"=SUM($P$8:$P${7 + ndays})")
+    tc = ws.cell(row=tr, column=16, value="CỘNG THÁNG"); tc.font = f_bold; tc.border = border
+    vc = ws.cell(row=tr, column=17, value=f"=SUM($Q$8:$Q${7 + ndays})")
     vc.font = f_bold; vc.number_format = VND; vc.border = border; vc.alignment = right
     ws.freeze_panes = "A8"
 
