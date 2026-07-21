@@ -38,6 +38,7 @@ fill_head = PatternFill("solid", fgColor="2E75B6")
 fill_sub = PatternFill("solid", fgColor="DDEBF7")
 fill_yellow = PatternFill("solid", fgColor="FFFF00")
 fill_green = PatternFill("solid", fgColor="C6EFCE")
+fill_amber = PatternFill("solid", fgColor="FFEB9C")   # da coc
 fill_red = PatternFill("solid", fgColor="FFC7CE")
 BANNER_FILLS = [PatternFill("solid", fgColor=c)
                 for c in ("4472C4", "305496", "4472C4", "305496")]
@@ -84,7 +85,8 @@ lines = [
     ("   • Cột STT và THÀNH TIỀN tự tính, KHÔNG sửa (Thành tiền = Số lượng × Đơn giá).", False),
     ("   • NGÀY ĐẶT nhập dạng dd/mm/yyyy (ví dụ 05/07/2026) — bắt buộc đúng định dạng thì báo cáo mới tính được.", False),
     ("   • SỐ LƯỢNG và ĐƠN GIÁ chỉ gõ số (ví dụ 50 và 85000) — không gõ chữ 'cái', 'đ', dấu chấm phẩy.", False),
-    ("   • TÌNH TRẠNG CHUYỂN KHOẢN: bấm vào ô sẽ có danh sách chọn 'Đã chuyển khoản' / 'Chưa chuyển khoản' (ô tự đổi màu xanh/đỏ).", False),
+    ("   • TÌNH TRẠNG CHUYỂN KHOẢN: bấm vào ô sẽ có danh sách chọn 'Đã chuyển khoản' / 'Đã cọc' / 'Chưa chuyển khoản' (ô tự đổi màu XANH / VÀNG / ĐỎ).", False),
+    ("   • Khách đã cọc: chọn 'Đã cọc' — khi khách thanh toán đủ thì đổi lại thành 'Đã chuyển khoản'. Tổng tiền các đơn đã cọc hiện ở đầu sheet và trong BÁO CÁO NĂM.", False),
     ("   • Sheet 'Tháng 6' có sẵn 3 dòng VÍ DỤ MẪU (chữ màu xanh dương) — hãy xóa hoặc ghi đè bằng dữ liệu thật của bạn.", False),
     ("", False),
     ("3. CÁCH CHÈN HÌNH ẢNH SẢN PHẨM VÀO Ô", True),
@@ -162,6 +164,7 @@ def month_sheet(m):
     labels = [
         ("TỔNG DOANH THU THÁNG (đ):", f"=SUM($J${FULL_FIRST}:$J${FULL_LAST})"),
         ("ĐÃ CHUYỂN KHOẢN (đ):", f'=SUMIF($L${FULL_FIRST}:$L${FULL_LAST},"Đã chuyển khoản",$J${FULL_FIRST}:$J${FULL_LAST})'),
+        ("ĐÃ CỌC (đ):", f'=SUMIF($L${FULL_FIRST}:$L${FULL_LAST},"Đã cọc",$J${FULL_FIRST}:$J${FULL_LAST})'),
         ("CHƯA CHUYỂN KHOẢN (đ):", f'=SUMIF($L${FULL_FIRST}:$L${FULL_LAST},"Chưa chuyển khoản",$J${FULL_FIRST}:$J${FULL_LAST})'),
     ]
     for i, (lab, formula) in enumerate(labels):
@@ -193,9 +196,9 @@ def month_sheet(m):
         for k, v in props.items():
             setattr(d, k, v)
 
-    dv = DataValidation(type="list", formula1='"Đã chuyển khoản,Chưa chuyển khoản"',
+    dv = DataValidation(type="list", formula1='"Đã chuyển khoản,Đã cọc,Chưa chuyển khoản"',
                         allow_blank=True, showDropDown=False)
-    dv.error = "Chọn: Đã chuyển khoản hoặc Chưa chuyển khoản"
+    dv.error = "Chọn: Đã chuyển khoản / Đã cọc / Chưa chuyển khoản"
     ws.add_data_validation(dv)
 
     # 4 khoi tuan
@@ -235,6 +238,8 @@ def month_sheet(m):
     rng = f"L{FULL_FIRST}:L{FULL_LAST}"
     ws.conditional_formatting.add(rng, CellIsRule(operator="equal",
         formula=['"Đã chuyển khoản"'], fill=fill_green))
+    ws.conditional_formatting.add(rng, CellIsRule(operator="equal",
+        formula=['"Đã cọc"'], fill=fill_amber))
     ws.conditional_formatting.add(rng, CellIsRule(operator="equal",
         formula=['"Chưa chuyển khoản"'], fill=fill_red))
 
@@ -285,7 +290,7 @@ for m in MONTHS:
 ws = wb.create_sheet("BÁO CÁO NĂM")
 ws.sheet_properties.tabColor = "1F4E78"
 for col, w in {"A": 11, "B": 10, "C": 13, "D": 13, "E": 17,
-               "F": 22, "G": 17, "H": 17, "I": 17}.items():
+               "F": 22, "G": 17, "H": 15, "I": 15, "J": 15}.items():
     ws.column_dimensions[col].width = w
 
 ws.merge_cells("A1:I1")
@@ -345,11 +350,11 @@ for mi, m in enumerate(MONTHS):
         cells[4].number_format = VND; cells[4].alignment = right
         rr += 1
 
-# --- 3. Theo thang (cot F-I)
-ws.merge_cells("F7:I7")
+# --- 3. Theo thang (cot F-J)
+ws.merge_cells("F7:J7")
 c = ws["F7"]; c.value = "3. DOANH THU THEO THÁNG"
 c.font = f_head; c.fill = fill_head; c.alignment = left
-for col, h in zip("FGHI", ["THÁNG", "DOANH THU (đ)", "ĐÃ CK (đ)", "CHƯA CK (đ)"]):
+for col, h in zip("FGHIJ", ["THÁNG", "DOANH THU (đ)", "ĐÃ CK (đ)", "ĐÃ CỌC (đ)", "CHƯA CK (đ)"]):
     cc = ws[f"{col}8"]; cc.value = h
     cc.font = f_head; cc.fill = fill_head; cc.alignment = center; cc.border = border
 for i, m in enumerate(MONTHS):
@@ -357,14 +362,14 @@ for i, m in enumerate(MONTHS):
     s = f"Tháng {m}"
     ws.cell(row=r2, column=6, value=f"{s}/{YEAR}").font = f_norm
     ws.cell(row=r2, column=6).border = border
-    for col, src in ((7, "$D$3"), (8, "$D$4"), (9, "$D$5")):
+    for col, src in ((7, "$D$3"), (8, "$D$4"), (9, "$D$5"), (10, "$D$6")):
         cc = ws.cell(row=r2, column=col, value=f"='{s}'!{src}")
         cc.number_format = VND; cc.font = f_green; cc.border = border; cc.alignment = right
 m_first, m_last = 9, 9 + len(MONTHS) - 1
 
 # --- 4. Theo quy
 qrow = m_last + 2
-ws.merge_cells(f"F{qrow}:I{qrow}")
+ws.merge_cells(f"F{qrow}:J{qrow}")
 c = ws[f"F{qrow}"]; c.value = "4. DOANH THU THEO QUÝ"
 c.font = f_head; c.fill = fill_head; c.alignment = left
 q2 = qrow + 1; q3 = qrow + 2; q4 = qrow + 3
@@ -375,21 +380,21 @@ for rq, (a, b) in ((q2, (m_first, m_first)),
                    (q3, (m_first + 1, m_first + 3)),
                    (q4, (m_first + 4, m_first + 6))):
     ws.cell(row=rq, column=6).border = border
-    for col in (7, 8, 9):
+    for col in (7, 8, 9, 10):
         L = get_column_letter(col)
         cc = ws.cell(row=rq, column=col, value=f"=SUM(${L}${a}:${L}${b})")
         cc.number_format = VND; cc.font = f_bold; cc.border = border; cc.alignment = right
 
 # --- 5. Ca nam
 yrow = q4 + 2
-ws.merge_cells(f"F{yrow}:I{yrow}")
+ws.merge_cells(f"F{yrow}:J{yrow}")
 c = ws[f"F{yrow}"]; c.value = f"5. DOANH THU CẢ NĂM {YEAR}"
 c.font = f_head; c.fill = fill_head; c.alignment = left
 ytot = yrow + 1
 ws.cell(row=ytot, column=6, value=f"TỔNG NĂM {YEAR}").font = f_bold
 ws.cell(row=ytot, column=6).fill = fill_sub
 ws.cell(row=ytot, column=6).border = border
-for col in (7, 8, 9):
+for col in (7, 8, 9, 10):
     L = get_column_letter(col)
     cc = ws.cell(row=ytot, column=col, value=f"=SUM(${L}${q2}:${L}${q4})")
     cc.number_format = VND; cc.font = Font(name=FONT, size=12, bold=True, color="1F4E78")
