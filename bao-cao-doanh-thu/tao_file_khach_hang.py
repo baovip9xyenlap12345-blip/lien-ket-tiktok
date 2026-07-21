@@ -61,7 +61,16 @@ for i, h in enumerate(headers, start=1):
     c.font = f_head; c.fill = fill_head; c.alignment = center; c.border = border
 ws.row_dimensions[5].height = 28
 
-parts = ";".join(f"IMPORTRANGE($B$3,\"'Tháng {m}'!B8:N407\")" for m in MONTHS)
+# moi thang 4 khoi tuan, chi keo vung DU LIEU cua tung khoi (bo qua banner/header)
+WEEK_ROWS = 80
+BLOCK = WEEK_ROWS + 2
+ranges = []
+for m in MONTHS:
+    for w in range(4):
+        first = 10 + w * BLOCK
+        last = first + WEEK_ROWS - 1
+        ranges.append(f"IMPORTRANGE($B$3,\"'Tháng {m}'!B{first}:N{last}\")")
+parts = ";".join(ranges)
 ws["A6"] = ("=IFERROR(QUERY({" + parts + "},"
             "\"select Col1,Col2,Col5,Col12,Col3,Col6,Col9,Col11 "
             "where Col1 is not null order by Col1\",0),"
