@@ -227,7 +227,7 @@ svg text{fill:var(--ink-3);font-size:10px}
     <div><label>Mật khẩu</label><input id="lg_p" type="password" autocomplete="current-password"></div>
     <button class="btn" style="justify-content:center" onclick="SYNC.doLogin()">🔓 Đăng nhập</button>
     <div id="lg_err" class="tiny" style="color:var(--crit);text-align:center"></div>
-    <button class="btn ghost sm" style="justify-content:center" onclick="SYNC.useLocal()">Dùng 1 máy (không đồng bộ)</button>
+    <button id="lg_local" class="btn ghost sm" style="justify-content:center" onclick="SYNC.useLocal()">Dùng 1 máy (không đồng bộ)</button>
   </div>
 </div></div>
 
@@ -360,6 +360,7 @@ const SYNC={
   showLogin(msg){
     $('#login').classList.add('open');
     $('#loginApiRow').style.display=this.api?'none':'block';
+    $('#lg_local').style.display=this.api?'none':'';
     if(this.api)$('#lg_api').value=this.api;
     $('#lg_err').textContent=msg||'';
   },
@@ -379,7 +380,10 @@ const SYNC={
     }catch(e){ $('#lg_err').textContent='Không kết nối được máy chủ — kiểm tra lại link và mạng.'; }
   },
   useLocal(){ localStorage.setItem('bb_local','1'); $('#login').classList.remove('open'); this.status='off'; render(); },
-  logout(){ ['bb_token','bb_role','bb_name','bb_local'].forEach(k=>localStorage.removeItem(k)); location.reload(); },
+  logout(){ if(this.api&&this.token){
+      if(!confirm('Đăng xuất sẽ xóa dữ liệu trên máy này (bản chuẩn vẫn nằm trên máy chủ, đăng nhập lại là kéo về). Tiếp tục?'))return;
+      localStorage.removeItem(KEY); }
+    ['bb_token','bb_role','bb_name','bb_local'].forEach(k=>localStorage.removeItem(k)); location.reload(); },
   _pushT:null,
   schedulePush(){ if(this.localMode||!this.api||!this.token)return;
     clearTimeout(this._pushT); this._pushT=setTimeout(()=>this.push(),1500); },
@@ -727,7 +731,7 @@ function vSettings(){
       ${SYNC.role==='admin'?'<button class="btn ghost" onclick="App.usersUI()">👥 Tài khoản nhân viên</button>':''}
       ${SYNC.token?'<button class="btn danger" onclick="SYNC.logout()">🚪 Đăng xuất</button>':''}
     </div>
-    <div class="tiny">Chưa có máy chủ? Làm theo file <b>Code.gs</b> tôi gửi kèm: script.google.com → dự án mới → dán code → Deploy → Web app → Anyone → copy link /exec dán vào đây. Các quyền: Chủ xưởng (tất cả) · Bán hàng (POS, hóa đơn, khách) · Kho (hàng hóa, nhập hàng) · Kế toán (sổ quỹ, lương, báo cáo).</div>
+    <div class="tiny">Chưa có máy chủ? Làm theo file <b>Code.gs</b> tôi gửi kèm: script.google.com → dự án mới → dán code → Deploy → Web app → Anyone → copy link /exec dán vào đây. Các quyền: Chủ xưởng (tất cả) · Bán hàng (POS, hóa đơn, khách) · Kho (hàng hóa, nhập hàng) · Kế toán (sổ quỹ, lương, báo cáo).<br>⚠ Khi mất mạng chỉ nên để 1 máy bán hàng để tránh trùng số hóa đơn — dữ liệu không mất, tự đồng bộ khi có mạng lại.</div>
   </div>
   <div class="eyebrow">Thông tin xưởng (in trên hóa đơn)</div>
   <div class="card pad frm">
@@ -822,7 +826,8 @@ const POS={
     v.items.forEach(i=>{const p=prod(i.pid); if(p){p.stock=Math.max(0,p.stock-i.qty);touch(p);}});
     DB.invoices.push(v); save();
     this.closeTab(this.active);
-    toast(`Đã lưu ${HD(v)}${paidAmt<total?' — khách nợ '+fmt(total-paidAmt)+' đ':''}`);
+    const offline=SYNC.api&&!SYNC.localMode&&SYNC.status==='err';
+    toast(`Đã lưu ${HD(v)}${paidAmt<total?' — khách nợ '+fmt(total-paidAmt)+' đ':''}${offline?' · ⚠ đang offline, sẽ đồng bộ khi có mạng':''}`);
     App.invView(v.id);
   },
 };
