@@ -426,6 +426,7 @@ function renderSyncDot(){ const el=$('#syncDot'); if(!el)return;
 const MENU=[['home','🏠','Tổng quan'],['goods','📦','Hàng hóa'],['trans','🧾','Giao dịch'],
   ['partners','🤝','Đối tác'],['fund','💰','Sổ quỹ'],['staff','👷','Nhân viên'],['reports','📊','Báo cáo']];
 function go(sc){ if(!can(sc)){toast('Tài khoản của bạn không có quyền vào mục này');return;}
+  if(S.screen!==sc) S.q='';
   S.screen=sc;render();window.scrollTo(0,0);}
 function renderNav(){
   $('#menu').innerHTML=MENU.filter(([k])=>can(k)).map(([k,i,l])=>`<button class="${S.screen===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
@@ -870,7 +871,8 @@ const POS={
   },
 };
 $('#posQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){
-  const q=e.target.value.toLowerCase();
+  const q=e.target.value.trim().toLowerCase();
+  if(!q) return;
   const p=alive(DB.products).find(p=>(p.name+' '+p.size).toLowerCase().includes(q));
   if(p){ POS.add(p.id); e.target.value=''; POS.renderProds(); } }});
 
@@ -1019,7 +1021,7 @@ const App={
     $('#pn_total').textContent=fmt(t)+' đ'; },
   pnSave(){ const items=[];
     document.querySelectorAll('#pn_items [data-row]').forEach(d=>{const i=d.dataset.row;
-      const p=DB.products.find(p=>`${p.name} — ${p.size}`===$(`#pni_p${i}`).value);
+      const p=alive(DB.products).find(p=>`${p.name} — ${p.size}`===$(`#pni_p${i}`).value);
       const qty=+$(`#pni_q${i}`).value, cost=+$(`#pni_c${i}`).value;
       if(p&&qty>0) items.push({pid:p.id,qty,cost:cost||0});});
     if(!items.length){toast('Chưa có dòng hàng hợp lệ');return;}
