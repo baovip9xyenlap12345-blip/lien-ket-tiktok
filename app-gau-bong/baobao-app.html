@@ -309,7 +309,7 @@ async function saveFile(name,text,mime){
 function fundRows(){
   const rows=[];
   DB.invoices.forEach(v=>{ if(v.status!=='cancel') (v.pays||[]).forEach(p=>rows.push(
-    {date:p.date, kind:'thu', code:HD(v), desc:'Thu tiền '+HD(v)+' — '+(v.cname||'Khách lẻ'), amount:p.amt})); });
+    {date:p.date, kind:'thu', code:HD(v), desc:'Thu tiền '+HD(v)+' — '+(v.cname||'Khách lẻ')+(p.method==='ck'?' · 🏦 CK':' · 💵 TM'), amount:p.amt})); });
   DB.purchases.forEach(p=>{ if(p.paid>0) rows.push({date:p.date, kind:'chi', code:PN(p), desc:'Trả tiền nhập hàng '+PN(p)+(p.sname?' — '+p.sname:''), amount:p.paid}); });
   alive(DB.fund).forEach(f=>rows.push({date:f.date, kind:f.kind, code:(f.kind==='thu'?'PT':'PC')+String(f.code).padStart(4,'0'),
     desc:f.group+(f.desc?' — '+f.desc:''), amount:+f.amount}));
@@ -781,7 +781,7 @@ const POS={
     if(!this.tabs.length) this.newTab();
     $('#pos').classList.add('open'); this.renderAll(); setTimeout(()=>$('#posQ').focus(),50); },
   close(){ $('#pos').classList.remove('open'); render(); },
-  newTab(){ this.tabs.push({items:[], cid:null, cname:'', discount:0, cash:'', deliver:''}); this.active=this.tabs.length-1; this.renderAll(); },
+  newTab(){ this.tabs.push({items:[], cid:null, cname:'', discount:0, cash:'', deliver:'', method:'tm'}); this.active=this.tabs.length-1; this.renderAll(); },
   closeTab(i){ this.tabs.splice(i,1); if(!this.tabs.length) this.newTab();
     this.active=Math.min(this.active,this.tabs.length-1); this.renderAll(); },
   cur(){ return this.tabs[this.active]; },
@@ -815,6 +815,7 @@ const POS={
   setDisc(v){ this.cur().discount=Math.max(0,+v||0); this.renderCart(); },
   setCash(v){ this.cur().cash=v; this.renderCart(); },
   setDeliver(v){ this.cur().deliver=v; },
+  setMethod(v){ this.cur().method=v; this.renderCart(); },
   renderCart(){ const t=this.cur();
     $('#posLines').innerHTML=t.items.length?t.items.map((i,idx)=>{const p=prod(i.pid);
       return `<div class="pline">
@@ -829,13 +830,16 @@ const POS={
     const sub=t.items.reduce((s,i)=>s+i.qty*i.price,0), total=Math.max(0,sub-(t.discount||0));
     const cash=+String(t.cash).replace(/\D/g,'')||0, change=cash-total;
     $('#posFoot').innerHTML=`
-      <div class="rw"><span>Tạm tính (${t.items.reduce((s,i)=>s+i.qty,0)} con)</span><b class="num">${fmt(sub)}</b></div>
+      <div class="rw"><span>Tổng tiền hàng (${t.items.reduce((s,i)=>s+i.qty,0)} con)</span><b class="num">${fmt(sub)}</b></div>
       <div class="rw"><span>Giảm giá</span><input type="number" value="${t.discount||''}" placeholder="0" step="1000" onchange="POS.setDisc(this.value)"></div>
       <div class="rw" style="font-size:17px"><b>KHÁCH PHẢI TRẢ</b><b class="num" style="color:var(--pri)">${fmt(total)} đ</b></div>
-      <div class="rw"><span>Khách đưa</span><input type="number" value="${t.cash||''}" placeholder="${total}" step="1000" oninput="POS.setCash(this.value)"></div>
+      <div class="rw"><span>💰 Khách cọc / thanh toán</span><input type="number" value="${t.cash||''}" placeholder="${total} (trả đủ)" step="1000" oninput="POS.setCash(this.value)"></div>
+      <div class="rw"><span>Hình thức</span><span style="display:flex;gap:5px">
+        <button class="btn sm ${t.method!=='ck'?'':'ghost'}" onclick="POS.setMethod('tm')">💵 Tiền mặt</button>
+        <button class="btn sm ${t.method==='ck'?'':'ghost'}" onclick="POS.setMethod('ck')">🏦 Chuyển khoản</button></span></div>
       <div class="rw"><span>📦 Ngày giao hàng</span><input type="date" value="${t.deliver||''}" onchange="POS.setDeliver(this.value)"></div>
-      <div class="rw"><span>${change>=0?'Tiền thừa trả khách':'Khách còn nợ (ghi công nợ)'}</span>
-        <b class="num ${change>=0?'pos':'neg'}">${fmt(Math.abs(change))}</b></div>
+      <div class="rw" style="font-size:15px"><b>${change>=0?'Tiền thừa trả khách':'⚠ KHÁCH CÒN NỢ'}</b>
+        <b class="num ${change>=0?'pos':'neg'}">${fmt(Math.abs(change))} đ</b></div>
       <button id="posPay" onclick="POS.pay()">💵 THANH TOÁN${t.items.length?` — ${fmt(total)} đ`:''}</button>`;
   },
   pay(){ const t=this.cur();
@@ -849,7 +853,7 @@ const POS={
     DB.seq.hd++;
     const v=touch({id:uid(), code:DB.seq.hd, date:today(), cid:c?c.id:null, cname:c?c.name:'Khách lẻ',
       items:t.items.map(i=>({...i})), discount:t.discount||0, deliver:t.deliver||'',
-      pays:paidAmt>0?[{date:today(),amt:paidAmt}]:[], status:'done', note:''});
+      pays:paidAmt>0?[{date:today(),amt:paidAmt,method:t.method||'tm'}]:[], status:'done', note:''});
     v.items.forEach(i=>{const p=prod(i.pid); if(p){p.stock=Math.max(0,p.stock-i.qty);touch(p);}});
     DB.invoices.push(v); save();
     this.closeTab(this.active);
@@ -881,9 +885,11 @@ const App={
       <tbody>${v.items.map(i=>{const p=prod(i.pid);
         return `<tr><td>${p?esc(p.name)+' '+esc(p.size):'SP'}</td><td class="r num">${i.qty}</td><td class="r num">${fmt(i.price)}</td><td class="r num">${fmt(i.qty*i.price)}</td></tr>`;}).join('')}
       ${v.discount?`<tr><td colspan="3">Giảm giá</td><td class="r num">−${fmt(v.discount)}</td></tr>`:''}
-      <tr style="font-weight:800"><td colspan="3">TỔNG</td><td class="r num">${fmt(invTotal(v))}</td></tr>
-      <tr><td colspan="3">Đã thanh toán</td><td class="r num pos">${fmt(invPaid(v))}</td></tr>
-      ${debt>0?`<tr><td colspan="3"><b>Còn nợ</b></td><td class="r num neg"><b>${fmt(debt)}</b></td></tr>`:''}
+      <tr style="font-weight:800"><td colspan="3">TỔNG TIỀN HÀNG</td><td class="r num">${fmt(invTotal(v))}</td></tr>
+      ${(v.pays||[]).map((p,i)=>`<tr><td colspan="3" class="muted">${i===0?'💰 Đã cọc/thanh toán':'＋ Trả thêm'} ${fmtd(p.date)} · ${p.method==='ck'?'🏦 Chuyển khoản':'💵 Tiền mặt'}</td><td class="r num pos">+${fmt(p.amt)}</td></tr>`).join('')}
+      <tr><td colspan="3"><b>Tổng đã trả</b></td><td class="r num pos"><b>${fmt(invPaid(v))}</b></td></tr>
+      ${debt>0?`<tr><td colspan="3"><b>⚠ CÒN NỢ</b></td><td class="r num neg"><b>${fmt(debt)}</b></td></tr>`
+        :`<tr><td colspan="3"></td><td class="r"><span class="chip ch-done">✅ Đã trả đủ</span></td></tr>`}
     </tbody></table></div>
     <div class="hrow">
       ${debt>0&&v.status!=='cancel'?`<button class="btn grn sm" onclick="App.payDebt('${v.id}')">💵 Thu nợ</button>`:''}
@@ -897,8 +903,16 @@ const App={
       csv+=`"${c.name}","${c.phone||''}","${c.email||''}","${c.mst||''}","${(c.addr||'').replace(/"/g,"'")}","${(c.note||'').replace(/"/g,"'")}",${st.n},${st.total},${st.debt},${st.last||''},${st.n>0?'Khach cu':'Khach moi'}\n`; });
     saveFile('data-crm-khach-hang.csv',csv,'text/csv'); toast('Đã xuất DATA CRM — mở bằng Excel'); },
   payDebt(id){ const v=DB.invoices.find(v=>v.id===id); const debt=invDebt(v);
-    const amt=+String(prompt(`Khách trả thêm (đang nợ ${fmt(debt)} đ):`, debt)||'').replace(/\D/g,'');
-    if(!amt) return; v.pays.push({date:today(), amt:Math.min(amt,debt)}); touch(v); save(); this.invView(id); render(); toast('Đã ghi thu nợ'); },
+    openModal(`<h2>💵 Thu nợ ${HD(v)}</h2><div class="frm">
+      <div class="muted">Khách <b>${esc(v.cname||'Khách lẻ')}</b> đang nợ <b class="num neg">${fmt(debt)} đ</b></div>
+      <div><label>Số tiền khách trả (đ)</label><input id="pd_amt" type="number" value="${debt}"></div>
+      <div><label>Hình thức</label><select id="pd_m"><option value="tm">💵 Tiền mặt</option><option value="ck">🏦 Chuyển khoản</option></select></div>
+      <div class="hrow"><button class="btn ghost" style="flex:1" onclick="App.invView('${id}')">Quay lại</button>
+        <button class="btn grn" style="flex:2" onclick="App.payDebtSave('${id}')">💾 Ghi thu nợ</button></div></div>`); },
+  payDebtSave(id){ const v=DB.invoices.find(v=>v.id===id); const debt=invDebt(v);
+    const amt=Math.min(+$('#pd_amt').value||0,debt);
+    if(!amt){toast('Nhập số tiền');return;}
+    v.pays.push({date:today(),amt,method:$('#pd_m').value}); touch(v); save(); this.invView(id); render(); toast('Đã ghi thu nợ '+fmt(amt)+' đ'); },
   invCancel(id){ const v=DB.invoices.find(v=>v.id===id);
     if(!confirm('Hủy hóa đơn này? Tồn kho sẽ hoàn lại, các khoản thu của HĐ bị gỡ khỏi sổ quỹ.')) return;
     v.items.forEach(i=>{const p=prod(i.pid); if(p){p.stock+=i.qty;touch(p);}});
@@ -908,7 +922,9 @@ const App={
       `HÓA ĐƠN ${HD(v)} · ${fmtd(v.date)}`,`Khách: ${v.cname||'Khách lẻ'}${c&&c.phone?' · '+c.phone:''}`,''];
     v.items.forEach(i=>{const p=prod(i.pid);L.push(`• ${p?p.name+' '+p.size:'SP'} ×${i.qty} × ${fmt(i.price)} = ${fmt(i.qty*i.price)} đ`);});
     if(v.discount)L.push(`Giảm giá: −${fmt(v.discount)} đ`);
-    L.push('',`TỔNG: ${fmt(invTotal(v))} đ`,`Đã trả: ${fmt(invPaid(v))} đ${invDebt(v)?` · Còn nợ: ${fmt(invDebt(v))} đ`:''}`);
+    L.push('',`TỔNG TIỀN HÀNG: ${fmt(invTotal(v))} đ`);
+    (v.pays||[]).forEach((p,i)=>L.push(`${i===0?'Đã cọc/thanh toán':'Trả thêm'} ${fmtd(p.date)} (${p.method==='ck'?'chuyển khoản':'tiền mặt'}): ${fmt(p.amt)} đ`));
+    L.push(invDebt(v)?`⚠ CÒN NỢ: ${fmt(invDebt(v))} đ`:'✅ Đã thanh toán đủ');
     if(v.deliver)L.push(`📦 Ngày giao nhận: ${fmtd(v.deliver)}`);
     navigator.clipboard.writeText(L.join('\n')).then(()=>toast('Đã copy — dán vào Zalo gửi khách!')); },
   prodInfo(id){ const p=prod(id); if(!p)return; const money=canMoney();
