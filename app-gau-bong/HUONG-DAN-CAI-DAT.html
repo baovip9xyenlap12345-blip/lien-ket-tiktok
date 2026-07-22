@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hướng dẫn cài đặt app BảoBảo POS cho công ty</title>
+<style>
+body{font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#1F2937;line-height:1.6;max-width:800px;margin:0 auto;padding:24px 20px 60px;font-size:15px}
+h1{color:#0058C7;font-size:24px;border-bottom:3px solid #0070F4;padding-bottom:8px}
+h2{color:#0058C7;font-size:19px;margin-top:34px;background:#E8F1FE;padding:8px 12px;border-radius:8px}
+h3{font-size:16px;margin-top:20px;color:#C2185B}
+ol li,ul li{margin:7px 0}
+.box{background:#FBF0DC;border-left:4px solid #B26A00;padding:10px 14px;border-radius:6px;margin:14px 0}
+.ok{background:#E3F5E9;border-left-color:#008A31}
+.imp{background:#FCE9E9;border-left-color:#D63A3A}
+code,.mono{background:#F0F2F5;padding:1px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:13.5px}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+th,td{border:1px solid #C9D4E0;padding:7px 10px;text-align:left;font-size:14px}
+th{background:#0070F4;color:#fff}
+.fill{border-bottom:1.5px dashed #93A1B3;display:inline-block;min-width:280px}
+.step{font-weight:700;color:#0058C7}
+@media print{body{font-size:12.5px} h2{margin-top:20px}}
+</style></head><body>
+
+<h1>🧸 HƯỚNG DẪN CÀI ĐẶT APP QUẢN LÝ BÁN HÀNG "BẢOBẢO POS"<br><small style="font-size:15px;color:#5B6B7F">Xưởng Gấu Bông Bảo Bảo — dùng chung nhiều máy tính & điện thoại, có đăng nhập phân quyền</small></h1>
+
+<div class="box ok"><b>Cần chuẩn bị:</b> ① File <code>baobao-app.html</code> (gửi qua Zalo/USB cho từng máy) &nbsp;② Đường link máy chủ (chủ xưởng tạo 1 lần ở Phần A) &nbsp;③ Tài khoản + mật khẩu do chủ xưởng cấp cho từng người.</div>
+
+<table>
+<tr><th colspan="2">📌 THÔNG TIN CÔNG TY — chủ xưởng điền vào đây rồi mới photo/gửi cho nhân viên</th></tr>
+<tr><td style="width:220px"><b>Link máy chủ (/exec)</b></td><td><span class="fill">&nbsp;</span></td></tr>
+<tr><td><b>Người hỗ trợ khi gặp lỗi</b></td><td>Anh Bảo — 📞 0876.123.333</td></tr>
+</table>
+
+<h2>PHẦN A — DÀNH CHO CHỦ XƯỞNG: tạo máy chủ (làm 1 LẦN duy nhất, ~5 phút)</h2>
+<p><i>Nếu đã làm rồi thì bỏ qua, chuyển sang Phần B.</i></p>
+<ol>
+<li><span class="step">Mở file Code.gs:</span> chuột phải file <code>Code.gs</code> → Open with → <b>Notepad</b>. Để đó.</li>
+<li><span class="step">Vào</span> <b>script.google.com</b> → đăng nhập Gmail của xưởng → bấm <b>"+ Dự án mới"</b> (New project).</li>
+<li><span class="step">Dán code:</span> bấm vào khung code → <b>Ctrl+A</b> → <b>Delete</b> (xóa code mẫu) → sang Notepad <b>Ctrl+A, Ctrl+C</b> → quay lại <b>Ctrl+V</b>.</li>
+<li><span class="step">Đổi mật khẩu:</span> tìm dòng <code>const ADMIN_PASS = 'baobao2026';</code> gần đầu → sửa <code>baobao2026</code> thành mật khẩu riêng (giữ 2 dấu nháy) → <b>Ctrl+S</b>.</li>
+<li><span class="step">Deploy:</span> bấm nút xanh <b>Triển khai (Deploy)</b> góc phải → <b>Tùy chọn triển khai mới</b> → bấm <b>bánh răng ⚙️</b> → chọn <b>Ứng dụng web (Web app)</b> → đặt: <b>Thực thi bằng: Tôi (Me)</b> · <b>Ai truy cập: Bất kỳ ai (Anyone)</b> → <b>Triển khai</b>.</li>
+<li><span class="step">Cấp quyền:</span> bấm <b>Ủy quyền truy cập</b> → chọn Gmail → hiện cảnh báo "Google chưa xác minh" (bình thường — code của chính mình) → bấm <b>Nâng cao (Advanced)</b> → <b>Đi tới ... (không an toàn)</b> → <b>Cho phép (Allow)</b>.</li>
+<li><span class="step">Copy link:</span> copy <b>URL ứng dụng web</b> (kết thúc bằng <code>/exec</code>) → <b>điền vào bảng Thông tin công ty ở đầu trang này</b> và lưu vào Zalo.
+<div class="box ok">✅ Kiểm tra: mở link đó bằng trình duyệt — thấy chữ <i>"May chu Bao Bao dang chay"</i> là thành công.</div></li>
+<li><span class="step">Kết nối máy của mình:</span> mở <code>baobao-app.html</code> → bấm <b>⚙️</b> → dán link vào ô <b>Địa chỉ máy chủ</b> → <b>Lưu &amp; đăng nhập</b> → tài khoản <code>admin</code> + mật khẩu vừa đặt.</li>
+<li><span class="step">Tạo tài khoản nhân viên:</span> ⚙️ Cài đặt → <b>👥 Tài khoản nhân viên</b> → tạo cho mỗi người 1 tài khoản theo bảng quyền dưới đây, rồi ghi ra giấy/Zalo gửi từng người.</li>
+</ol>
+
+<table>
+<tr><th>Quyền</th><th>Dành cho</th><th>Được làm gì</th><th>KHÔNG thấy gì</th></tr>
+<tr><td><b>admin</b> — Chủ xưởng</td><td>Anh Bảo</td><td>Tất cả + tạo tài khoản</td><td>—</td></tr>
+<tr><td><b>sale</b> — Bán hàng</td><td>NV sale/chốt đơn</td><td>🛒 Bán hàng POS, hóa đơn, khách hàng, xem hàng hóa</td><td>Giá nhập, sổ quỹ, lương, báo cáo lợi nhuận</td></tr>
+<tr><td><b>kho</b> — Kho</td><td>NV đóng hàng/kho</td><td>Hàng hóa, kiểm kho, phiếu nhập hàng</td><td>Sổ quỹ, lương, lợi nhuận</td></tr>
+<tr><td><b>ketoan</b> — Kế toán</td><td>NV kế toán</td><td>Sổ quỹ, lương, báo cáo, hóa đơn</td><td>Không bán hàng POS</td></tr>
+</table>
+
+<h2>PHẦN B — CÀI TRÊN TỪNG MÁY TÍNH NHÂN VIÊN (~2 phút/máy)</h2>
+<ol>
+<li>Nhận file <code>baobao-app.html</code> (qua Zalo/USB) → <b>lưu ra Màn hình (Desktop)</b> — đừng mở thẳng trong Zalo.</li>
+<li><b>Nháy đúp</b> file → app mở bằng Chrome/Edge.</li>
+<li>Bấm biểu tượng <b>⚙️</b> góc trên phải → mục <b>🔗 Kết nối nhiều máy</b> → <b>dán Link máy chủ</b> (ở bảng đầu trang) → bấm <b>💾 Lưu &amp; đăng nhập</b>.</li>
+<li>Đăng nhập bằng <b>tài khoản + mật khẩu được cấp</b>.</li>
+<li>✅ Nhìn góc trên phải thấy <b>🟢 Đồng bộ</b> là xong — máy này đã liên thông dữ liệu với cả công ty.</li>
+</ol>
+<div class="box">💡 Mẹo: bấm chuột phải file trên Desktop → Gửi lối tắt, hoặc trong Chrome: menu ⋮ → "Cài đặt trang dưới dạng ứng dụng" để có icon mở nhanh như phần mềm thật.</div>
+
+<h2>PHẦN C — CÀI TRÊN ĐIỆN THOẠI</h2>
+<ol>
+<li>Gửi file <code>baobao-app.html</code> vào Zalo điện thoại → tải về → mở bằng <b>Chrome</b> (Android) hoặc <b>Safari</b> (iPhone).</li>
+<li>Làm bước 3–5 giống Phần B (dán link máy chủ → đăng nhập).</li>
+<li>Bấm menu trình duyệt → <b>"Thêm vào màn hình chính"</b> → có icon 🧸 ngoài màn hình, mở như app thật.</li>
+</ol>
+
+<h2>PHẦN D — DÙNG HẰNG NGÀY THEO BỘ PHẬN</h2>
+<h3>🛒 Nhân viên bán hàng</h3>
+<ul><li>Bấm nút xanh <b>Bán hàng</b> → bấm ảnh gấu (hoặc gõ tên + Enter) → nhập số lượng → gõ tên khách + ngày giao → <b>Khách đưa tiền</b> → <b>THANH TOÁN</b>. Khách đưa thiếu = tự ghi công nợ.</li>
+<li>Khách trả nợ: mở hóa đơn → <b>💵 Thu nợ</b>. Gửi hóa đơn cho khách: <b>📋 Copy hóa đơn</b> → dán Zalo.</li></ul>
+<h3>📦 Nhân viên kho</h3>
+<ul><li>Hàng về: <b>Hàng hóa → 📥 Nhập hàng</b> (chọn mẫu, số lượng, giá nhập) — kho tự cộng.</li>
+<li>Kiểm kê: mở sản phẩm → <b>Kiểm kho</b> → nhập số đếm thực tế.</li></ul>
+<h3>💰 Kế toán</h3>
+<ul><li><b>Sổ quỹ</b>: tiền bán, nhập hàng, lương tự chảy vào; chi phí điện nước/quảng cáo thì bấm <b>＋ Phiếu chi</b>.</li>
+<li>Cuối tháng: <b>Nhân viên</b> → điền lương → bấm "Đã trả". <b>Báo cáo</b> → xem lợi nhuận, xuất CSV.</li></ul>
+<h3>👑 Chủ xưởng</h3>
+<ul><li><b>Tổng quan</b>: doanh thu, chi phí, lợi nhuận, công nợ, biểu đồ — cập nhật theo thời gian thực từ mọi máy.</li>
+<li><b>Đối tác</b>: CRM khách hàng (khách mới/cũ, MST, email) → <b>⬇ Xuất DATA CRM</b>.</li></ul>
+
+<h2>PHẦN E — SỰ CỐ THƯỜNG GẶP</h2>
+<table>
+<tr><th>Hiện tượng</th><th>Cách xử lý</th></tr>
+<tr><td>Góc phải hiện <b>🔴 Mất kết nối</b></td><td>Kiểm tra wifi/mạng. App vẫn dùng được, có mạng lại là tự đồng bộ. Khi mất mạng, chỉ nên để 1 máy bán để tránh trùng số hóa đơn.</td></tr>
+<tr><td>Báo "Phiên hết hạn"</td><td>Đăng nhập lại bằng tài khoản của mình — dữ liệu không mất.</td></tr>
+<tr><td>Nhân viên quên mật khẩu</td><td>Chủ xưởng vào ⚙️ → Tài khoản nhân viên → gõ lại mật khẩu mới cho tài khoản đó → Lưu.</td></tr>
+<tr><td>Nhân viên nghỉ việc</td><td>Chủ xưởng xóa tài khoản (⚙️ → 👥 → 🗑). Trên máy của người đó bấm <b>Đăng xuất</b> — dữ liệu trên máy tự xóa sạch.</td></tr>
+<tr><td>Máy tính mới / cài lại</td><td>Chỉ cần chép lại file app + làm Phần B — dữ liệu nằm trên máy chủ, đăng nhập là kéo về đủ.</td></tr>
+<tr><td>Muốn phòng xa mất dữ liệu</td><td>Chủ xưởng thỉnh thoảng vào ⚙️ → <b>⬇ Sao lưu</b> để giữ 1 file dự phòng. (Dữ liệu chính đã nằm an toàn trong Google Drive của xưởng — file <code>baobao-db.json</code>.)</td></tr>
+</table>
+
+<div class="box imp"><b>⚠️ Quy tắc an toàn:</b> KHÔNG gửi link máy chủ + mật khẩu admin cho người ngoài công ty. Mỗi nhân viên chỉ dùng tài khoản của mình. File app có thể gửi thoải mái — không có link + tài khoản thì không xem được dữ liệu.</div>
+
+<p style="margin-top:30px;color:#5B6B7F"><i>🧸 Xưởng Gấu Bông Bảo Bảo — baogaubong.vn · In trang này: nhấn Ctrl + P</i></p>
+</body></html>
