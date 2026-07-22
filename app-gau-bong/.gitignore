@@ -1,0 +1,7 @@
+node_modules/
+__pycache__/
+package*.json
+*.png
+test_*.mjs
+debug_*.mjs
+mock_server.mjs
