@@ -267,7 +267,7 @@ function load(){
 function save(){ localStorage.setItem(KEY, JSON.stringify(DB)); if(window.SYNC) SYNC.schedulePush(); }
 const uid=()=>Math.random().toString(36).slice(2,9);
 const S={ screen:'home', month:new Date().toISOString().slice(0,7), year:new Date().getFullYear(),
-  q:'', cat:'all', transTab:'hd', partTab:'kh', repTab:'day', repDate:new Date().toISOString().slice(0,10), fundKind:'all' };
+  q:'', cat:'all', goodsView:'grid', transTab:'hd', partTab:'kh', repTab:'day', repDate:new Date().toISOString().slice(0,10), fundKind:'all' };
 
 /* ================= HELPERS ================= */
 const $=s=>document.querySelector(s);
@@ -546,8 +546,24 @@ function vGoods(){
   <div class="hrow">
     <input class="grow" placeholder="🔍 Tìm theo tên, mã, size..." value="${esc(S.q)}" oninput="S.q=this.value;render()">
     <select style="max-width:190px" onchange="S.cat=this.value;render()">
-      <option value="all">Tất cả nhóm</option>${cats.map(c=>`<option ${S.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-  <div class="card tbl" style="max-height:64vh;overflow:auto"><table>
+      <option value="all">Tất cả nhóm</option>${cats.map(c=>`<option ${S.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <button class="btn ghost sm ${S.goodsView==='grid'?'on':''}" onclick="S.goodsView='grid';render()">🖼 Lưới ảnh</button>
+    <button class="btn ghost sm ${S.goodsView==='list'?'on':''}" onclick="S.goodsView='list';render()">☰ Bảng</button></div>
+  ${S.goodsView==='grid'?`<div class="pgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+    ${list.map(p=>`<div class="pcard">
+      <div class="im" style="height:120px;cursor:pointer" onclick="App.prodInfo('${p.id}')" title="Xem chi tiết">${p.img?`<img src="${p.img}">`:'🧸'}</div>
+      <div class="bd">
+        <div class="nm" style="height:auto;min-height:29px">${esc(p.name)}</div>
+        <div class="tiny">${esc(p.size)}${p.color?' · '+esc(p.color):''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+          <span class="pr num">${fmt(p.si)}</span>
+          ${p.stock>0?`<span class="chip ch-done">Tồn ${p.stock}</span>`:'<span class="chip ch-part">Hết</span>'}</div>
+        ${p.le?`<div class="tiny">Giá lẻ: ${fmt(p.le)}</div>`:''}
+        <div class="hrow" style="margin:6px 0 0;gap:4px">
+          <button class="btn ghost sm" style="flex:1" onclick="App.prodInfo('${p.id}')">👁 Chi tiết</button>
+          <button class="btn ghost sm" onclick="App.pickImg('${p.id}')" title="Thêm/đổi ảnh">📷</button>
+        </div></div></div>`).join('')}</div>`
+  :`<div class="card tbl" style="max-height:64vh;overflow:auto"><table>
     <thead><tr><th></th><th>Mã</th><th>Tên hàng</th><th>Size</th>${money?'<th class="r">Giá vốn</th>':''}<th class="r">Giá sỉ</th><th class="r">Giá lẻ</th><th class="r">Tồn</th><th></th></tr></thead>
     <tbody>${list.map(p=>`<tr>
       <td><span class="thumb" style="cursor:pointer" onclick="App.pickImg('${p.id}')" title="Đổi ảnh">${p.img?`<img src="${p.img}">`:'🧸'}</span></td>
@@ -559,7 +575,7 @@ function vGoods(){
       <td class="r num">${p.le?fmt(p.le):''}</td>
       <td class="r"><b class="num ${p.stock<=0?'neg':''}">${p.stock}</b></td>
       <td><button class="btn ghost sm" onclick="App.stockAdj('${p.id}')">Kiểm kho</button></td></tr>`).join('')}</tbody>
-  </table></div>`;
+  </table></div>`}`;
 }
 function vTrans(){
   const tabs=`<div class="subtabs">
@@ -580,16 +596,19 @@ function vTrans(){
   if(q) list=list.filter(v=>(HD(v)+' '+v.cname).toLowerCase().includes(q));
   return `<div class="hrow"><h2>Giao dịch</h2><div class="grow"></div>${(!SYNC.role||POS_ROLES.includes(SYNC.role))?'<button class="btn grn sm" onclick="POS.open()">🛒 Bán hàng</button>':''}</div>${tabs}
   <div class="hrow"><input class="grow" placeholder="🔍 Tìm theo mã HĐ, tên khách..." value="${esc(S.q)}" oninput="S.q=this.value;render()"></div>
-  <div class="card tbl"><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th class="r">SL</th><th class="r">Tổng</th><th class="r">Đã trả</th><th>Trạng thái</th></tr></thead>
+  <div class="card tbl"><table><thead><tr><th>Mã</th><th>Ngày</th><th>Khách</th><th class="r">SL</th><th class="r">Tổng</th><th class="r">Đã trả</th><th>📦 Giao hàng</th><th>Trạng thái</th></tr></thead>
   <tbody>${list.length?list.map(v=>{const st=invStatus(v);
     return `<tr><td class="link" onclick="App.invView('${v.id}')">${HD(v)}</td><td>${fmtd(v.date)}</td>
     <td>${esc(v.cname||'Khách lẻ')}</td><td class="r num">${v.items.reduce((s,i)=>s+i.qty,0)}</td>
     <td class="r num money">${fmt(invTotal(v))}</td><td class="r num">${fmt(invPaid(v))}</td>
+    <td>${v.deliver?fmtd(v.deliver):'<span class="tiny">—</span>'}</td>
     <td><span class="chip ${st[1]}">${st[0]}</span></td></tr>`;}).join('')
-  :'<tr><td colspan="7" class="muted" style="text-align:center;padding:18px">Chưa có hóa đơn — bấm 🛒 Bán hàng để tạo hóa đơn đầu tiên!</td></tr>'}</tbody></table></div>`;
+  :'<tr><td colspan="8" class="muted" style="text-align:center;padding:18px">Chưa có hóa đơn — bấm 🛒 Bán hàng để tạo hóa đơn đầu tiên!</td></tr>'}</tbody></table></div>`;
 }
 function custStats(c){const vs=DB.invoices.filter(v=>v.cid===c.id&&v.status!=='cancel');
-  return {n:vs.length,total:vs.reduce((s,v)=>s+invTotal(v),0),debt:vs.reduce((s,v)=>s+invDebt(v),0)};}
+  return {n:vs.length,total:vs.reduce((s,v)=>s+invTotal(v),0),debt:vs.reduce((s,v)=>s+invDebt(v),0),
+    last:vs.reduce((m,v)=>v.date>m?v.date:m,'')};}
+function custChip(n){return n>0?`<span class="chip ch-done">🔁 Đã mua ${n} lần</span>`:`<span class="chip ch-blue">✨ Khách mới</span>`;}
 function vPartners(){
   const tabs=`<div class="subtabs">
     <button class="${S.partTab==='kh'?'on':''}" onclick="S.partTab='kh';render()">👥 Khách hàng (${alive(DB.customers).length})</button>
@@ -603,15 +622,19 @@ function vPartners(){
     :'<tr><td colspan="4" class="muted" style="text-align:center;padding:18px">Chưa có nhà cung cấp.</td></tr>'}</tbody></table></div>`;
   }
   const q=S.q.toLowerCase();
-  const list=alive(DB.customers).filter(c=>!q||(c.name+' '+c.phone).toLowerCase().includes(q));
-  return `<div class="hrow"><h2>Đối tác</h2><div class="grow"></div><button class="btn sm" onclick="App.custForm()">＋ Thêm khách</button></div>${tabs}
-  <div class="hrow"><input class="grow" placeholder="🔍 Tìm khách theo tên, SĐT..." value="${esc(S.q)}" oninput="S.q=this.value;render()"></div>
-  <div class="card tbl"><table><thead><tr><th>Khách hàng</th><th>SĐT</th><th class="r">Số HĐ</th><th class="r">Tổng mua</th><th class="r">Còn nợ</th></tr></thead>
+  const list=alive(DB.customers).filter(c=>!q||(c.name+' '+(c.phone||'')+' '+(c.email||'')+' '+(c.mst||'')).toLowerCase().includes(q));
+  return `<div class="hrow"><h2>Đối tác — CRM khách hàng</h2><div class="grow"></div>
+    <button class="btn ghost sm" onclick="App.exportCRM()">⬇ Xuất DATA CRM</button>
+    <button class="btn sm" onclick="App.custForm()">＋ Thêm khách</button></div>${tabs}
+  <div class="hrow"><input class="grow" placeholder="🔍 Tìm theo tên, SĐT, email, mã số thuế..." value="${esc(S.q)}" oninput="S.q=this.value;render()"></div>
+  <div class="card tbl"><table><thead><tr><th>Khách hàng</th><th>SĐT</th><th>Email</th><th>MST</th><th>Mua hàng</th><th>Mua gần nhất</th><th class="r">Tổng mua</th><th class="r">Còn nợ</th></tr></thead>
   <tbody>${list.length?list.map(c=>{const st=custStats(c);
-    return `<tr><td class="link" onclick="App.custView('${c.id}')">${esc(c.name)}</td><td>${esc(c.phone||'—')}</td>
-    <td class="r num">${st.n}</td><td class="r num money">${fmt(st.total)}</td>
+    return `<tr><td class="link" onclick="App.custView('${c.id}')">${esc(c.name)}<div class="tiny">${esc(c.addr||'')}</div></td>
+    <td>${esc(c.phone||'—')}</td><td class="tiny">${esc(c.email||'—')}</td><td class="tiny">${esc(c.mst||'—')}</td>
+    <td>${custChip(st.n)}</td><td>${st.last?fmtd(st.last):'—'}</td>
+    <td class="r num money">${fmt(st.total)}</td>
     <td class="r num ${st.debt?'neg':''}">${fmt(st.debt)}</td></tr>`;}).join('')
-  :'<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Chưa có khách — bán hàng có gắn tên khách là tự lưu.</td></tr>'}</tbody></table></div>`;
+  :'<tr><td colspan="8" class="muted" style="text-align:center;padding:18px">Chưa có khách — bán hàng có gắn tên khách là tự lưu.</td></tr>'}</tbody></table></div>`;
 }
 function vFund(){
   const ym=S.month;
@@ -756,7 +779,7 @@ const POS={
     if(!this.tabs.length) this.newTab();
     $('#pos').classList.add('open'); this.renderAll(); setTimeout(()=>$('#posQ').focus(),50); },
   close(){ $('#pos').classList.remove('open'); render(); },
-  newTab(){ this.tabs.push({items:[], cid:null, cname:'', discount:0, cash:''}); this.active=this.tabs.length-1; this.renderAll(); },
+  newTab(){ this.tabs.push({items:[], cid:null, cname:'', discount:0, cash:'', deliver:''}); this.active=this.tabs.length-1; this.renderAll(); },
   closeTab(i){ this.tabs.splice(i,1); if(!this.tabs.length) this.newTab();
     this.active=Math.min(this.active,this.tabs.length-1); this.renderAll(); },
   cur(){ return this.tabs[this.active]; },
@@ -789,6 +812,7 @@ const POS={
     const c=alive(DB.customers).find(c=>c.name===t.cname); t.cid=c?c.id:null; },
   setDisc(v){ this.cur().discount=Math.max(0,+v||0); this.renderCart(); },
   setCash(v){ this.cur().cash=v; this.renderCart(); },
+  setDeliver(v){ this.cur().deliver=v; },
   renderCart(){ const t=this.cur();
     $('#posLines').innerHTML=t.items.length?t.items.map((i,idx)=>{const p=prod(i.pid);
       return `<div class="pline">
@@ -807,6 +831,7 @@ const POS={
       <div class="rw"><span>Giảm giá</span><input type="number" value="${t.discount||''}" placeholder="0" step="1000" onchange="POS.setDisc(this.value)"></div>
       <div class="rw" style="font-size:17px"><b>KHÁCH PHẢI TRẢ</b><b class="num" style="color:var(--pri)">${fmt(total)} đ</b></div>
       <div class="rw"><span>Khách đưa</span><input type="number" value="${t.cash||''}" placeholder="${total}" step="1000" oninput="POS.setCash(this.value)"></div>
+      <div class="rw"><span>📦 Ngày giao hàng</span><input type="date" value="${t.deliver||''}" onchange="POS.setDeliver(this.value)"></div>
       <div class="rw"><span>${change>=0?'Tiền thừa trả khách':'Khách còn nợ (ghi công nợ)'}</span>
         <b class="num ${change>=0?'pos':'neg'}">${fmt(Math.abs(change))}</b></div>
       <button id="posPay" onclick="POS.pay()">💵 THANH TOÁN${t.items.length?` — ${fmt(total)} đ`:''}</button>`;
@@ -821,7 +846,7 @@ const POS={
     const paidAmt=Math.min(cash,total);
     DB.seq.hd++;
     const v=touch({id:uid(), code:DB.seq.hd, date:today(), cid:c?c.id:null, cname:c?c.name:'Khách lẻ',
-      items:t.items.map(i=>({...i})), discount:t.discount||0,
+      items:t.items.map(i=>({...i})), discount:t.discount||0, deliver:t.deliver||'',
       pays:paidAmt>0?[{date:today(),amt:paidAmt}]:[], status:'done', note:''});
     v.items.forEach(i=>{const p=prod(i.pid); if(p){p.stock=Math.max(0,p.stock-i.qty);touch(p);}});
     DB.invoices.push(v); save();
@@ -846,6 +871,9 @@ const App={
     const c=cust(v.cid), st=invStatus(v), debt=invDebt(v);
     openModal(`<h2>${HD(v)} <span class="chip ${st[1]}">${st[0]}</span></h2>
     <div class="muted">${fmtd(v.date)} · ${esc(v.cname||'Khách lẻ')}${c&&c.phone?' · 📞 '+esc(c.phone):''}</div>
+    <div class="muted" style="margin-top:4px">📦 Ngày giao nhận:
+      <input type="date" value="${v.deliver||''}" style="max-width:150px;display:inline-block;width:auto" onchange="App.setDeliver('${v.id}',this.value)">
+      ${v.deliver?'':'<span class="tiny">(chưa hẹn — chọn ngày để lưu)</span>'}</div>
     <div class="tbl" style="margin:10px 0"><table>
       <thead><tr><th>Sản phẩm</th><th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Tiền</th></tr></thead>
       <tbody>${v.items.map(i=>{const p=prod(i.pid);
@@ -860,6 +888,12 @@ const App={
       <button class="btn ghost sm" onclick="App.copyInvoice('${v.id}')">📋 Copy hóa đơn</button>
       ${v.status!=='cancel'?`<button class="btn danger sm" onclick="App.invCancel('${v.id}')">✕ Hủy HĐ</button>`:''}
       <div class="grow"></div><button class="btn ghost sm" onclick="closeModal()">Đóng</button></div>`); },
+  setDeliver(id,val){ const v=DB.invoices.find(v=>v.id===id); if(!v)return;
+    v.deliver=val; touch(v); save(); render(); toast(val?'Đã hẹn giao '+fmtd(val):'Đã bỏ ngày giao'); },
+  exportCRM(){ let csv='Ten khach,SDT,Email,Ma so thue,Dia chi,Ghi chu,Da mua (lan),Tong mua (d),Con no (d),Mua gan nhat,Loai khach\n';
+    alive(DB.customers).forEach(c=>{ const st=custStats(c);
+      csv+=`"${c.name}","${c.phone||''}","${c.email||''}","${c.mst||''}","${(c.addr||'').replace(/"/g,"'")}","${(c.note||'').replace(/"/g,"'")}",${st.n},${st.total},${st.debt},${st.last||''},${st.n>0?'Khach cu':'Khach moi'}\n`; });
+    saveFile('data-crm-khach-hang.csv',csv,'text/csv'); toast('Đã xuất DATA CRM — mở bằng Excel'); },
   payDebt(id){ const v=DB.invoices.find(v=>v.id===id); const debt=invDebt(v);
     const amt=+String(prompt(`Khách trả thêm (đang nợ ${fmt(debt)} đ):`, debt)||'').replace(/\D/g,'');
     if(!amt) return; v.pays.push({date:today(), amt:Math.min(amt,debt)}); touch(v); save(); this.invView(id); render(); toast('Đã ghi thu nợ'); },
@@ -873,7 +907,31 @@ const App={
     v.items.forEach(i=>{const p=prod(i.pid);L.push(`• ${p?p.name+' '+p.size:'SP'} ×${i.qty} × ${fmt(i.price)} = ${fmt(i.qty*i.price)} đ`);});
     if(v.discount)L.push(`Giảm giá: −${fmt(v.discount)} đ`);
     L.push('',`TỔNG: ${fmt(invTotal(v))} đ`,`Đã trả: ${fmt(invPaid(v))} đ${invDebt(v)?` · Còn nợ: ${fmt(invDebt(v))} đ`:''}`);
+    if(v.deliver)L.push(`📦 Ngày giao nhận: ${fmtd(v.deliver)}`);
     navigator.clipboard.writeText(L.join('\n')).then(()=>toast('Đã copy — dán vào Zalo gửi khách!')); },
+  prodInfo(id){ const p=prod(id); if(!p)return; const money=canMoney();
+    openModal(`<div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div class="thumb" style="width:100%;height:220px;font-size:64px;border-radius:10px;cursor:pointer" onclick="App.pickImg('${id}')" title="Bấm để thêm/đổi ảnh">
+          ${p.img?`<img src="${p.img}" style="border-radius:10px">`:'🧸'}</div>
+        <div class="tiny" style="text-align:center;margin-top:4px">📷 bấm vào ảnh để thêm/đổi ảnh</div></div>
+      <div style="flex:1.2;min-width:220px">
+        <h2 style="margin-bottom:4px">${esc(p.name)}</h2>
+        <div class="tiny">${p.code||''} · ${esc(p.cat)}</div>
+        <div class="tbl" style="margin-top:8px"><table>
+          <tr><td class="muted">Size</td><td class="r"><b>${esc(p.size)}</b></td></tr>
+          ${p.color?`<tr><td class="muted">Màu sắc</td><td class="r">${esc(p.color)}</td></tr>`:''}
+          <tr><td class="muted">GIÁ SỈ</td><td class="r"><b class="num" style="color:var(--pri);font-size:16px">${fmt(p.si)} đ</b></td></tr>
+          ${p.le?`<tr><td class="muted">Giá lẻ tham khảo</td><td class="r num">${fmt(p.le)} đ</td></tr>`:''}
+          ${money&&p.cost?`<tr><td class="muted">Giá vốn</td><td class="r num">${fmt(p.cost)} đ</td></tr>`:''}
+          <tr><td class="muted">Tồn kho</td><td class="r">${p.stock>0?`<span class="chip ch-done">✅ Còn ${p.stock} con</span>`:'<span class="chip ch-part">☎ Hết hàng — nhận đặt trước</span>'}</td></tr>
+          ${p.note?`<tr><td class="muted">Ghi chú</td><td class="r">${esc(p.note)}</td></tr>`:''}
+        </table></div>
+        <div class="hrow" style="margin-top:12px">
+          ${(!SYNC.role||POS_ROLES.includes(SYNC.role))?`<button class="btn grn" style="flex:1" onclick="closeModal();POS.open();POS.add('${id}')">🛒 Bán ngay</button>`:''}
+          <button class="btn ghost" onclick="App.prodForm('${id}')">✏️ Sửa</button>
+          <button class="btn ghost" onclick="App.stockAdj('${id}')">📦 Kho</button>
+        </div></div></div>`); },
   prodForm(id){ const p=id?prod(id):{name:'',cat:[...new Set(alive(DB.products).map(x=>x.cat))][0]||'🔥 Hot Trend',color:'',size:'',si:0,le:0,cost:0,stock:0,note:''};
     const cats=[...new Set(DB.products.map(x=>x.cat))];
     openModal(`<h2>${id?'✏️ Sửa':'＋ Thêm'} hàng hóa ${id?`<span class="tiny">${p.code||''}</span>`:''}</h2><div class="frm">
@@ -957,20 +1015,23 @@ const App={
     openModal(`<h2>${id?'✏️ Sửa':'＋ Thêm'} khách hàng</h2><div class="frm">
     <div><label>Tên khách / shop</label><input id="c_name" value="${esc(c.name)}"></div>
     <div class="f2"><div><label>SĐT / Zalo</label><input id="c_phone" value="${esc(c.phone)}"></div>
+      <div><label>Email</label><input id="c_email" value="${esc(c.email||'')}" placeholder="vd: shop@gmail.com"></div></div>
+    <div class="f2"><div><label>Mã số thuế (nếu là công ty)</label><input id="c_mst" value="${esc(c.mst||'')}"></div>
       <div><label>Ghi chú</label><input id="c_note" value="${esc(c.note)}"></div></div>
     <div><label>Địa chỉ</label><input id="c_addr" value="${esc(c.addr||'')}"></div>
     <div class="hrow">${id?`<button class="btn danger sm" onclick="App.custDel('${id}')">🗑</button>`:''}
       <div class="grow"></div><button class="btn ghost" onclick="closeModal()">Hủy</button>
       <button class="btn" onclick="App.custSave('${id||''}')">💾 Lưu</button></div></div>`); },
-  custSave(id){ const v={name:$('#c_name').value.trim(),phone:$('#c_phone').value.trim(),addr:$('#c_addr').value.trim(),note:$('#c_note').value.trim()};
+  custSave(id){ const v={name:$('#c_name').value.trim(),phone:$('#c_phone').value.trim(),addr:$('#c_addr').value.trim(),
+      note:$('#c_note').value.trim(),email:$('#c_email').value.trim(),mst:$('#c_mst').value.trim()};
     if(!v.name){toast('Nhập tên khách');return;}
     if(id)touch(Object.assign(cust(id),v));else DB.customers.push(touch({id:uid(),...v}));
     save();closeModal();render();toast('Đã lưu'); },
   custDel(id){ if(!confirm('Xóa khách này?'))return; const c=cust(id);c.del=1;touch(c);save();closeModal();render(); },
   custView(id){ const c=cust(id);if(!c)return; const st=custStats(c);
     const vs=DB.invoices.filter(v=>v.cid===id).sort((a,b)=>b.code-a.code);
-    openModal(`<h2>👤 ${esc(c.name)}</h2>
-    <div class="muted">📞 ${esc(c.phone||'—')}${c.addr?' · 📍 '+esc(c.addr):''}</div>
+    openModal(`<h2>👤 ${esc(c.name)} ${custChip(st.n)}</h2>
+    <div class="muted">📞 ${esc(c.phone||'—')}${c.email?' · ✉️ '+esc(c.email):''}${c.mst?' · MST: '+esc(c.mst):''}${c.addr?'<br>📍 '+esc(c.addr):''}${c.note?'<br>📝 '+esc(c.note):''}${st.last?'<br>🕐 Mua gần nhất: '+fmtd(st.last):''}</div>
     <div class="kpis" style="grid-template-columns:1fr 1fr;margin:10px 0">
       <div class="card kpi"><div class="lb">Tổng mua</div><div class="v num" style="font-size:16px">${fmt(st.total)}</div></div>
       <div class="card kpi"><div class="lb">Còn nợ</div><div class="v num ${st.debt?'neg':''}" style="font-size:16px">${fmt(st.debt)}</div></div></div>
