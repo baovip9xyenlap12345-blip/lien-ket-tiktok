@@ -554,7 +554,8 @@ function vGoods(){
       <div class="im" style="height:120px;cursor:pointer" onclick="App.prodInfo('${p.id}')" title="Xem chi tiết">${p.img?`<img src="${p.img}">`:'🧸'}</div>
       <div class="bd">
         <div class="nm" style="height:auto;min-height:29px">${esc(p.name)}</div>
-        <div class="tiny">${esc(p.size)}${p.color?' · '+esc(p.color):''}</div>
+        <div class="tiny">${esc(p.size)}${p.color?' · '+esc(p.color):''}${p.weight?' · ⚖️'+esc(p.weight):''}</div>
+        ${p.desc?`<div class="tiny" style="height:26px;overflow:hidden">${esc(p.desc)}</div>`:''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
           <span class="pr num">${fmt(p.si)}</span>
           ${p.stock>0?`<span class="chip ch-done">Tồn ${p.stock}</span>`:'<span class="chip ch-part">Hết</span>'}</div>
@@ -564,12 +565,13 @@ function vGoods(){
           <button class="btn ghost sm" onclick="App.pickImg('${p.id}')" title="Thêm/đổi ảnh">📷</button>
         </div></div></div>`).join('')}</div>`
   :`<div class="card tbl" style="max-height:64vh;overflow:auto"><table>
-    <thead><tr><th></th><th>Mã</th><th>Tên hàng</th><th>Size</th>${money?'<th class="r">Giá vốn</th>':''}<th class="r">Giá sỉ</th><th class="r">Giá lẻ</th><th class="r">Tồn</th><th></th></tr></thead>
+    <thead><tr><th></th><th>Mã</th><th>Tên hàng</th><th>Size</th><th>Cân nặng</th>${money?'<th class="r">Giá nhập</th>':''}<th class="r">Giá sỉ</th><th class="r">Giá bán</th><th class="r">Tồn</th><th></th></tr></thead>
     <tbody>${list.map(p=>`<tr>
       <td><span class="thumb" style="cursor:pointer" onclick="App.pickImg('${p.id}')" title="Đổi ảnh">${p.img?`<img src="${p.img}">`:'🧸'}</span></td>
       <td class="tiny">${p.code||''}</td>
       <td><span class="link" onclick="App.prodForm('${p.id}')">${esc(p.name)}</span><div class="tiny">${esc(p.color||'')}</div></td>
       <td>${esc(p.size)}</td>
+      <td class="tiny">${esc(p.weight||'—')}</td>
       ${money?`<td class="r num">${p.cost?fmt(p.cost):'<span class="tiny">—</span>'}</td>`:''}
       <td class="r num money">${fmt(p.si)}</td>
       <td class="r num">${p.le?fmt(p.le):''}</td>
@@ -919,14 +921,18 @@ const App={
         <h2 style="margin-bottom:4px">${esc(p.name)}</h2>
         <div class="tiny">${p.code||''} · ${esc(p.cat)}</div>
         <div class="tbl" style="margin-top:8px"><table>
+          <tr><td class="muted">Phân loại</td><td class="r">${esc(p.cat)}</td></tr>
           <tr><td class="muted">Size</td><td class="r"><b>${esc(p.size)}</b></td></tr>
           ${p.color?`<tr><td class="muted">Màu sắc</td><td class="r">${esc(p.color)}</td></tr>`:''}
+          ${p.weight?`<tr><td class="muted">Cân nặng</td><td class="r">⚖️ ${esc(p.weight)}</td></tr>`:''}
           <tr><td class="muted">GIÁ SỈ</td><td class="r"><b class="num" style="color:var(--pri);font-size:16px">${fmt(p.si)} đ</b></td></tr>
-          ${p.le?`<tr><td class="muted">Giá lẻ tham khảo</td><td class="r num">${fmt(p.le)} đ</td></tr>`:''}
-          ${money&&p.cost?`<tr><td class="muted">Giá vốn</td><td class="r num">${fmt(p.cost)} đ</td></tr>`:''}
+          ${p.le?`<tr><td class="muted">Giá bán lẻ</td><td class="r num">${fmt(p.le)} đ</td></tr>`:''}
+          ${money&&p.cost?`<tr><td class="muted">Giá nhập (vốn)</td><td class="r num">${fmt(p.cost)} đ</td></tr>`:''}
           <tr><td class="muted">Tồn kho</td><td class="r">${p.stock>0?`<span class="chip ch-done">✅ Còn ${p.stock} con</span>`:'<span class="chip ch-part">☎ Hết hàng — nhận đặt trước</span>'}</td></tr>
           ${p.note?`<tr><td class="muted">Ghi chú</td><td class="r">${esc(p.note)}</td></tr>`:''}
         </table></div>
+        ${p.desc?`<div class="card pad" style="margin-top:8px;background:var(--surface-2);border:none"><b>📝 Mô tả:</b> ${esc(p.desc)}</div>`
+          :`<div class="tiny" style="margin-top:8px">Chưa có mô tả — bấm ✏️ Sửa để thêm mô tả chất liệu, đặc điểm giúp dễ chốt khách.</div>`}
         <div class="hrow" style="margin-top:12px">
           ${(!SYNC.role||POS_ROLES.includes(SYNC.role))?`<button class="btn grn" style="flex:1" onclick="closeModal();POS.open();POS.add('${id}')">🛒 Bán ngay</button>`:''}
           <button class="btn ghost" onclick="App.prodForm('${id}')">✏️ Sửa</button>
@@ -939,17 +945,19 @@ const App={
     <div class="f3"><div><label>Nhóm</label><select id="p_cat">${cats.map(c=>`<option ${c===p.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
       <div><label>Size</label><input id="p_size" value="${esc(p.size)}"></div>
       <div><label>Màu</label><input id="p_color" value="${esc(p.color)}"></div></div>
-    <div class="f3"><div><label>Giá vốn</label><input id="p_cost" type="number" value="${p.cost||''}"></div>
+    <div class="f3"><div><label>Giá nhập (vốn)</label><input id="p_cost" type="number" value="${p.cost||''}"></div>
       <div><label>Giá sỉ</label><input id="p_si" type="number" value="${p.si}"></div>
-      <div><label>Giá lẻ</label><input id="p_le" type="number" value="${p.le}"></div></div>
-    <div class="f2"><div><label>Tồn kho</label><input id="p_stock" type="number" value="${p.stock}"></div>
+      <div><label>Giá bán lẻ</label><input id="p_le" type="number" value="${p.le}"></div></div>
+    <div class="f3"><div><label>Tồn kho (con)</label><input id="p_stock" type="number" value="${p.stock}"></div>
+      <div><label>Cân nặng</label><input id="p_weight" value="${esc(p.weight||'')}" placeholder="vd: 1.2 kg"></div>
       <div><label>Ghi chú</label><input id="p_note" value="${esc(p.note)}"></div></div>
+    <div><label>Mô tả sản phẩm (chất liệu, đặc điểm, điểm bán hàng...)</label><textarea id="p_desc" rows="3" placeholder="vd: Lông xù mềm mịn, không đổ lông, bông trắng 3D đàn hồi tốt, có thể giặt máy...">${esc(p.desc||'')}</textarea></div>
     <div class="hrow">${id?`<button class="btn danger sm" onclick="App.prodDel('${id}')">🗑 Xóa</button>`:''}
       <div class="grow"></div><button class="btn ghost" onclick="closeModal()">Hủy</button>
       <button class="btn" onclick="App.prodSave('${id||''}')">💾 Lưu</button></div></div>`); },
   prodSave(id){ const v={name:$('#p_name').value.trim(),cat:$('#p_cat').value,size:$('#p_size').value.trim(),
       color:$('#p_color').value.trim(),cost:+$('#p_cost').value||0,si:+$('#p_si').value||0,le:+$('#p_le').value||0,
-      stock:+$('#p_stock').value||0,note:$('#p_note').value.trim()};
+      stock:+$('#p_stock').value||0,weight:$('#p_weight').value.trim(),desc:$('#p_desc').value.trim(),note:$('#p_note').value.trim()};
     if(!v.name){toast('Nhập tên hàng');return;}
     if(id) touch(Object.assign(prod(id),v));
     else DB.products.push(touch({id:uid(),img:'',code:'SP'+String(DB.products.length+1).padStart(4,'0'),...v}));
@@ -1091,8 +1099,8 @@ const App={
       const r=monthRevenue(k),g=monthCogs(k),e=monthChi(k),s=monthSalary(k);
       csv+=`Thang ${m},${r},${r-g},${e},${s},${r-e-s}\n`;}
     saveFile(`bao-cao-${y}.csv`,csv,'text/csv'); },
-  exportGoods(){ let csv='Ma,Ten,Size,Mau,Gia von,Gia si,Gia le,Ton kho\n';
-    alive(DB.products).forEach(p=>{csv+=`${p.code},"${p.name}",${p.size},"${p.color||''}",${p.cost||0},${p.si},${p.le||0},${p.stock}\n`;});
+  exportGoods(){ let csv='Ma,Ten,Phan loai,Size,Mau,Can nang,Gia nhap,Gia si,Gia ban le,Ton kho,Mo ta\n';
+    alive(DB.products).forEach(p=>{csv+=`${p.code},"${p.name}","${p.cat}",${p.size},"${p.color||''}","${p.weight||''}",${p.cost||0},${p.si},${p.le||0},${p.stock},"${(p.desc||'').replace(/"/g,"'")}"\n`;});
     saveFile('hang-hoa.csv',csv,'text/csv'); },
   saveSettings(){ DB.settings=touch({name:$('#st_name').value,phone:$('#st_phone').value,web:$('#st_web').value,addr:$('#st_addr').value});
     save();toast('Đã lưu'); },
