@@ -177,6 +177,16 @@ svg text{fill:var(--ink-3);font-size:10px}
 #login h2{font-size:18px;font-weight:800;text-align:center}
 #login .sub{text-align:center;color:var(--ink-2);font-size:12px;margin:4px 0 16px}
 @media print{#hdr,#tabs,#pos,#sheet{display:none!important}}
+#printArea{display:none}
+.pr-c{text-align:center}.pr-line{border-top:1px dashed #000;margin:4px 0}
+.pr-t{width:100%;border-collapse:collapse}.pr-t td{padding:2px 0;vertical-align:top;font-size:11px}.pr-t .r{text-align:right}
+.pr-r{display:flex;justify-content:space-between;font-size:11px}
+@media print{
+  body.printing #hdr,body.printing #wrap,body.printing #tabs,body.printing #pos,
+  body.printing #ovl,body.printing #sheet,body.printing #login{display:none!important}
+  body.printing #printArea{display:block!important;width:72mm;color:#000;background:#fff;font-family:Arial,sans-serif;font-size:11px;line-height:1.35}
+  @page{size:80mm auto;margin:3mm}
+}
 </style>
 
 <div id="hdr">
@@ -217,6 +227,7 @@ svg text{fill:var(--ink-3);font-size:10px}
 <div id="ovl"><div id="modal"></div></div>
 <div id="toast"></div>
 <div id="tt"></div>
+<div id="printArea"></div>
 
 <div id="login"><div class="box">
   <h2>🧸 BảoBảo POS</h2>
@@ -305,6 +316,11 @@ async function saveFile(name,text,mime){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(["﻿"+text],{type:(mime||'text/plain')+';charset=utf-8'}));
   a.download=name;document.body.appendChild(a);a.click();a.remove();
+}
+const BANKS=[['VCB','Vietcombank'],['ICB','VietinBank'],['BIDV','BIDV'],['VBA','Agribank'],['TCB','Techcombank'],['MB','MB Bank'],['VPB','VPBank'],['ACB','ACB'],['STB','Sacombank'],['TPB','TPBank'],['VIB','VIB'],['SHB','SHB'],['MSB','MSB'],['HDB','HDBank'],['OCB','OCB'],['SEAB','SeABank'],['LPB','LPBank'],['NAB','Nam Á Bank'],['EIB','Eximbank']];
+function qrURL(amt,info){ const st=DB.settings;
+  if(!st.bank||!st.acc) return '';
+  return `https://img.vietqr.io/image/${st.bank}-${st.acc}-qr_only.png?amount=${Math.round(amt)}&addInfo=${encodeURIComponent(info)}`+(st.accName?`&accountName=${encodeURIComponent(st.accName)}`:'');
 }
 function fundRows(){
   const rows=[];
@@ -508,6 +524,21 @@ function vHome(){
     return {label:p?`${p.name} ${p.size}`:'(đã xóa)',value:x.v,sub:x.q+' con'};}).sort((a,b)=>b.value-a.value).slice(0,5);
   const profit=rev-chi-sal;
   const money=canMoney();
+  const debts=DB.invoices.filter(v=>invDebt(v)>0)
+    .map(v=>({v, days:Math.max(0,Math.floor((Date.now()-new Date(v.date+'T00:00:00'))/86400000))}))
+    .sort((a,b)=>b.days-a.days);
+  const debtHtml=(debts.length&&SYNC.role!=='kho')?`
+  <div class="eyebrow">🔔 Nhắc nợ — ${debts.length} hóa đơn chưa thu đủ · tổng ${fmt(debts.reduce((s,d)=>s+invDebt(d.v),0))} đ</div>
+  <div class="card tbl"><table><thead><tr><th>Mã</th><th>Khách</th><th>Ngày mua</th><th>Nợ bao lâu</th><th class="r">Còn nợ</th><th></th></tr></thead>
+  <tbody>${debts.slice(0,8).map(({v,days})=>{const c=cust(v.cid);
+    return `<tr><td class="link" onclick="App.invView('${v.id}')">${HD(v)}</td>
+    <td>${esc(v.cname||'Khách lẻ')}${c&&c.phone?`<div class="tiny">📞 ${esc(c.phone)}</div>`:''}</td>
+    <td>${fmtd(v.date)}</td>
+    <td><span class="chip ${days>=7?'ch-cancel':'ch-part'}">${days===0?'Hôm nay':days+' ngày'}</span></td>
+    <td class="r num neg"><b>${fmt(invDebt(v))}</b></td>
+    <td><button class="btn grn sm" onclick="App.payDebt('${v.id}')">💵 Thu nợ</button></td></tr>`;}).join('')}
+  ${debts.length>8?`<tr><td colspan="6" class="tiny">... còn ${debts.length-8} khoản khác — xem trong Giao dịch</td></tr>`:''}
+  </tbody></table></div>`:'';
   return `
   <div class="hrow"><h2>Tổng quan</h2><input type="month" value="${ym}" style="max-width:165px" onchange="S.month=this.value;render()">
     <div class="grow"></div>${(!SYNC.role||POS_ROLES.includes(SYNC.role))?'<button class="btn grn" onclick="POS.open()">🛒 Bán hàng</button>':''}</div>
@@ -521,6 +552,7 @@ function vHome(){
     <div class="card kpi"><div class="lb">👥 Khách hàng</div><div class="v num">${alive(DB.customers).length}</div><div class="sub">trong sổ</div></div>
     <div class="card kpi"><div class="lb">⚠️ Hết hàng</div><div class="v num ${alive(DB.products).filter(p=>p.stock<=0).length?'neg':''}">${alive(DB.products).filter(p=>p.stock<=0).length}</div><div class="sub">mẫu tồn = 0</div></div>
   </div>
+  ${debtHtml}
   ${money?`<div class="eyebrow">Doanh thu vs chi phí năm ${y}</div>
   <div class="card pad">${groupBarChart(labels,[{name:'Doanh thu',color:'var(--s1)',values:revs},{name:'Chi phí',color:'var(--s2)',values:costs}])}
     <div class="legend"><span><span class="sw" style="background:var(--s1)"></span>Doanh thu</span><span><span class="sw" style="background:var(--s2)"></span>Chi phí</span></div></div>
@@ -765,6 +797,12 @@ function vSettings(){
     <div class="f2"><div><label>SĐT / Zalo</label><input id="st_phone" value="${esc(st.phone)}"></div>
     <div><label>Website</label><input id="st_web" value="${esc(st.web)}"></div></div>
     <div><label>Địa chỉ</label><input id="st_addr" value="${esc(st.addr)}"></div>
+    <div class="eyebrow" style="margin:6px 0 0">🏦 Tài khoản nhận chuyển khoản — điền để hóa đơn tự hiện mã QR</div>
+    <div class="f3"><div><label>Ngân hàng</label><select id="st_bank"><option value="">— chọn —</option>
+      ${BANKS.map(([c,l])=>`<option value="${c}" ${st.bank===c?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div><label>Số tài khoản</label><input id="st_acc" value="${esc(st.acc||'')}"></div>
+      <div><label>Tên chủ TK (IN HOA)</label><input id="st_accName" value="${esc(st.accName||'')}" placeholder="VD: BUI HUU BAO"></div></div>
+    <div class="tiny">Mã QR chuẩn VietQR — khách quét bằng app ngân hàng bất kỳ, số tiền + mã hóa đơn tự điền sẵn. (Cần có mạng để hiện QR.)</div>
     <div><button class="btn" onclick="App.saveSettings()">💾 Lưu</button></div></div>
   <div class="eyebrow">Dữ liệu</div>
   <div class="card pad frm">
@@ -900,8 +938,12 @@ const App={
       ${debt>0?`<tr><td colspan="3"><b>⚠ CÒN NỢ</b></td><td class="r num neg"><b>${fmt(debt)}</b></td></tr>`
         :`<tr><td colspan="3"></td><td class="r"><span class="chip ch-done">✅ Đã trả đủ</span></td></tr>`}
     </tbody></table></div>
+    ${debt>0&&v.status!=='cancel'&&qrURL(debt,HD(v))?`<div style="text-align:center;margin:8px 0;padding:10px;background:var(--surface-2);border-radius:8px">
+      <img src="${qrURL(debt,HD(v))}" alt="QR chuyển khoản" style="width:170px;max-width:70%" onerror="this.style.display='none'">
+      <div class="tiny" style="margin-top:4px">📱 Quét QR chuyển <b>${fmt(debt)} đ</b> · ${esc(DB.settings.bank)} ${esc(DB.settings.acc)}${DB.settings.accName?' · '+esc(DB.settings.accName):''}<br>Nội dung tự điền: ${HD(v)}</div></div>`:''}
     <div class="hrow">
       ${debt>0&&v.status!=='cancel'?`<button class="btn grn sm" onclick="App.payDebt('${v.id}')">💵 Thu nợ</button>`:''}
+      <button class="btn ghost sm" onclick="App.printInvoice('${v.id}')">🖨 In K80</button>
       <button class="btn ghost sm" onclick="App.copyInvoice('${v.id}')">📋 Copy hóa đơn</button>
       ${v.status!=='cancel'?`<button class="btn danger sm" onclick="App.invCancel('${v.id}')">✕ Hủy HĐ</button>`:''}
       <div class="grow"></div><button class="btn ghost sm" onclick="closeModal()">Đóng</button></div>`); },
@@ -911,6 +953,29 @@ const App={
     alive(DB.customers).forEach(c=>{ const st=custStats(c);
       csv+=`"${c.name}","${c.phone||''}","${c.email||''}","${c.mst||''}","${(c.addr||'').replace(/"/g,"'")}","${(c.note||'').replace(/"/g,"'")}",${st.n},${st.total},${st.debt},${st.last||''},${st.n>0?'Khach cu':'Khach moi'}\n`; });
     saveFile('data-crm-khach-hang.csv',csv,'text/csv'); toast('Đã xuất DATA CRM — mở bằng Excel'); },
+  printInvoice(id){ const v=DB.invoices.find(x=>x.id===id); if(!v)return;
+    const st=DB.settings, c=cust(v.cid), debt=invDebt(v);
+    const qr=debt>0?qrURL(debt,HD(v)):'';
+    $('#printArea').innerHTML=`
+      <div class="pr-c"><b style="font-size:14px">🧸 ${esc(st.name)}</b><br>${esc(st.addr)}<br>📞 ${esc(st.phone)} · ${esc(st.web)}</div>
+      <div class="pr-line"></div>
+      <div class="pr-c"><b>HÓA ĐƠN BÁN HÀNG</b><br>${HD(v)} · ${fmtd(v.date)}</div>
+      <div style="font-size:11px">Khách: ${esc(v.cname||'Khách lẻ')}${c&&c.phone?' · '+esc(c.phone):''}</div>
+      ${v.deliver?`<div style="font-size:11px">📦 Giao hàng: ${fmtd(v.deliver)}</div>`:''}
+      <div class="pr-line"></div>
+      <table class="pr-t">${v.items.map(i=>{const p=prod(i.pid);
+        return `<tr><td>${p?esc(p.name)+' '+esc(p.size):'SP'}<br><span style="color:#444">${i.qty} × ${fmt(i.price)}</span></td><td class="r">${fmt(i.qty*i.price)}</td></tr>`;}).join('')}</table>
+      <div class="pr-line"></div>
+      ${v.discount?`<div class="pr-r"><span>Giảm giá</span><span>−${fmt(v.discount)}</span></div>`:''}
+      <div class="pr-r" style="font-size:13px"><b>TỔNG</b><b>${fmt(invTotal(v))} đ</b></div>
+      ${(v.pays||[]).map(p=>`<div class="pr-r"><span>Đã trả ${fmtd(p.date)} (${p.method==='ck'?'CK':'TM'})</span><span>${fmt(p.amt)}</span></div>`).join('')}
+      ${debt>0?`<div class="pr-r" style="font-size:13px"><b>CÒN NỢ</b><b>${fmt(debt)} đ</b></div>`:'<div class="pr-c">✅ Đã thanh toán đủ</div>'}
+      ${qr?`<div class="pr-c" style="margin-top:6px"><img src="${qr}" style="width:150px"><br>Quét QR chuyển ${fmt(debt)} đ<br>${esc(st.bank)} ${esc(st.acc)}${st.accName?' · '+esc(st.accName):''}</div>`:''}
+      <div class="pr-c" style="margin-top:8px">Cảm ơn quý khách! 🧸</div>`;
+    document.body.classList.add('printing');
+    const done=()=>{document.body.classList.remove('printing');window.removeEventListener('afterprint',done);};
+    window.addEventListener('afterprint',done);
+    setTimeout(()=>window.print(), qr?600:100); },
   payDebt(id){ const v=DB.invoices.find(v=>v.id===id); const debt=invDebt(v);
     openModal(`<h2>💵 Thu nợ ${HD(v)}</h2><div class="frm">
       <div class="muted">Khách <b>${esc(v.cname||'Khách lẻ')}</b> đang nợ <b class="num neg">${fmt(debt)} đ</b></div>
@@ -1127,7 +1192,8 @@ const App={
   exportGoods(){ let csv='Ma,Ten,Phan loai,Size,Mau,Can nang,Gia nhap,Gia si,Gia ban le,Ton kho,Mo ta\n';
     alive(DB.products).forEach(p=>{csv+=`${p.code},"${p.name}","${p.cat}",${p.size},"${p.color||''}","${p.weight||''}",${p.cost||0},${p.si},${p.le||0},${p.stock},"${(p.desc||'').replace(/"/g,"'")}"\n`;});
     saveFile('hang-hoa.csv',csv,'text/csv'); },
-  saveSettings(){ DB.settings=touch({name:$('#st_name').value,phone:$('#st_phone').value,web:$('#st_web').value,addr:$('#st_addr').value});
+  saveSettings(){ DB.settings=touch({name:$('#st_name').value,phone:$('#st_phone').value,web:$('#st_web').value,addr:$('#st_addr').value,
+      bank:$('#st_bank').value,acc:$('#st_acc').value.trim(),accName:$('#st_accName').value.trim().toUpperCase()});
     save();toast('Đã lưu'); },
   connSave(){ SYNC.api=$('#cn_api').value.trim(); toast(SYNC.api?'Đã lưu địa chỉ máy chủ':'Đã tắt đồng bộ');
     if(SYNC.api){ localStorage.removeItem('bb_local'); SYNC.showLogin(); } render(); },
