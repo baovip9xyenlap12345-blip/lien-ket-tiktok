@@ -118,3 +118,11 @@
 - Tạo admin đầu tiên production: scripts/create-admin.ts (từ chối khi DB đã có user; không seed demo).
 - Tài liệu: docs/DEPLOYMENT.md (cài máy chủ, tên miền/HTTPS Caddy, env, admin đầu tiên, backup, nâng cấp, ROLLBACK, giám sát) + docs/RISKS.md (rủi ro còn lại phân Critical/High/Medium/Low kèm kế hoạch — C1 seed demo trên prod, C2 backup cùng máy chủ, H1 uploads chưa S3, H2 webhook chưa có nghiệp vụ per-kênh, M1 giá vốn bình quân chờ xác nhận…).
 - Kiểm thử cuối: lint ✅ · typecheck ✅ · unit 81/81 ✅ · build ✅ · smoke health/ready ✅ · E2E TOÀN BỘ 10 BỘ: 231 kiểm tra PASS (GĐ9 27 + GĐ10 14 mới).
+
+## [KIỂM TOÁN] 23/07/2026 — Kiểm toán độc lập + sửa lỗi (báo cáo: docs/AUDIT_REPORT.md)
+- 3 kiểm toán viên song song soi mã + tấn công thật + đối chiếu SQL; 653 đơn test hiệu năng.
+- Phát hiện: 0 Critical, 4 High, 3 Medium, 6 Low. Đã sửa toàn bộ High+Medium + 3 Low đáng giá, mỗi lỗi có regression test (e2e/audit-fixes.e2e.mjs — 12 kiểm tra).
+- High đã sửa: (1) lost-update paidAmt khi thu tiền đồng thời → khóa dòng đơn FOR UPDATE + idempotency; (2) quỹ âm khi 2 chi đồng thời → khóa dòng quỹ FOR UPDATE; (3) COD đối soát rút sai số + đối soát trùng → lưu số thực thu + guard codStatus trong updateMany; (4) trả hàng COD không đảo tiền → tạo HT- liên kết + giảm paidAmt.
+- Medium đã sửa: hoàn tiền cần finance.approve; sales/approve áp data scope; rate-limit login khóa theo username (chống lách X-Forwarded-For).
+- Low đã sửa: convert trùng → 409; webhook so sánh timing-safe; files/[id] từ chối file không gắn đối tác.
+- Sau sửa: lint/typecheck/unit 81/81/build ✅ · E2E 11 bộ toàn PASS · 6 bất biến nhất quán = 0 (chạy lại sau test tương tranh).

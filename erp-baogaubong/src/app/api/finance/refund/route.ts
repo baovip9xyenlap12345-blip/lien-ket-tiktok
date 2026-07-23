@@ -12,9 +12,10 @@ const In = z.object({
   idempotencyKey: z.string().trim().min(8).optional(),
 });
 
-/** Hoan tien: chung tu HT- LIEN KET phieu thu goc — khong sua/xoa phieu cu. */
+/** Hoan tien: chung tu HT- LIEN KET phieu thu goc — khong sua/xoa phieu cu.
+ *  Tien RA khoi xuong cho khach → can quyen DUYET (finance.approve) nhu phieu chi. */
 export const POST = guarded(async (req) => {
-  const actor = await requirePerm('finance.manage');
+  const actor = await requirePerm('finance.approve');
   const b = In.safeParse(await req.json());
   if (!b.success) throw jsonError(400, b.error.errors[0]?.message ?? 'Dữ liệu không hợp lệ');
   const d = b.data;
@@ -35,6 +36,7 @@ export const POST = guarded(async (req) => {
       reason: d.reason, note: `Hoàn cho ${orig.code}`,
       refundOfId: orig.id, idempotencyKey: d.idempotencyKey ?? null, forceApproved: true });
     if (orig.orderId) {
+      await tx.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${orig.orderId} FOR UPDATE`;
       const order = await tx.salesOrder.findUnique({ where: { id: orig.orderId } });
       if (order) {
         // Ghi giao dich lien ket am vao lich su thu cua don — KHONG dung phieu cu

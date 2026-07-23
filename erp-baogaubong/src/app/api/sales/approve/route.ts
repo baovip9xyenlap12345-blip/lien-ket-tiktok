@@ -2,15 +2,17 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
+import { scopeWhere, inScope } from '@/lib/scope';
 import { logStatus } from '@/modules/sales/server';
 
-/** Danh sach cho duyet + duyet/tu choi. CHI nguoi co quyen sales.approve. */
+/** Danh sach cho duyet + duyet/tu choi. CHI nguoi co quyen sales.approve, TRONG pham vi du lieu. */
 export const GET = guarded(async () => {
-  await requirePerm('sales.approve');
+  const user = await requirePerm('sales.approve');
+  const scope = scopeWhere(user);
   const [quotes, orders] = await Promise.all([
-    prisma.quote.findMany({ where: { deletedAt: null, approvalStatus: 'PENDING' },
+    prisma.quote.findMany({ where: { deletedAt: null, approvalStatus: 'PENDING', ...scope },
       select: { id: true, code: true, partnerName: true, total: true, approvalReason: true, createdAt: true } }),
-    prisma.salesOrder.findMany({ where: { deletedAt: null, approvalStatus: 'PENDING' },
+    prisma.salesOrder.findMany({ where: { deletedAt: null, approvalStatus: 'PENDING', ...scope },
       select: { id: true, code: true, partnerName: true, total: true, approvalReason: true, createdAt: true } }),
   ]);
   return Response.json({ ok: true, quotes, orders });
@@ -28,7 +30,7 @@ export const POST = guarded(async (req) => {
   const code = await prisma.$transaction(async (tx) => {
     if (d.entity === 'quote') {
       const cur = await tx.quote.findFirst({ where: { id: d.id, deletedAt: null } });
-      if (!cur) throw jsonError(404, 'Không tìm thấy báo giá.');
+      if (!cur || !inScope(actor, cur)) throw jsonError(404, 'Không tìm thấy báo giá trong phạm vi của bạn.');
       if (cur.approvalStatus !== 'PENDING') throw jsonError(400, 'Báo giá này không ở trạng thái chờ duyệt.');
       await tx.quote.update({ where: { id: d.id },
         data: { approvalStatus: to, approvedById: actor.id, approvedAt: new Date() } });
@@ -36,7 +38,7 @@ export const POST = guarded(async (req) => {
       return cur.code;
     }
     const cur = await tx.salesOrder.findFirst({ where: { id: d.id, deletedAt: null } });
-    if (!cur) throw jsonError(404, 'Không tìm thấy đơn hàng.');
+    if (!cur || !inScope(actor, cur)) throw jsonError(404, 'Không tìm thấy đơn hàng trong phạm vi của bạn.');
     if (cur.approvalStatus !== 'PENDING') throw jsonError(400, 'Đơn này không ở trạng thái chờ duyệt.');
     await tx.salesOrder.update({ where: { id: d.id },
       data: { approvalStatus: to, approvedById: actor.id, approvedAt: new Date() } });

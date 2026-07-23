@@ -51,8 +51,11 @@ export async function createCashTx(tx: Tx, opts: {
   try { assertPeriodOpen(await lockedPeriods(tx), happenedAt); }
   catch (e) { throw jsonError(400, (e as Error).message); }
   const needApproval = opts.kind === 'PAYMENT' && !opts.forceApproved && !opts.actor.perms.includes('finance.approve');
-  // CAM AM QUY: moi dong tien RA da duyet phai con du so du (nhat quan voi chuyen quy)
+  // CAM AM QUY: moi dong tien RA da duyet phai con du so du.
+  // KHOA DONG quy (FOR UPDATE) truoc khi tinh so du → 2 lenh chi dong thoi bi tuan tu hoa,
+  // khong con race check-then-act (READ COMMITTED khong du an toan neu khong khoa).
   if (signOf(opts.kind) < 0 && !needApproval) {
+    await tx.$queryRaw`SELECT id FROM "CashAccount" WHERE id = ${acc.id} FOR UPDATE`;
     const bal = await accountBalance(tx, acc.id);
     if (bal < opts.amount) {
       throw jsonError(400, `Quỹ ${acc.name} chỉ còn ${bal.toLocaleString('vi-VN')}đ — không đủ để chi ${opts.amount.toLocaleString('vi-VN')}đ. Quỹ không được âm.`);

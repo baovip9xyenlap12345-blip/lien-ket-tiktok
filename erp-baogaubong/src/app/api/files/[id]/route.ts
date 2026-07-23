@@ -9,7 +9,9 @@ export const GET = guarded(async (req) => {
   const id = Number(new URL(req.url).pathname.split('/').pop());
   if (!id) throw jsonError(400, 'Thiếu id');
   const row = await prisma.attachment.findFirst({ where: { id, deletedAt: null }, include: { partner: true } });
-  if (!row || (row.partner && !inScope(user, row.partner))) {
+  // File PHAI gan doi tac va doi tac PHAI trong pham vi nguoi xem — file khong gan doi tac thi tu choi
+  // (chan IDOR ngu neu sau nay them attachment cho entity khac voi partnerId null).
+  if (!row || !row.partner || !inScope(user, row.partner)) {
     throw jsonError(404, 'Không tìm thấy file trong phạm vi của bạn.');
   }
   let buf: Buffer;

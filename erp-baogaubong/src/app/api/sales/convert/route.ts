@@ -35,7 +35,9 @@ export const POST = guarded(async (req) => {
       total: quote.total, creditLimit: p?.creditLimit ?? 0, currentDebt: debt, paidNow: 0 });
     if (chk.needed) { approvalStatus = 'PENDING'; approvalReason = chk.reasons.join('; '); }
   }
-  const order = await prisma.$transaction(async (tx) => {
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
     const code = await nextCode(tx, 'DH-');
     const o = await tx.salesOrder.create({ data: {
       code, quoteId: quote.id, partnerId: quote.partnerId, partnerName: quote.partnerName,
@@ -54,7 +56,16 @@ export const POST = guarded(async (req) => {
     }
     await logStatus(tx, 'order', o.id, 'order', '—', 'NEW', actor, `Từ báo giá ${quote.code}`);
     return o;
-  });
+    });
+  } catch (e) {
+    // Race double-submit: quoteId @unique bi dam → bao 409 than thien thay vi 500
+    if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002') {
+      const existing = await prisma.salesOrder.findUnique({ where: { quoteId: quote.id }, select: { id: true, code: true } });
+      return Response.json({ ok: false, error: `Báo giá đã được chuyển thành đơn ${existing?.code ?? ''} — không chuyển lại được.`,
+        orderId: existing?.id, orderCode: existing?.code }, { status: 409 });
+    }
+    throw e;
+  }
   const { ip, ua } = reqMeta();
   await audit({ actorId: actor.id, actorName: actor.name, action: 'quote_convert', entity: 'order',
     entityId: order.code, after: { from: quote.code, total: order.total, approvalStatus }, ip, ua });

@@ -56,6 +56,8 @@ export const POST = guarded(async (req) => {
     let amount = d.amount;
     let order = null;
     if (d.kind === 'RECEIPT' && d.orderId) {
+      // Khoa dong don → chong lost-update khi thu tien 2 lan dong thoi
+      await tx.$queryRaw`SELECT id FROM "SalesOrder" WHERE id = ${d.orderId} FOR UPDATE`;
       order = await tx.salesOrder.findFirst({ where: { id: d.orderId, deletedAt: null } });
       if (!order) throw jsonError(400, 'Đơn hàng gắn phiếu thu không tồn tại.');
       const remaining = order.total - order.paidAmt;

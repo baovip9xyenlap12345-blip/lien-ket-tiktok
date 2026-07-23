@@ -1,5 +1,13 @@
+import { timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/db';
 import { guarded } from '@/lib/auth';
+
+/** So sanh chuoi bi mat theo thoi gian hang so (chong timing attack). */
+function safeEq(a: string, b: string): boolean {
+  const ba = Buffer.from(a), bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 /** Nhan webhook tu kenh ngoai (van chuyen, thanh toan, chat...).
  *  - XAC MINH: header x-webhook-secret phai khop env WEBHOOK_SECRET (chua cau hinh → tu choi het).
@@ -9,7 +17,8 @@ export const POST = guarded(async (req: Request) => {
   const url = new URL(req.url);
   const channel = url.pathname.split('/').pop() ?? 'unknown';
   const secret = process.env.WEBHOOK_SECRET;
-  if (!secret || req.headers.get('x-webhook-secret') !== secret) {
+  const given = req.headers.get('x-webhook-secret');
+  if (!secret || !given || !safeEq(given, secret)) {
     return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
   let body: { eventId?: string } & Record<string, unknown> = {};

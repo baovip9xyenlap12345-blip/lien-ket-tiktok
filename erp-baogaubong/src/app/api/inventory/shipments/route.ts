@@ -153,6 +153,32 @@ export const PATCH = guarded(async (req) => {
       ...(d.to === 'RETURNED' || d.to === 'CANCELLED' ? { restock: d.restock, codStatus: 'NONE' } : {}) } });
     await logStatus(tx, 'order', order.id, 'shipping', sh.status, d.to, actor, sh.code);
 
+    // Tra/huy don DA THU tien COD → phai DAO tien: khong de quy COD va cong no lech
+    if ((d.to === 'RETURNED' || d.to === 'CANCELLED') && sh.codTxId) {
+      const codTx = await tx.cashTransaction.findUnique({ where: { id: sh.codTxId } });
+      if (codTx && codTx.status === 'APPROVED') {
+        const refunded = await tx.cashTransaction.findFirst({
+          where: { refundOfId: codTx.id, status: 'APPROVED' } });
+        if (!refunded) {
+          // Chi dao tien khi CHUA doi soat (tien con o quy COD). Da doi soat → ke toan hoan qua ngan hang.
+          if (sh.codStatus === 'PENDING') {
+            const code = await nextCode(tx, 'HT-');
+            const cash = await createCashTx(tx, { actor, kind: 'REFUND', code,
+              accountId: codTx.accountId, amount: codTx.amount,
+              partnerId: order.partnerId, partnerName: order.partnerName, orderId: order.id,
+              reason: `Hoàn COD do ${d.to === 'RETURNED' ? 'trả hàng' : 'hủy giao'} ${sh.code}`,
+              refundOfId: codTx.id, forceApproved: true });
+            await tx.payment.create({ data: { code, orderId: order.id, partnerId: order.partnerId,
+              amount: -codTx.amount, method: 'CASH', note: `Đảo COD ${sh.code}`,
+              cashTxId: cash.tx.id, createdById: actor.id } });
+          }
+          const paidAmt = order.paidAmt - codTx.amount;
+          await tx.salesOrder.update({ where: { id: order.id },
+            data: { paidAmt, paymentStatus: paidAmt <= 0 ? 'UNPAID' : 'PARTIAL' } });
+        }
+      }
+    }
+
     if (d.to === 'SHIPPING' && order.shippingStatus !== 'SHIPPING') {
       await tx.salesOrder.update({ where: { id: order.id }, data: { shippingStatus: 'SHIPPING' } });
     }
@@ -174,7 +200,11 @@ export const PATCH = guarded(async (req) => {
           const paidAmt = order.paidAmt + amount;
           await tx.salesOrder.update({ where: { id: order.id },
             data: { paidAmt, paymentStatus: paymentStatusOf(order.total, paidAmt) } });
-          await tx.shipment.update({ where: { id: sh.id }, data: { codTxId: cash.tx.id } });
+          // Luu SO TIEN THUC THU vao codAmount de doi soat rut dung so (khong dung codAmount khai bao)
+          await tx.shipment.update({ where: { id: sh.id }, data: { codTxId: cash.tx.id, codAmount: amount } });
+        } else {
+          // Don da tra du truoc do → shipper khong thu COD → khong co gi doi soat
+          await tx.shipment.update({ where: { id: sh.id }, data: { codStatus: 'NONE' } });
         }
       }
       // Neu tong da giao du so dat → don DELIVERED, nguoc lai giu SHIPPING (giao nhieu dot)

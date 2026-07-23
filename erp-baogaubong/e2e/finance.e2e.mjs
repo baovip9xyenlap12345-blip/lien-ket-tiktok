@@ -89,15 +89,17 @@ check('POS bán 198k', r.status === 200);
 r = await api(pgA, `/api/finance/tx?q=${pos.orderCode}&page=1`);
 const posTx = JSON.parse(r.body).rows.find((t) => t.kind === 'RECEIPT' && t.orderId === pos.orderId);
 check('Phiếu thu POS tự vào sổ quỹ (gắn đơn)', !!posTx && posTx.amount === 198000);
-// Hoan 1 phan
-r = await post(pgKT, '/api/finance/refund', { txId: posTx.id, amount: 50000,
+// Hoan tien = tien RA cho khach → CAN quyen duyet: ke toan (finance.manage) bi chan, admin duoc
+r = await post(pgKT, '/api/finance/refund', { txId: posTx.id, amount: 50000, reason: 'thử' });
+check('Kế toán (không có finance.approve) hoàn tiền bị chặn 403', r.status === 403);
+r = await post(pgA, '/api/finance/refund', { txId: posTx.id, amount: 50000,
   reason: 'Khách trả 1 gấu lỗi', idempotencyKey: `k4-${tag}` });
 const ht = JSON.parse(r.body);
-check('Hoàn 50k → chứng từ HT- liên kết phiếu gốc', r.status === 200 && /^HT-/.test(ht.code));
+check('Admin hoàn 50k → chứng từ HT- liên kết phiếu gốc', r.status === 200 && /^HT-/.test(ht.code));
 r = await api(pgA, `/api/sales/orders?id=${pos.orderId}`);
 const ordAfter = JSON.parse(r.body).order;
 check('Đơn sau hoàn: đã thu 148k, trạng thái PARTIAL', ordAfter.paidAmt === 148000 && ordAfter.paymentStatus === 'PARTIAL');
-r = await post(pgKT, '/api/finance/refund', { txId: posTx.id, amount: 999000, reason: 'x' });
+r = await post(pgA, '/api/finance/refund', { txId: posTx.id, amount: 999000, reason: 'x' });
 check('Hoàn vượt số thu gốc bị chặn', r.status === 400 && JSON.parse(r.body).error.includes('vượt'));
 
 // ===== 6. So quy: doi chieu dau ky + thu - chi = cuoi ky =====

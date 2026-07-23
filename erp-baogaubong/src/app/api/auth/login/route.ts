@@ -8,13 +8,15 @@ const attempts = new Map<string, { n: number; t: number }>();
 
 export const POST = guarded(async (req) => {
   const { ip, ua } = reqMeta();
-  const key = ip ?? 'local';
+  const body = Body.safeParse(await req.json());
+  if (!body.success) throw jsonError(400, 'Thiếu tài khoản hoặc mật khẩu.');
+  // Khoa rate-limit theo TEN DANG NHAP (client khong gia mao duoc), khong theo IP
+  // (IP lay tu header x-forwarded-for co the bi doi moi request de lach bo dem).
+  const key = body.data.username.trim().toLowerCase();
   const a = attempts.get(key);
   if (a && a.n >= 10 && Date.now() - a.t < 10 * 60_000) {
     throw jsonError(429, 'Sai quá nhiều lần. Vui lòng thử lại sau 10 phút.');
   }
-  const body = Body.safeParse(await req.json());
-  if (!body.success) throw jsonError(400, 'Thiếu tài khoản hoặc mật khẩu.');
   const u = await prisma.user.findUnique({ where: { username: body.data.username.trim() } });
   const ok = u && u.active && !u.deletedAt && (await verifyPassword(body.data.password, u.passwordHash));
   if (!ok) {
