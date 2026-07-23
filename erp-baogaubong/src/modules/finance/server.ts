@@ -7,9 +7,17 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { jsonError, type SessionUser } from '@/lib/auth';
 import { nextCode } from '@/lib/seq';
-import { periodOf, assertPeriodOpen } from './domain';
+import { periodOf, assertPeriodOpen, balanceOf, signOf } from './domain';
 
 type Tx = Prisma.TransactionClient;
+
+/** So du hien tai cua quy (dau ky + chung tu da duyet). */
+export async function accountBalance(tx: Tx, accountId: number): Promise<number> {
+  const acc = await tx.cashAccount.findUnique({ where: { id: accountId },
+    include: { txs: { select: { kind: true, status: true, amount: true } } } });
+  if (!acc) throw jsonError(400, 'Quỹ không tồn tại.');
+  return balanceOf(acc.openingBalance, acc.txs);
+}
 
 export const KIND_PREFIX: Record<string, string> = {
   RECEIPT: 'PT-', PAYMENT: 'PC-', TRANSFER_IN: 'CQ-', TRANSFER_OUT: 'CQ-', REFUND: 'HT-' };
@@ -43,6 +51,13 @@ export async function createCashTx(tx: Tx, opts: {
   try { assertPeriodOpen(await lockedPeriods(tx), happenedAt); }
   catch (e) { throw jsonError(400, (e as Error).message); }
   const needApproval = opts.kind === 'PAYMENT' && !opts.forceApproved && !opts.actor.perms.includes('finance.approve');
+  // CAM AM QUY: moi dong tien RA da duyet phai con du so du (nhat quan voi chuyen quy)
+  if (signOf(opts.kind) < 0 && !needApproval) {
+    const bal = await accountBalance(tx, acc.id);
+    if (bal < opts.amount) {
+      throw jsonError(400, `Quỹ ${acc.name} chỉ còn ${bal.toLocaleString('vi-VN')}đ — không đủ để chi ${opts.amount.toLocaleString('vi-VN')}đ. Quỹ không được âm.`);
+    }
+  }
   const code = opts.code ?? await nextCode(tx, KIND_PREFIX[opts.kind]);
   const row = await tx.cashTransaction.create({ data: {
     code, kind: opts.kind, status: needApproval ? 'PENDING' : 'APPROVED',

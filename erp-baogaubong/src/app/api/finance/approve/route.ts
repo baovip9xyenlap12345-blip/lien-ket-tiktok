@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { lockedPeriods } from '@/modules/finance/server';
-import { assertPeriodOpen } from '@/modules/finance/domain';
+import { lockedPeriods, accountBalance } from '@/modules/finance/server';
+import { assertPeriodOpen, signOf } from '@/modules/finance/domain';
 
 /** Danh sach phieu chi cho duyet + duyet/tu choi (CHI finance.approve). */
 export const GET = guarded(async () => {
@@ -27,6 +27,13 @@ export const POST = guarded(async (req) => {
       // Duyet la thoi diem chung tu bat dau tinh vao so du → ky phai con mo
       try { assertPeriodOpen(await lockedPeriods(tx), cur.happenedAt); }
       catch (e) { throw jsonError(400, (e as Error).message); }
+      // Cam am quy tai thoi diem duyet dong tien ra
+      if (signOf(cur.kind) < 0) {
+        const bal = await accountBalance(tx, cur.accountId);
+        if (bal < cur.amount) {
+          throw jsonError(400, `Quỹ chỉ còn ${bal.toLocaleString('vi-VN')}đ — không đủ để duyệt phiếu chi ${cur.amount.toLocaleString('vi-VN')}đ.`);
+        }
+      }
     }
     await tx.cashTransaction.update({ where: { id: cur.id },
       data: { status: b.data.approve ? 'APPROVED' : 'REJECTED',

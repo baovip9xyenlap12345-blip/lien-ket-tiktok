@@ -29,3 +29,6 @@
 | 26 | 23/07/2026 | Duyệt mẫu dùng quyền sales.approve (chủ xưởng) — không thêm quyền mới; nhân viên sản xuất tạo/sửa bản demo, không tự duyệt | ít quyền, đúng người quyết | sản xuất |
 | 27 | 23/07/2026 | Hủy lệnh SX: chưa chấm công đoạn nào → tự trả nguyên liệu; đã làm dở → không tự trả (tiêu hao thật), thủ kho kiểm kê phần thừa | tránh tồn kho ảo | sản xuất, kho |
 | 28 | 23/07/2026 | Tiến độ = sản lượng công đoạn SAU CÙNG có ghi nhận / kế hoạch (không cộng dồn các công đoạn) | phản ánh số ra thành phẩm thật | sản xuất |
+| 29 | 23/07/2026 | Quỹ CẤM ÂM với mọi dòng tiền ra (chi/hoàn/chuyển), kiểm tại lập + tại duyệt | quỹ âm là phi lý; lỗi thật phát hiện khi test lặp | tài chính |
+| 30 | 23/07/2026 | Hoa hồng 2 căn cứ (doanh thu/tiền đã thu); căn cứ lợi nhuận lùi GĐ9 khi giá vốn bình quân sẵn sàng | không bịa số lợi nhuận khi giá vốn chưa chuẩn | hr |
+| 31 | 23/07/2026 | Chấm công 0/½/1 mỗi ngày, không quản ca giờ; công chuẩn tháng = setting standard_work_days (26) | đủ cho xưởng nhỏ, tránh phức tạp | hr |

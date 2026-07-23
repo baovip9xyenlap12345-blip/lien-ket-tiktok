@@ -22,6 +22,7 @@ export const PERMISSIONS: { code: string; name: string }[] = [
   { code: 'cost.view', name: 'Xem giá vốn/lợi nhuận' },
   { code: 'production.view', name: 'Xem sản xuất' },
   { code: 'production.manage', name: 'Nghiệp vụ sản xuất' },
+  { code: 'hr.view', name: 'Xem bảng công/lương toàn xưởng' },
   { code: 'hr.manage', name: 'Quản lý nhân sự/lương' },
   { code: 'report.view', name: 'Xem báo cáo' },
 ];
@@ -35,7 +36,7 @@ export const ROLE_DEFAULTS: Record<string, { name: string; perms: string[] }> = 
   ketoan: {
     name: 'Kế toán',
     perms: ['dashboard.view','catalog.view','partner.view','sales.view','inventory.view',
-      'finance.view','finance.manage','cost.view','report.view','audit.view'],
+      'finance.view','finance.manage','cost.view','report.view','audit.view','hr.view'],
   },
   kho: {
     name: 'Kho',

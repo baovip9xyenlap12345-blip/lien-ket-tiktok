@@ -989,3 +989,142 @@ model QcChecklist {
   productType ProductType @unique
   items       String[]
 }
+
+// ===== GD8: NHAN VIEN, KPI, HOA HONG, LUONG =====
+// LUU Y: day la quan tri noi bo cua xuong — KHONG phai he thong ke khai luong/thue phap ly.
+
+model EmployeeProfile {
+  userId      Int      @id
+  position    String?
+  joinDate    DateTime?
+  baseSalary  Int      @default(0)
+  allowance   Int      @default(0)
+  bankAccount String?
+  note        String?
+  updatedAt   DateTime @updatedAt
+}
+
+model TimesheetEntry {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  date      DateTime @db.Date
+  day       Decimal  @db.Decimal(3, 2)
+  note      String?
+  byId      Int
+  byName    String
+  updatedAt DateTime @updatedAt
+  @@unique([userId, date])
+}
+
+enum HrTaskStatus {
+  OPEN
+  DOING
+  DONE
+  CANCELLED
+}
+
+enum HrTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model HrTask {
+  id         Int            @id @default(autoincrement())
+  title      String
+  desc       String?
+  assigneeId Int
+  dueAt      DateTime?
+  priority   HrTaskPriority @default(NORMAL)
+  status     HrTaskStatus   @default(OPEN)
+  createdById Int
+  createdByName String
+  doneAt     DateTime?
+  createdAt  DateTime       @default(now())
+  @@index([assigneeId, status])
+}
+
+model KpiTarget {
+  id            Int    @id @default(autoincrement())
+  userId        Int
+  period        String
+  targetRevenue Int    @default(0)
+  note          String?
+  @@unique([userId, period])
+}
+
+enum CommissionBasis {
+  REVENUE
+  COLLECTED
+}
+
+model CommissionRule {
+  id        Int             @id @default(autoincrement())
+  version   Int             @unique
+  basis     CommissionBasis @default(REVENUE)
+  pct       Decimal         @db.Decimal(5, 2)
+  note      String?
+  createdById Int
+  createdByName String
+  createdAt DateTime        @default(now())
+}
+
+enum CommissionPeriodStatus {
+  LOCKED
+}
+
+model CommissionPeriod {
+  id          Int    @id @default(autoincrement())
+  period      String @unique
+  ruleVersion Int
+  basis       CommissionBasis
+  pct         Decimal @db.Decimal(5, 2)
+  status      CommissionPeriodStatus @default(LOCKED)
+  lines       CommissionLine[]
+  lockedById  Int
+  lockedByName String
+  lockedAt    DateTime @default(now())
+}
+
+model CommissionLine {
+  id       Int              @id @default(autoincrement())
+  periodId Int
+  periodRef CommissionPeriod @relation(fields: [periodId], references: [id])
+  userId   Int
+  base     Int
+  amount   Int
+  @@unique([periodId, userId])
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  PAID
+}
+
+model PayrollSlip {
+  id           Int           @id @default(autoincrement())
+  code         String        @unique
+  userId       Int
+  period       String
+  baseSalary   Int           @default(0)
+  workDays     Decimal       @db.Decimal(5, 2) @default(0)
+  standardDays Int           @default(26)
+  salaryByDays Int           @default(0)
+  allowance    Int           @default(0)
+  commission   Int           @default(0)
+  bonus        Int           @default(0)
+  penalty      Int           @default(0)
+  advance      Int           @default(0)
+  total        Int           @default(0)
+  status       PayrollStatus @default(DRAFT)
+  cashTxId     Int?
+  approvedById Int?
+  approvedByName String?
+  approvedAt   DateTime?
+  paidAt       DateTime?
+  note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  @@unique([userId, period])
+}

@@ -75,6 +75,9 @@ check('QTM -100k, NH1 +100k (cặp chứng từ khớp nhau)',
   accs.find((a) => a.code === 'NH1').balance === nhBal0 + 100000);
 r = await post(pgKT, '/api/finance/transfer', { fromId: qtm.id, toId: nh1.id, amount: 999999999999 });
 check('Chuyển quá số dư bị chặn', r.status === 400 && JSON.parse(r.body).error.includes('không đủ'));
+r = await post(pgA, '/api/finance/tx', { kind: 'PAYMENT', accountId: qtm.id, amount: 999999999999,
+  reason: 'chi quá số dư', idempotencyKey: `kover-${tag}` });
+check('Phiếu chi vượt số dư bị chặn (quỹ không âm)', r.status === 400 && JSON.parse(r.body).error.includes('không đủ'));
 
 // ===== 5. Ban hang thu tien → tu dong vao so quy; hoan tien lien ket =====
 r = await api(pgA, '/api/catalog/products?q=SP001&page=1');

@@ -10,7 +10,7 @@ const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/production', label: '🏭 Sản xuất', perm: 'production.view' },
   { href: '/partners', label: '🤝 Đối tác', perm: 'partner.view' },
   { href: '/finance', label: '💰 Giao dịch & quỹ', perm: 'finance.view' },
-  { href: '/hr', label: '👷 Nhân viên', perm: 'hr.manage', wip: true },
+  { href: '/hr', label: '👷 Nhân viên & lương' },
   { href: '/reports', label: '📊 Báo cáo', perm: 'report.view', wip: true },
   { href: '/admin/users', label: '👥 Tài khoản', perm: 'user.manage' },
   { href: '/admin/roles', label: '🔑 Phân quyền', perm: 'role.manage' },

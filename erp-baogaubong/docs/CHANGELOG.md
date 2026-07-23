@@ -83,3 +83,17 @@
 - UI /production: bảng thẻ tiến độ (thanh %, cảnh báo chậm đỏ) bấm được trên điện thoại, chi tiết lệnh với nút to từng bước; tab Thiết kế: thêm bản demo, góp ý, duyệt/yêu cầu sửa ngay trên màn.
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 74/74 ✅ (6 test sản xuất mới) · build ✅ · E2E 159/159 ✅ (GĐ7 thêm 28: duyệt mẫu 2 vòng, chặn mẫu chưa duyệt + ngoại lệ thiếu lý do, nhu cầu 22 vải = 10 con × 2 + 10% hao hụt, thiếu NL báo tên, giữ chỗ → cấp phát khớp số, tiến độ 90%, QC lệch số bị chặn, nhập thành phẩm đúng 8 con đạt và đúng 1 lần, cảnh báo chậm, phân quyền).
 - Chưa làm (đúng kế hoạch): upload ảnh công đoạn trực tiếp (hiện dán link ảnh — upload file dùng chung hạ tầng GĐ10/MinIO); tự tạo lệnh SX từ dòng đơn hàng trên UI (API đã nhận orderId — nút bấm thêm ở GĐ9 khi có màn kế hoạch); chi phí nhân công vào giá thành (GĐ8 khi có lương).
+
+## [GĐ8] 23/07/2026 — Nhân viên, KPI, hoa hồng, lương HOÀN THÀNH
+- Schema + migration `gd8_hr`: EmployeeProfile (vị trí, lương cơ bản, phụ cấp, STK), TimesheetEntry (chấm công 0/0.5/1 theo ngày, unique người+ngày), HrTask (giao việc: hạn, ưu tiên, người phụ trách), KpiTarget, CommissionRule (PHIÊN BẢN — quy tắc mới không sửa bản cũ), CommissionPeriod + Line (chốt kỳ = SNAPSHOT bất biến), PayrollSlip (LP-, nháp → duyệt → đã chi, unique người+kỳ).
+- Chấm công dạng lưới tháng bấm xoay vòng 1 → ½ → nghỉ; MỌI lần sửa công ghi audit trước/sau. Xuất bảng công CSV.
+- Giao việc: hr.manage giao cho bất kỳ ai, nhân viên tự giao việc mình; việc quá hạn tô đỏ trên tab "Của tôi".
+- KPI sale theo kỳ: chỉ tiêu nhập tay, THỰC TẾ lấy từ đơn hàng thật (doanh thu đơn xác nhận + tiền đã thu) — không có ô nhập kết quả tay.
+- Hoa hồng: quy tắc theo % trên doanh thu HOẶC tiền đã thu (cấu hình); chốt kỳ tính từ số liệu thật và lưu snapshot (căn cứ, %, phiên bản) — đổi quy tắc mới KHÔNG làm đổi kỳ đã chốt; chốt lại bị chặn.
+- Lương: sinh phiếu cả xưởng theo kỳ = lương cơ bản × công/công chuẩn (26, cấu hình) + phụ cấp + hoa hồng đã chốt + thưởng − phạt − tạm ứng; nháp → duyệt → CHI TẠO PHIẾU CHI PC- LIÊN KẾT vào sổ quỹ (idempotency key chống chi 2 lần; cấu hình payroll_create_pc).
+- Quyền: nhân viên CHỈ xem phiếu lương/bảng công của mình (menu "Nhân viên & lương" mở cho mọi người, nội dung theo quyền); kế toán thêm hr.view xem toàn xưởng; sale sửa lương/xuất bảng lương/giao việc người khác đều 403.
+- SỬA LỖI NGHIỆP VỤ THẬT phát hiện nhờ chạy hồi quy lặp: quỹ tiền mặt bị ÂM 5,87tr do phiếu chi/chi lương không kiểm số dư (chuyển quỹ thì có) → mọi dòng tiền RA (chi/hoàn/chuyển) giờ đều CẤM ÂM QUỸ tại lúc lập và lúc duyệt; dữ liệu dev âm được bù bằng phiếu thu điều chỉnh có dấu vết (không sửa lịch sử).
+- E2E GĐ8 viết dạng idempotent (mỗi lần chạy tạo 1 nhân viên mới) — chạy lặp bao nhiêu lần cũng PASS; toàn bộ 8 bộ chạy 2 vòng ổn định.
+- Ghi rõ trên màn hình + tài liệu: quản trị nội bộ, KHÔNG phải hệ thống kê khai lương/thuế pháp lý.
+- Kiểm thử: lint ✅ · typecheck ✅ · unit 81/81 ✅ (7 test lương/hoa hồng mới) · build ✅ · E2E 190/190 ✅ (GĐ8 thêm 30 + GĐ5 thêm ca "chi vượt số dư bị chặn").
+- Chưa làm (đúng kế hoạch): ca làm việc nhiều khung giờ (hiện công ngày 0/½/1 — đủ cho xưởng); hoa hồng theo LỢI NHUẬN (chờ giá vốn bình quân gia quyền hoàn chỉnh GĐ9 — hiện có 2 căn cứ doanh thu/tiền thu); in phiếu lương PDF (CSV + màn hình; PDF GĐ9).
