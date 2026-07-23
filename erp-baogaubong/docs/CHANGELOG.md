@@ -97,3 +97,24 @@
 - Ghi rõ trên màn hình + tài liệu: quản trị nội bộ, KHÔNG phải hệ thống kê khai lương/thuế pháp lý.
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 81/81 ✅ (7 test lương/hoa hồng mới) · build ✅ · E2E 190/190 ✅ (GĐ8 thêm 30 + GĐ5 thêm ca "chi vượt số dư bị chặn").
 - Chưa làm (đúng kế hoạch): ca làm việc nhiều khung giờ (hiện công ngày 0/½/1 — đủ cho xưởng); hoa hồng theo LỢI NHUẬN (chờ giá vốn bình quân gia quyền hoàn chỉnh GĐ9 — hiện có 2 căn cứ doanh thu/tiền thu); in phiếu lương PDF (CSV + màn hình; PDF GĐ9).
+
+## [GĐ9] 23/07/2026 — Báo cáo & Cổng đại lý/khách hàng HOÀN THÀNH
+- Báo cáo bán hàng /reports: doanh thu theo ngày TÁCH CÓ VAT / KHÔNG VAT + thuế, TÁCH DOANH THU khỏi TIỀN ĐÃ THU (định nghĩa chỉ số in ngay trên màn), theo nhân viên, bán chạy, còn phải thu; bộ lọc thời gian + nhân viên (+ nhóm khách/kênh ở API); drill-down tới từng chứng từ (bấm mã đơn mở bản in).
+- ĐỐI CHIẾU TÍNH TAY bằng E2E: tạo 2 đơn kiểm soát (2×150k+VAT8%=324k thu 100k; 120k không VAT thu đủ) → báo cáo khớp TUYỆT ĐỐI từng chỉ số: 324.000/24.000/120.000/220.000/224.000.
+- Cổng đại lý/khách hàng /portal: ĐĂNG NHẬP RIÊNG (bảng PortalAccount + PortalSession, cookie riêng, rate-limit, phiên portal KHÔNG gọi được API nội bộ); giao diện mobile-first có bottom-nav.
+- Portal xem: danh mục với GIÁ ĐƯỢC CẤP theo bảng giá riêng của khách; đơn hàng kèm trạng thái giao (mã vận đơn) + tiến độ sản xuất; công nợ + hạn thanh toán + lịch sử thanh toán; báo giá của mình.
+- Portal làm: gửi yêu cầu báo giá (thành BG- nháp gắn sale phụ trách), ĐẶT LẠI đơn cũ, DUYỆT/YÊU CẦU SỬA bản demo thiết kế của chính mình (hệ ghi "Khách: <tên>" + thời gian), tải logo/thiết kế lên (đánh dấu [KH gửi]), gửi hỗ trợ (thành việc CSKH có hạn 24h trong CRM).
+- IDOR kiểm bằng E2E: đại lý B không thấy/không đặt lại/không duyệt được bất kỳ thứ gì của A (404), công nợ không lẫn; nhân viên cấp tài khoản cổng ngay trên trang chi tiết khách.
+- Hiệu năng đo thật: dashboard 53ms, báo cáo tháng 47ms (ngưỡng 3s).
+- E2E GĐ9: 27/27 PASS ngay lần chạy đầu.
+
+## [GĐ10] 23/07/2026 — Tích hợp, bảo mật, sao lưu, triển khai HOÀN THÀNH
+- Adapter 9 kênh (Messenger, Zalo OA, website, vận chuyển, hóa đơn điện tử, email, SMS, máy in, Google Sheets) qua 1 interface sendVia(); CHƯA có API key → chạy SANDBOX: chỉ ghi nhật ký IntegrationLog với chữ "[SANDBOX — CHƯA GỬI THẬT]" — không giả vờ đã gửi; điền key vào .env là kênh chuyển ready.
+- Webhook /api/webhooks/[kênh]: xác minh x-webhook-secret (thiếu/sai → 401), IDEMPOTENT theo (kênh, eventId) — gửi lặp trả duplicated, 2 request đồng thời chỉ 1 bản ghi (unique constraint); sự kiện lỗi lưu lại xử lý qua /api/integrations.
+- Health/readiness: /api/health + /api/ready (kiểm DB) công khai — gắn Docker HEALTHCHECK.
+- Thùng rác: /api/admin/trash liệt kê + khôi phục bản ghi xóa mềm (đối tác/sản phẩm/báo giá), có audit.
+- Docker production: Dockerfile 2 tầng (standalone), docker-entrypoint chạy `prisma migrate deploy` an toàn trước khi mở cổng, docker-compose.prod.yml (app + PostgreSQL + service BACKUP hằng ngày), .env.example đầy đủ.
+- Sao lưu: scripts/backup.sh (pg_dump -Fc + tar uploads + mã hóa gpg tùy chọn + retention 14 ngày) + scripts/restore.sh; ĐÃ THỬ KHÔI PHỤC THẬT sang DB staging: 5/5 chỉ số khớp tuyệt đối (47 đơn, 127 chứng từ tiền, 71 chứng từ kho, 53 đối tác, tổng tiền 13.155.840đ) — bằng chứng tại docs/DISASTER_RECOVERY_TEST.md.
+- Tạo admin đầu tiên production: scripts/create-admin.ts (từ chối khi DB đã có user; không seed demo).
+- Tài liệu: docs/DEPLOYMENT.md (cài máy chủ, tên miền/HTTPS Caddy, env, admin đầu tiên, backup, nâng cấp, ROLLBACK, giám sát) + docs/RISKS.md (rủi ro còn lại phân Critical/High/Medium/Low kèm kế hoạch — C1 seed demo trên prod, C2 backup cùng máy chủ, H1 uploads chưa S3, H2 webhook chưa có nghiệp vụ per-kênh, M1 giá vốn bình quân chờ xác nhận…).
+- Kiểm thử cuối: lint ✅ · typecheck ✅ · unit 81/81 ✅ · build ✅ · smoke health/ready ✅ · E2E TOÀN BỘ 10 BỘ: 231 kiểm tra PASS (GĐ9 27 + GĐ10 14 mới).

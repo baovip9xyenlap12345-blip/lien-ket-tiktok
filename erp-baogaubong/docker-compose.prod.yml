@@ -1,0 +1,54 @@
+# Trien khai production: docker compose -f docker-compose.prod.yml up -d
+# HTTPS: dat Caddy/Nginx phia truoc (xem docs/DEPLOYMENT.md).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Dat DB_PASSWORD trong .env}
+      POSTGRES_DB: erp
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://erp:${DB_PASSWORD}@db:5432/erp
+      NODE_ENV: production
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - backups:/backups
+      - uploads:/uploads:ro
+      - ./scripts/backup.sh:/backup.sh:ro
+    # chay backup hang ngay 2h sang (gio may chu)
+    entrypoint: ["/bin/sh", "-c", "while true; do sleep 86400 & wait; sh /backup.sh; done"]
+
+volumes:
+  db_data:
+  uploads:
+  backups:

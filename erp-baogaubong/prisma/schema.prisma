@@ -1128,3 +1128,60 @@ model PayrollSlip {
   updatedAt    DateTime      @updatedAt
   @@unique([userId, period])
 }
+
+// ===== GD9: PORTAL DAI LY / KHACH HANG =====
+
+model PortalAccount {
+  id           Int      @id @default(autoincrement())
+  partnerId    Int      @unique
+  username     String   @unique
+  passwordHash String
+  active       Boolean  @default(true)
+  sessions     PortalSession[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PortalSession {
+  token     String        @id
+  accountId Int
+  account   PortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  @@index([expiresAt])
+}
+
+// ===== GD10: TICH HOP & WEBHOOK =====
+
+enum IntegrationStatus {
+  SANDBOX
+  SENT
+  ERROR
+}
+
+// Nhat ky moi lan he thong GUI ra kenh ngoai (sandbox = CHUA gui that, chi ghi nhan)
+model IntegrationLog {
+  id        Int               @id @default(autoincrement())
+  channel   String
+  direction String            @default("OUT")
+  summary   String
+  payload   Json?
+  status    IntegrationStatus @default(SANDBOX)
+  error     String?
+  createdAt DateTime          @default(now())
+  @@index([channel, createdAt])
+}
+
+// Su kien webhook NHAN vao — idempotent theo eventId, co retry/error de xu ly lai
+model WebhookEvent {
+  id        Int      @id @default(autoincrement())
+  channel   String
+  eventId   String
+  payload   Json
+  status    String   @default("OK")
+  error     String?
+  retries   Int      @default(0)
+  createdAt DateTime @default(now())
+  @@unique([channel, eventId])
+  @@index([status])
+}

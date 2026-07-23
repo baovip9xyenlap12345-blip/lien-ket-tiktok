@@ -79,7 +79,21 @@ export default function PartnerDetailClient({ id, canManage }: { id: number; can
         <span className="text-xs text-slate-500">
           {[p.isCustomer && 'Khách hàng', p.isAgent && 'Đại lý', p.isSupplier && 'NCC'].filter(Boolean).join(' · ')}
         </span>
-        {canManage && <button className="btn-ghost ml-auto" onClick={() => setShowMerge(true)}>🔀 Gộp khách trùng</button>}
+        {canManage && (
+          <span className="ml-auto flex gap-1">
+            <button className="btn-ghost" onClick={async () => {
+              const username = prompt('Tài khoản cổng khách (≥4 ký tự):');
+              if (!username) return;
+              const password = prompt('Mật khẩu (≥6 ký tự):');
+              if (!password) return;
+              const res = await fetch('/api/partners/portal', { method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerId: id, username, password }) });
+              const j = await res.json();
+              alert(j.ok ? `✅ Đã cấp tài khoản cổng khách "${username}" — khách đăng nhập tại /portal` : (j.error || 'Lỗi'));
+            }}>🔑 Cấp tài khoản cổng</button>
+            <button className="btn-ghost" onClick={() => setShowMerge(true)}>🔀 Gộp khách trùng</button>
+          </span>)}
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
