@@ -57,3 +57,18 @@
 - UI /finance 5 tab: Tổng quan (số dư từng quỹ + dòng tiền tháng), Sổ quỹ, Thu/Chi (lập phiếu + duyệt + chuyển quỹ + hoàn tiền), Công nợ, Khóa sổ. In phiếu thu/chi A5 (/print/cash/[id]); xuất CSV sổ quỹ theo quyền.
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 60/60 ✅ (7 test tài chính mới) · build ✅ · E2E 104/104 ✅ (GĐ5 thêm 32: idempotency không ghi đôi, phiếu chi chờ duyệt chưa trừ quỹ, chuyển quỹ khớp 2 đầu + chặn quá số dư, hoàn tiền liên kết + chặn hoàn vượt, đối chiếu sổ quỹ, khóa/mở kỳ + audit, tuổi nợ, kho/sale 403, export, trang in).
 - Chưa làm (đúng kế hoạch): COD gắn vận đơn thực tế + đối soát tự động (GĐ6 — giao hàng chưa xây, quỹ COD đã sẵn); chi lương (GĐ8); xuất Excel .xlsx (dùng CSV theo quyết định #10).
+
+## [GĐ6] 23/07/2026 — Kho & Giao hàng HOÀN THÀNH
+- Schema + migration `gd6_inventory`: StockMovement BẤT BIẾN (8 loại: nhập/xuất/giao bán/chuyển đi-đến/điều chỉnh/nhập lại/hủy hàng; tham chiếu chứng từ nguồn; không có API sửa/xóa), InventoryBalance (projection cập nhật cùng transaction), StockReservation (giữ chỗ), Shipment + ShipmentLine (GH-, đơn vị vận chuyển, mã vận đơn, phí giao, COD), Stocktake (KK-), min/max tồn trên biến thể.
+- CẤM ÂM KHO an toàn đồng thời: điều kiện tồn đủ nằm ngay trong câu UPDATE (khóa dòng PostgreSQL) — E2E cho 2 người cùng xuất 5 con khi tồn 7: đúng 1 người thành công. Xuất thường trừ theo KHẢ DỤNG (tồn − giữ chỗ) để không ăn vào hàng đã giữ cho đơn.
+- Tồn thực tế / giữ chỗ / khả dụng tính đúng; giữ chỗ theo đơn Đã xác nhận (chỉ trong phạm vi khả dụng), giao từng phần tiêu thụ giữ chỗ đúng phần giao, phần chưa giao vẫn giữ.
+- Giao hàng nhiều đợt: xuất kho khi soạn hàng; số giao KHÔNG vượt số còn được giao (muốn vượt cần quyền duyệt sales.approve); trục giao hàng của đơn tự cập nhật (giao đủ mới thành Đã giao).
+- COD đúng nghiệp vụ: giao xong → phiếu thu vào quỹ "COD chờ đối soát" (tiền đang ở đơn vị vận chuyển, KHÔNG phải ngân hàng) + đơn ghi nhận đã thu; khi ngân hàng báo có → màn Đối soát chọn vận đơn khớp sao kê → cặp chứng từ chuyển quỹ COD→ngân hàng + đánh dấu đã đối soát.
+- Đổi trả/hoàn hàng: đợt giao Bị trả/Hủy hỏi "hàng còn bán được không" → nhập lại kho (RETURN) hoặc ghi nhận + hủy (RETURN+SCRAP có dấu vết); hoàn tiền dùng phân hệ GĐ5 (liên kết phiếu gốc).
+- Kiểm kho: nhập số đếm thực tế → tự sinh chứng từ ĐIỀU CHỈNH phần lệch (KK-), theo tồn vật lý.
+- Quét barcode/SKU ở nhập/xuất/kiểm kho; chống quét trùng ngoài ý muốn (cùng mã trong 2 giây → hỏi xác nhận).
+- Cảnh báo tồn: sắp hết (≤ min) đỏ, vượt max vàng; lọc "chỉ hiện cảnh báo"; thẻ kho từng SKU (drill-down chứng từ).
+- UI /inventory 5 tab: Tồn kho, Nhập/Xuất, Giao hàng, Kiểm kho, Đối soát COD (tab tài chính chỉ hiện với người có quyền).
+- Kiểm thử: lint ✅ · typecheck ✅ · unit 68/68 ✅ (8 test kho mới) · build ✅ · E2E 131/131 ✅ (GĐ6 thêm 27: cấm âm, CONCURRENCY 2 người cùng xuất, giữ chỗ chặn xuất thường, giao 2 đợt + chặn vượt, COD vào quỹ COD → đối soát sang NH khớp 2 đầu, hoàn hàng nhập lại, kiểm kho tự điều chỉnh, thẻ kho đủ dấu vết, phân quyền).
+- Lỗi thật bị test bắt & sửa: giao từng phần ban đầu xóa toàn bộ giữ chỗ của biến thể → sửa thành tiêu thụ đúng số giao, phần còn lại giữ nguyên.
+- Chưa làm (đúng kế hoạch): vị trí kệ trong kho (xưởng 1 kho — bổ sung khi cần), "đang chuyển" giữa 2 kho (chuyển kho tức thời vì cùng địa điểm — ghi DECISIONS #24), nhu cầu sản xuất trong cảnh báo tồn (GĐ7), tự trừ kho khi POS (quyết định #25 — POS xưởng chưa gắn kho, sẽ nối ở GĐ7 khi có luồng sản xuất-nhập kho đầy đủ).

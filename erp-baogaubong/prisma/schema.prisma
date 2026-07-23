@@ -230,6 +230,8 @@ model ProductVariant {
   material  String?
   costPrice Int      @default(0)
   weightGr  Int?
+  minStock  Int      @default(0)
+  maxStock  Int?
   imageUrls String[] @default([])
   status    ProductStatus @default(ACTIVE)
   priceRules PriceRule[]
@@ -724,4 +726,133 @@ model PeriodLock {
   lockedByName String
   lockedAt     DateTime  @default(now())
   note         String?
+}
+
+// ===== GD6: KHO & GIAO HANG =====
+
+enum MovementKind {
+  RECEIPT
+  ISSUE
+  SALE
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUST
+  RETURN
+  SCRAP
+}
+
+// Chung tu kho BAT BIEN — khong co API sua/xoa. qty: + nhap, - xuat.
+model StockMovement {
+  id          Int          @id @default(autoincrement())
+  warehouseId Int
+  variantId   Int
+  kind        MovementKind
+  qty         Int
+  refType     String?
+  refId       String?
+  note        String?
+  byId        Int
+  byName      String
+  createdAt   DateTime     @default(now())
+  @@index([warehouseId, variantId])
+  @@index([refType, refId])
+  @@index([createdAt])
+}
+
+// Projection tu StockMovement — cap nhat cung transaction, khoa dong chong am kho.
+model InventoryBalance {
+  id          Int @id @default(autoincrement())
+  warehouseId Int
+  variantId   Int
+  onHand      Int @default(0)
+  reserved    Int @default(0)
+  @@unique([warehouseId, variantId])
+}
+
+model StockReservation {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  warehouseId Int
+  variantId   Int
+  qty         Int
+  released    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  @@index([orderId])
+  @@index([warehouseId, variantId, released])
+}
+
+enum ShipmentStatus {
+  PREPARING
+  SHIPPING
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+enum CodStatus {
+  NONE
+  PENDING
+  RECONCILED
+}
+
+model Shipment {
+  id          Int            @id @default(autoincrement())
+  code        String         @unique
+  orderId     Int
+  warehouseId Int
+  status      ShipmentStatus @default(PREPARING)
+  carrier     String?
+  trackingNo  String?
+  shipFee     Int            @default(0)
+  codAmount   Int            @default(0)
+  codStatus   CodStatus      @default(NONE)
+  codTxId     Int?
+  restock     Boolean?
+  note        String?
+  lines       ShipmentLine[]
+  createdById Int
+  createdByName String
+  deliveredAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  @@index([orderId])
+  @@index([status, codStatus])
+}
+
+model ShipmentLine {
+  id         Int      @id @default(autoincrement())
+  shipmentId Int
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+  variantId  Int
+  sku        String
+  name       String
+  qty        Int
+}
+
+enum StocktakeStatus {
+  DRAFT
+  DONE
+}
+
+model Stocktake {
+  id          Int             @id @default(autoincrement())
+  code        String          @unique
+  warehouseId Int
+  status      StocktakeStatus @default(DRAFT)
+  note        String?
+  lines       StocktakeLine[]
+  createdById Int
+  createdByName String
+  doneAt      DateTime?
+  createdAt   DateTime        @default(now())
+}
+
+model StocktakeLine {
+  id          Int       @id @default(autoincrement())
+  stocktakeId Int
+  stocktake   Stocktake @relation(fields: [stocktakeId], references: [id])
+  variantId   Int
+  sku         String
+  systemQty   Int
+  countedQty  Int
 }

@@ -23,3 +23,6 @@
 | 20 | 23/07/2026 | Công nợ phải thu = tính trực tiếp từ chứng từ (đơn − phiếu thu/hoàn) thay vì bảng ledger riêng; không tồn tại chỗ nào nhập đè số dư | đơn giản, luôn khớp chứng từ, đúng yêu cầu "không nhập đè"; bảng ledger riêng cân nhắc lại khi có kế toán kép GĐ9 | tài chính |
 | 21 | 23/07/2026 | Chứng từ tiền bất biến: không có API sửa/xóa; sai thì lập chứng từ đối ứng (hoàn tiền/chi bù); duyệt là thời điểm tính vào số dư | audit sạch, khớp spec | tài chính |
 | 22 | 23/07/2026 | Phiếu thu gắn đơn dùng CHUNG mã với phiếu thu của đơn (PT-) — 1 sự kiện tiền 1 mã, hiện cả ở đơn lẫn sổ quỹ | tránh 2 mã cho 1 lần thu | tài chính, bán hàng |
+| 23 | 23/07/2026 | Xuất kho tại thời điểm SOẠN hàng (tạo đợt giao); hủy/trả đợt thì tự nhập lại | hàng rời kệ là phải trừ sổ, khớp thực tế xưởng | kho |
+| 24 | 23/07/2026 | Chuyển kho tức thời (cặp chứng từ OUT+IN cùng transaction) — không có trạng thái "đang chuyển" vì xưởng 1 địa điểm; sẽ thêm kho trung chuyển khi mở chi nhánh | tránh phức tạp không cần thiết | kho |
+| 25 | 23/07/2026 | POS/đơn bán chưa tự trừ kho ở GĐ6 — trừ kho qua luồng GIAO HÀNG (mọi đơn muốn trừ kho thì tạo đợt giao, kể cả khách mua tại xưởng: giao ngay tại quầy); cân nhắc POS trừ thẳng ở GĐ7 | 1 đường trừ kho duy nhất, không trừ đôi | kho, bán hàng |
