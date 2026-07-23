@@ -53,5 +53,10 @@ async function main() {
   }
   console.log('Seed xong: 5 tai khoan demo (mat khau Baobao@2026 — CHI DUNG LOCAL).');
   await seedCatalog(prisma);
+  // GD3: nhom khach mac dinh (khong seed khach gia — CRM bat dau rong)
+  for (const name of ['Khách lẻ', 'Khách sỉ', 'Đại lý']) {
+    await prisma.partnerGroup.upsert({ where: { name }, update: {}, create: { name } });
+  }
+  console.log('Seed GD3: 3 nhom khach mac dinh.');
 }
 main().finally(() => prisma.$disconnect());

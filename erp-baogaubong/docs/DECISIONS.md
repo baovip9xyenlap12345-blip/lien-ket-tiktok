@@ -13,3 +13,6 @@
 | 10 | 23/07/2026 | Nhập/xuất danh mục dùng CSV (UTF-8 BOM) thay vì xlsx | không thêm thư viện nặng, Excel/Sheets mở tốt | catalog |
 | 11 | 23/07/2026 | Giá vốn seed = 0 cho 63 SP thật (chưa có số thật); nguyên liệu/BOM/combo/gấu AI seed là bản demo ghi rõ "demo" | SPEC cấm bịa số liệu; chủ DN sẽ nhập giá vốn thật | catalog, giá vốn |
 | 12 | 23/07/2026 | resolvePrice: ưu tiên bảng giá được chỉ định → bảng khác priority cao (sỉ 10 > lẻ 0) → lẻ; không tìm được giá trả null buộc nơi gọi xử lý | tránh bán giá 0 do lỗi cấu hình | bán hàng GĐ5 |
+| 13 | 23/07/2026 | Lưu file: adapter local (./uploads) cho dev; mọi luợt tải qua API kiểm quyền + phạm vi, không có URL công khai; driver MinIO/S3 cắm vào GĐ10 | môi trường dev không có MinIO; bảo mật file là bắt buộc ngay | CRM, GĐ7 thiết kế |
+| 14 | 23/07/2026 | Scope TEAM tạm xử lý như OWN đến khi có mô hình tổ/nhóm (GĐ8) | chưa có bảng team | phân quyền |
+| 15 | 23/07/2026 | Chống trùng: chuẩn hóa SĐT (+84→0), email thường hóa, MST bỏ ký tự — cảnh báo 409 + xác nhận "vẫn lưu", không tự chặn cứng | tránh chặn nhầm 2 khách dùng chung số công ty | CRM |

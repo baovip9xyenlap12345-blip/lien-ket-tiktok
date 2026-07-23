@@ -91,6 +91,11 @@ model User {
   active       Boolean   @default(true)
   deletedAt    DateTime?
   sessions     Session[]
+  partnersSale    Partner[]      @relation("PartnerSale")
+  partnersCreated Partner[]      @relation("PartnerCreator")
+  careAssigned    CareActivity[] @relation("CareAssignee")
+  careCreated     CareActivity[] @relation("CareCreator")
+  filesUploaded   Attachment[]   @relation("FileUploader")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   @@index([roleId])
@@ -326,4 +331,124 @@ model AiDevice {
   warrantyMonths Int            @default(12)
   note           String?
   createdAt      DateTime       @default(now())
+}
+
+// ===== GD3: DOI TAC & CRM =====
+
+enum PartnerType {
+  PERSON
+  COMPANY
+}
+
+model PartnerGroup {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  partners Partner[]
+}
+
+model Partner {
+  id           Int         @id @default(autoincrement())
+  code         String      @unique
+  name         String
+  type         PartnerType @default(PERSON)
+  isCustomer   Boolean     @default(true)
+  isSupplier   Boolean     @default(false)
+  isAgent      Boolean     @default(false)
+  phone        String?
+  normPhone    String?
+  email        String?
+  normEmail    String?
+  taxCode      String?
+  groupId      Int?
+  group        PartnerGroup? @relation(fields: [groupId], references: [id])
+  source       String?
+  channel      String?
+  priceListId  Int?
+  assignedToId Int?
+  assignedTo   User?       @relation("PartnerSale", fields: [assignedToId], references: [id])
+  createdById  Int?
+  createdBy    User?       @relation("PartnerCreator", fields: [createdById], references: [id])
+  branchId     Int?
+  creditLimit  Int         @default(0)
+  creditDays   Int         @default(0)
+  note         String?
+  mergedIntoId Int?
+  contacts     PartnerContact[]
+  addresses    PartnerAddress[]
+  activities   CareActivity[]
+  attachments  Attachment[]
+  deletedAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  @@index([normPhone])
+  @@index([normEmail])
+  @@index([taxCode])
+  @@index([assignedToId])
+  @@index([name])
+}
+
+model PartnerContact {
+  id        Int     @id @default(autoincrement())
+  partnerId Int
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  name      String
+  phone     String?
+  email     String?
+  position  String?
+  note      String?
+  deletedAt DateTime?
+}
+
+model PartnerAddress {
+  id         Int     @id @default(autoincrement())
+  partnerId  Int
+  partner    Partner @relation(fields: [partnerId], references: [id])
+  label      String?
+  address    String
+  isBilling  Boolean @default(false)
+  isShipping Boolean @default(false)
+  deletedAt  DateTime?
+}
+
+enum CareKind {
+  NOTE
+  CALL
+  TASK
+  MEETING
+}
+
+model CareActivity {
+  id          Int      @id @default(autoincrement())
+  partnerId   Int
+  partner     Partner  @relation(fields: [partnerId], references: [id])
+  kind        CareKind @default(NOTE)
+  content     String
+  dueAt       DateTime?
+  remindAt    DateTime?
+  doneAt      DateTime?
+  assigneeId  Int?
+  assignee    User?    @relation("CareAssignee", fields: [assigneeId], references: [id])
+  createdById Int
+  createdBy   User     @relation("CareCreator", fields: [createdById], references: [id])
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  @@index([partnerId])
+  @@index([assigneeId, doneAt])
+}
+
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  partnerId    Int?
+  partner      Partner? @relation(fields: [partnerId], references: [id])
+  entity       String
+  entityId     String
+  fileName     String
+  mime         String
+  size         Int
+  storageKey   String   @unique
+  uploadedById Int
+  uploadedBy   User     @relation("FileUploader", fields: [uploadedById], references: [id])
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  @@index([entity, entityId])
 }

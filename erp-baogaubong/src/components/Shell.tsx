@@ -5,10 +5,10 @@ import { usePathname, useRouter } from 'next/navigation';
 const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/', label: '🏠 Tổng quan', perm: 'dashboard.view' },
   { href: '/sales', label: '🧾 Bán hàng', perm: 'sales.view', wip: true },
-  { href: '/catalog', label: '🧸 Sản phẩm', perm: 'catalog.view', wip: true },
+  { href: '/catalog', label: '🧸 Sản phẩm', perm: 'catalog.view' },
   { href: '/inventory', label: '📦 Kho', perm: 'inventory.view', wip: true },
   { href: '/production', label: '🏭 Sản xuất', perm: 'production.view', wip: true },
-  { href: '/partners', label: '🤝 Đối tác', perm: 'partner.view', wip: true },
+  { href: '/partners', label: '🤝 Đối tác', perm: 'partner.view' },
   { href: '/finance', label: '💰 Giao dịch & quỹ', perm: 'finance.view', wip: true },
   { href: '/hr', label: '👷 Nhân viên', perm: 'hr.manage', wip: true },
   { href: '/reports', label: '📊 Báo cáo', perm: 'report.view', wip: true },

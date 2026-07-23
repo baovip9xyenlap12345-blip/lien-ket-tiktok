@@ -20,3 +20,14 @@
 - Seed dữ liệu THẬT: 63 dòng bảng giá sỉ baogaubong.vn → 33 sản phẩm + biến thể theo size, giá lẻ + giá sỉ; 4 nhóm hàng; ĐVT con/cái/m/kg; kèm demo (ghi rõ "demo"): 3 nguyên liệu, 1 BOM, 1 combo, 1 gấu AI + thiết bị.
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 20/20 ✅ · build ✅ (29 routes) · E2E GĐ1 6/6 ✅ + GĐ2 14/14 ✅ (dữ liệu thật hiển thị, SKU trùng bị chặn, giá bậc thang sỉ/lẻ đúng, kho bị ẩn giá vốn + 403 khi tạo).
 - Chưa làm (đúng kế hoạch): in tem mã vạch (GĐ6), upload ảnh MinIO (GĐ3 — tạm lưu URL), màn quản lý thiết bị gấu AI (schema đã sẵn).
+
+## [GĐ3] 23/07/2026 — Đối tác & CRM HOÀN THÀNH
+- Schema + migration `gd3_partners_crm`: Partner (cá nhân/doanh nghiệp; cờ khách hàng/đại lý/NCC; nhóm, nguồn, kênh, bảng giá riêng, sale phụ trách, hạn mức nợ + số ngày nợ; normPhone/normEmail để bắt trùng), PartnerContact, PartnerAddress (mặc định hóa đơn/giao hàng), PartnerGroup, CareActivity (ghi chú/cuộc gọi/nhiệm vụ/gặp mặt + hạn + nhắc + người phụ trách), Attachment (file đính kèm theo đối tác).
+- Mã tự sinh KH0001/NCC0001 qua DocumentSequence (src/lib/seq.ts, cấp trong transaction).
+- Phạm vi dữ liệu dùng chung src/lib/scope.ts: OWN/TEAM → của mình; BRANCH → chi nhánh; ALL. Áp cho danh sách, tìm kiếm, chi tiết, sửa/xóa, chăm sóc, file, export — sale KHÔNG thể thấy/đọc/sửa khách người khác kể cả gọi thẳng API.
+- Phát hiện trùng SĐT/email/MST khi lưu (chuẩn hóa +84→0, MST 13 số tự tách 10-3): trả 409 kèm danh sách nghi trùng, người dùng xác nhận "vẫn lưu" mới ghi. Gộp khách trùng: chuyển liên hệ/địa chỉ/chăm sóc/file sang bản giữ, điền bù thông tin trống, bản gộp đánh dấu mergedInto + xóa mềm, audit trước/sau.
+- File đính kèm (logo, thiết kế, hợp đồng): upload ≤10MB, chỉ ảnh/PDF/Word/Excel/CSV; KHÔNG có link công khai — tải về duy nhất qua /api/files/[id] có kiểm quyền + phạm vi; driver lưu trữ tách riêng (local dev, MinIO/S3 ở GĐ10).
+- UI: /partners (tab Khách hàng/Đại lý/NCC/Tất cả, tìm kiếm, nhóm, phân trang, thẻ "Lịch nhắc chăm sóc của tôi" với việc quá hạn đỏ, form đầy đủ liên hệ + địa chỉ + hạn mức, cảnh báo trùng ngay trong form); /partners/[id] (timeline chăm sóc, thêm ghi chú/nhiệm vụ, đánh dấu xong, upload/tải/xóa file, gộp khách). Nhập/xuất CSV theo quyền + phạm vi.
+- Seed: chỉ 3 nhóm khách mặc định (Khách lẻ/Khách sỉ/Đại lý) — KHÔNG seed khách giả.
+- Kiểm thử: lint ✅ · typecheck ✅ · unit 32/32 ✅ (12 test mới: chuẩn hóa SĐT/MST, bắt trùng, scope) · build ✅ · E2E 41/41 ✅ (GĐ1 6 + GĐ2 14 + GĐ3 21: trùng 409→vẫn lưu, lịch nhắc, file .exe bị chặn, sale không thấy/không tìm/không export/không tải file khách người khác, kho 403, gộp khách + audit, trang chi tiết).
+- Chưa làm (đúng kế hoạch): timeline tự gom báo giá/đơn/thanh toán (chờ GĐ4-5, khung đã sẵn); nhắc qua thông báo đẩy/email (GĐ10); MinIO driver (GĐ10).

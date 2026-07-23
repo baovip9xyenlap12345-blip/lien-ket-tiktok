@@ -1,13 +1,23 @@
 import Forbidden from '@/components/Forbidden';
 import { getSessionUser } from '@/lib/auth';
-export default async function WIP() {
+import { prisma } from '@/lib/db';
+import PartnersClient from './ui';
+
+export default async function PartnersPage() {
   const user = await getSessionUser();
   if (!user?.perms.includes('partner.view')) return <Forbidden />;
+  const [groups, sales, priceLists] = await Promise.all([
+    prisma.partnerGroup.findMany({ orderBy: { id: 'asc' } }),
+    prisma.user.findMany({ where: { active: true, deletedAt: null },
+      select: { id: true, name: true }, orderBy: { id: 'asc' } }),
+    prisma.priceList.findMany({ where: { deletedAt: null },
+      select: { id: true, name: true, kind: true }, orderBy: { priority: 'desc' } }),
+  ]);
   return (
-    <div className="card mx-auto mt-10 max-w-md p-8 text-center">
-      <div className="text-4xl">🚧</div>
-      <h1 className="mt-2 text-lg font-extrabold">Đối tác/CRM</h1>
-      <p className="mt-1 text-sm text-slate-500">Phân hệ này thuộc giai đoạn GĐ3 của kế hoạch và chưa được triển khai. Hệ thống không hiển thị dữ liệu giả.</p>
-    </div>
+    <PartnersClient
+      meta={{ groups, sales, priceLists }}
+      canManage={user.perms.includes('partner.manage')}
+      myScope={user.scope}
+    />
   );
 }
