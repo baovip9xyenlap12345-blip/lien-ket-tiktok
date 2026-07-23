@@ -39,7 +39,8 @@ export const ROLE_DEFAULTS: Record<string, { name: string; perms: string[] }> = 
   },
   kho: {
     name: 'Kho',
-    perms: ['dashboard.view','catalog.view','inventory.view','inventory.manage'],
+    perms: ['dashboard.view','catalog.view','inventory.view','inventory.manage',
+      'production.view','production.manage'],
   },
   cskh: {
     name: 'CSKH',

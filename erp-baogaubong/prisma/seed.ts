@@ -65,5 +65,15 @@ async function main() {
     await prisma.cashAccount.upsert({ where: { code }, update: {}, create: { code, name, kind } });
   }
   console.log('Seed GD5: 3 quy mac dinh (QTM/NH1/COD).');
+  // GD7: QC checklist mac dinh theo loai hang (cau hinh duoc)
+  const qc: [('FINISHED'|'AI_BEAR'|'CUSTOM'), string[]][] = [
+    ['FINISHED', ['Đường may đều, không lộ chỉ', 'Mắt mũi chắc chắn, cân đối', 'Bông nhồi đủ, đàn hồi tốt', 'Vải sạch, không lỗi sợi/ố màu', 'Tem mác + khóa kéo (nếu có) đạt']],
+    ['CUSTOM', ['Đúng thiết kế đã duyệt (logo, màu)', 'Đường may đều, không lộ chỉ', 'Bông nhồi đủ, đàn hồi tốt', 'In/thêu sắc nét đúng vị trí']],
+    ['AI_BEAR', ['Loa và pin hoạt động, sạc được', 'Kết nối app/thẻ nhớ OK', 'Đường may đều, hộp máy cố định', 'Mắt mũi chắc chắn', 'Tem serial đúng']],
+  ];
+  for (const [productType, items] of qc) {
+    await prisma.qcChecklist.upsert({ where: { productType }, update: { items }, create: { productType, items } });
+  }
+  console.log('Seed GD7: QC checklist 3 loai hang.');
 }
 main().finally(() => prisma.$disconnect());

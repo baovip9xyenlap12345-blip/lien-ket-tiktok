@@ -771,7 +771,8 @@ model InventoryBalance {
 
 model StockReservation {
   id          Int      @id @default(autoincrement())
-  orderId     Int
+  orderId     Int?
+  prodId      Int?
   warehouseId Int
   variantId   Int
   qty         Int
@@ -855,4 +856,136 @@ model StocktakeLine {
   sku         String
   systemQty   Int
   countedQty  Int
+}
+
+// ===== GD7: THIET KE, DUYET MAU, SAN XUAT =====
+
+enum DesignStatus {
+  OPEN
+  APPROVED
+  CANCELLED
+}
+
+enum DesignVersionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DesignRequest {
+  id          Int             @id @default(autoincrement())
+  code        String          @unique
+  title       String
+  desc        String?
+  partnerId   Int?
+  partnerName String?
+  orderId     Int?
+  status      DesignStatus    @default(OPEN)
+  versions    DesignVersion[]
+  createdById Int
+  createdByName String
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model DesignVersion {
+  id             Int                 @id @default(autoincrement())
+  designId       Int
+  design         DesignRequest       @relation(fields: [designId], references: [id])
+  no             Int
+  imageUrl       String?
+  note           String?
+  status         DesignVersionStatus @default(PENDING)
+  decidedById    Int?
+  decidedByName  String?
+  decidedAt      DateTime?
+  decideNote     String?
+  comments       DesignComment[]
+  productionOrders ProductionOrder[]
+  createdById    Int
+  createdByName  String
+  createdAt      DateTime            @default(now())
+  @@unique([designId, no])
+}
+
+model DesignComment {
+  id        Int           @id @default(autoincrement())
+  versionId Int
+  version   DesignVersion @relation(fields: [versionId], references: [id])
+  content   String
+  byId      Int
+  byName    String
+  createdAt DateTime      @default(now())
+}
+
+enum ProductionStatus2 {
+  DRAFT
+  RELEASED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum ProductionStage {
+  PREP
+  CUT
+  SEW
+  STUFF
+  FINISH
+  QC
+  PACK
+}
+
+model ProductionOrder {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  orderId         Int?
+  variantId       Int
+  bomVersionId    Int?
+  designVersionId Int?
+  designVersion   DesignVersion?    @relation(fields: [designVersionId], references: [id])
+  overrideNote    String?
+  warehouseId     Int
+  qtyPlanned      Int
+  qtyGood         Int               @default(0)
+  qtyDefect       Int               @default(0)
+  qtyScrap        Int               @default(0)
+  status          ProductionStatus2 @default(DRAFT)
+  dueDate         DateTime?
+  materialsIssued Boolean           @default(false)
+  finishedReceipted Boolean         @default(false)
+  costEstimate    Int               @default(0)
+  costActual      Int               @default(0)
+  note            String?
+  steps           ProductionStep[]
+  createdById     Int
+  createdByName   String
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  @@index([status, dueDate])
+}
+
+model ProductionStep {
+  id        Int             @id @default(autoincrement())
+  prodId    Int
+  prod      ProductionOrder @relation(fields: [prodId], references: [id])
+  stage     ProductionStage
+  qtyGood   Int             @default(0)
+  qtyDefect Int             @default(0)
+  qtyRework Int             @default(0)
+  photoUrl  String?
+  note      String?
+  checklist Json?
+  byId      Int
+  byName    String
+  createdAt DateTime        @default(now())
+  @@index([prodId, stage])
+}
+
+model QcChecklist {
+  id          Int         @id @default(autoincrement())
+  productType ProductType @unique
+  items       String[]
 }

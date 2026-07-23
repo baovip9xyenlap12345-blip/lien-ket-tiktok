@@ -26,3 +26,6 @@
 | 23 | 23/07/2026 | Xuất kho tại thời điểm SOẠN hàng (tạo đợt giao); hủy/trả đợt thì tự nhập lại | hàng rời kệ là phải trừ sổ, khớp thực tế xưởng | kho |
 | 24 | 23/07/2026 | Chuyển kho tức thời (cặp chứng từ OUT+IN cùng transaction) — không có trạng thái "đang chuyển" vì xưởng 1 địa điểm; sẽ thêm kho trung chuyển khi mở chi nhánh | tránh phức tạp không cần thiết | kho |
 | 25 | 23/07/2026 | POS/đơn bán chưa tự trừ kho ở GĐ6 — trừ kho qua luồng GIAO HÀNG (mọi đơn muốn trừ kho thì tạo đợt giao, kể cả khách mua tại xưởng: giao ngay tại quầy); cân nhắc POS trừ thẳng ở GĐ7 | 1 đường trừ kho duy nhất, không trừ đôi | kho, bán hàng |
+| 26 | 23/07/2026 | Duyệt mẫu dùng quyền sales.approve (chủ xưởng) — không thêm quyền mới; nhân viên sản xuất tạo/sửa bản demo, không tự duyệt | ít quyền, đúng người quyết | sản xuất |
+| 27 | 23/07/2026 | Hủy lệnh SX: chưa chấm công đoạn nào → tự trả nguyên liệu; đã làm dở → không tự trả (tiêu hao thật), thủ kho kiểm kê phần thừa | tránh tồn kho ảo | sản xuất, kho |
+| 28 | 23/07/2026 | Tiến độ = sản lượng công đoạn SAU CÙNG có ghi nhận / kế hoạch (không cộng dồn các công đoạn) | phản ánh số ra thành phẩm thật | sản xuất |
