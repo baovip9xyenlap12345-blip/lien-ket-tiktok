@@ -1,13 +1,22 @@
 import Forbidden from '@/components/Forbidden';
 import { getSessionUser } from '@/lib/auth';
-export default async function WIP() {
+import { prisma } from '@/lib/db';
+import CatalogClient from './ui';
+
+export default async function CatalogPage() {
   const user = await getSessionUser();
   if (!user?.perms.includes('catalog.view')) return <Forbidden />;
+  const [units, categories, priceLists] = await Promise.all([
+    prisma.unit.findMany({ orderBy: { id: 'asc' } }),
+    prisma.category.findMany({ where: { deletedAt: null }, orderBy: { id: 'asc' } }),
+    prisma.priceList.findMany({ where: { deletedAt: null }, orderBy: { priority: 'desc' } }),
+  ]);
   return (
-    <div className="card mx-auto mt-10 max-w-md p-8 text-center">
-      <div className="text-4xl">🚧</div>
-      <h1 className="mt-2 text-lg font-extrabold">Sản phẩm & hàng hóa</h1>
-      <p className="mt-1 text-sm text-slate-500">Phân hệ này thuộc giai đoạn GĐ2 của kế hoạch và chưa được triển khai. Hệ thống không hiển thị dữ liệu giả.</p>
-    </div>
+    <CatalogClient
+      meta={{ units, categories, priceLists: priceLists.map((l) => ({
+        id: l.id, kind: l.kind, name: l.name, priority: l.priority, active: l.active })) }}
+      canManage={user.perms.includes('catalog.manage')}
+      showCost={user.perms.includes('cost.view')}
+    />
   );
 }

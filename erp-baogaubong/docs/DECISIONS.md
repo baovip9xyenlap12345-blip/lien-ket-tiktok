@@ -10,3 +10,6 @@
 | 7 | 22/07/2026 | "Quên mật khẩu" GĐ1 = Admin cấp lại trong màn Tài khoản; luồng email tự phục vụ làm ở GĐ10 (cần mail adapter) | chưa có hạ tầng email | auth |
 | 8 | 22/07/2026 | Build phải chạy NODE_ENV=production (script đã ép); môi trường dev đặt sẵn NODE_ENV=development gây trộn runtime | sự cố thực tế khi build | devops |
 | 9 | 22/07/2026 | Hồ sơ nhân sự chi tiết (employee) tách riêng ở GĐ8; GĐ1 gộp vào User | đủ cho phân quyền | hr |
+| 10 | 23/07/2026 | Nhập/xuất danh mục dùng CSV (UTF-8 BOM) thay vì xlsx | không thêm thư viện nặng, Excel/Sheets mở tốt | catalog |
+| 11 | 23/07/2026 | Giá vốn seed = 0 cho 63 SP thật (chưa có số thật); nguyên liệu/BOM/combo/gấu AI seed là bản demo ghi rõ "demo" | SPEC cấm bịa số liệu; chủ DN sẽ nhập giá vốn thật | catalog, giá vốn |
+| 12 | 23/07/2026 | resolvePrice: ưu tiên bảng giá được chỉ định → bảng khác priority cao (sỉ 10 > lẻ 0) → lẻ; không tìm được giá trả null buộc nơi gọi xử lý | tránh bán giá 0 do lỗi cấu hình | bán hàng GĐ5 |

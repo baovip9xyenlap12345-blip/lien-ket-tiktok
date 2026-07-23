@@ -137,3 +137,193 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([at])
 }
+
+// ===== GD2: SAN PHAM & HANG HOA =====
+
+enum ProductType {
+  FINISHED
+  MATERIAL
+  SEMI
+  SERVICE
+  COMBO
+  CUSTOM
+  AI_BEAR
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  parentId Int?
+  parent   Category?  @relation("CatTree", fields: [parentId], references: [id])
+  children Category[] @relation("CatTree")
+  products Product[]
+  deletedAt DateTime?
+}
+
+model Unit {
+  id       Int    @id @default(autoincrement())
+  code     String @unique
+  name     String
+  products Product[]
+  fromConv UnitConversion[] @relation("FromUnit")
+  toConv   UnitConversion[] @relation("ToUnit")
+}
+
+model UnitConversion {
+  id         Int   @id @default(autoincrement())
+  fromUnitId Int
+  toUnitId   Int
+  factor     Decimal @db.Decimal(18, 6)
+  fromUnit   Unit  @relation("FromUnit", fields: [fromUnitId], references: [id])
+  toUnit     Unit  @relation("ToUnit", fields: [toUnitId], references: [id])
+  locked     Boolean @default(false)
+  @@unique([fromUnitId, toUnitId])
+}
+
+model Product {
+  id         Int           @id @default(autoincrement())
+  code       String        @unique
+  name       String
+  type       ProductType
+  status     ProductStatus @default(ACTIVE)
+  categoryId Int?
+  category   Category?     @relation(fields: [categoryId], references: [id])
+  unitId     Int
+  unit       Unit          @relation(fields: [unitId], references: [id])
+  brand      String?
+  tags       String[]      @default([])
+  desc       String?
+  imageUrls  String[]      @default([])
+  taxPercent Int?
+  costRef    Int           @default(0)
+  deductMode String?
+  note       String?
+  variants   ProductVariant[]
+  bundleItems BundleItem[] @relation("ComboOwner")
+  boms       Bom[]
+  version    Int           @default(1)
+  deletedAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  @@index([type, status])
+  @@index([name])
+}
+
+model ProductVariant {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  sku       String   @unique
+  barcode   String?  @unique
+  size      String?
+  color     String?
+  material  String?
+  costPrice Int      @default(0)
+  weightGr  Int?
+  imageUrls String[] @default([])
+  status    ProductStatus @default(ACTIVE)
+  priceRules PriceRule[]
+  bundleComponents BundleItem[] @relation("ComponentVariant")
+  bomItems  BomItem[]
+  aiDevices AiDevice[]
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([productId])
+}
+
+enum PriceListKind {
+  RETAIL
+  WHOLESALE
+  AGENT
+  COMPANY
+  CUSTOM
+}
+
+model PriceList {
+  id        Int           @id @default(autoincrement())
+  kind      PriceListKind
+  name      String
+  priority  Int           @default(0)
+  validFrom DateTime?
+  validTo   DateTime?
+  active    Boolean       @default(true)
+  rules     PriceRule[]
+  deletedAt DateTime?
+}
+
+model PriceRule {
+  id          Int            @id @default(autoincrement())
+  priceListId Int
+  priceList   PriceList      @relation(fields: [priceListId], references: [id])
+  variantId   Int
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  minQty      Int            @default(1)
+  price       Int
+  @@unique([priceListId, variantId, minQty])
+  @@index([variantId])
+}
+
+model BundleItem {
+  id                 Int            @id @default(autoincrement())
+  comboProductId     Int
+  comboProduct       Product        @relation("ComboOwner", fields: [comboProductId], references: [id])
+  componentVariantId Int
+  componentVariant   ProductVariant @relation("ComponentVariant", fields: [componentVariantId], references: [id])
+  qty                Int
+  @@unique([comboProductId, componentVariantId])
+}
+
+model Bom {
+  id        Int          @id @default(autoincrement())
+  productId Int
+  product   Product      @relation(fields: [productId], references: [id])
+  name      String
+  versions  BomVersion[]
+  deletedAt DateTime?
+}
+
+enum BomStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+model BomVersion {
+  id        Int       @id @default(autoincrement())
+  bomId     Int
+  bom       Bom       @relation(fields: [bomId], references: [id])
+  no        Int
+  status    BomStatus @default(DRAFT)
+  validFrom DateTime?
+  wastePct  Decimal   @db.Decimal(5, 2) @default(0)
+  items     BomItem[]
+  createdAt DateTime  @default(now())
+  @@unique([bomId, no])
+}
+
+model BomItem {
+  id                Int            @id @default(autoincrement())
+  bomVersionId      Int
+  bomVersion        BomVersion     @relation(fields: [bomVersionId], references: [id])
+  materialVariantId Int
+  materialVariant   ProductVariant @relation(fields: [materialVariantId], references: [id])
+  qtyPerUnit        Decimal        @db.Decimal(18, 4)
+  note              String?
+}
+
+model AiDevice {
+  id             Int            @id @default(autoincrement())
+  variantId      Int
+  variant        ProductVariant @relation(fields: [variantId], references: [id])
+  serial         String         @unique
+  activatedAt    DateTime?
+  warrantyMonths Int            @default(12)
+  note           String?
+  createdAt      DateTime       @default(now())
+}

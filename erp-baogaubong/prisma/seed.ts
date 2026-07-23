@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { PERMISSIONS, ROLE_DEFAULTS } from '../src/lib/rbac';
+import { seedCatalog } from './seed-catalog';
 
 const prisma = new PrismaClient();
 
@@ -51,5 +52,6 @@ async function main() {
     await prisma.setting.upsert({ where: { key: k }, update: {}, create: { key: k, value: { v } } });
   }
   console.log('Seed xong: 5 tai khoan demo (mat khau Baobao@2026 — CHI DUNG LOCAL).');
+  await seedCatalog(prisma);
 }
 main().finally(() => prisma.$disconnect());
