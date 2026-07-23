@@ -44,3 +44,16 @@
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 53/53 ✅ (21 test tiền mới) · build ✅ · E2E 72/72 ✅ (31 test GĐ4: tiền đúng từng đồng, nháp không chuyển đơn, chống chuyển trùng 409, sale không tự duyệt 403, chờ duyệt chặn gửi/xác nhận, thu 2 lần PARTIAL→PAID, DONE không hủy được, lịch sử ≥5 bước, CK 25% + gõ giá thấp đều bị bắt, POS trả lại tiền thừa, kho 403, trang in đủ thông tin).
 - Sự cố thật đã sửa: (1) chiết khấu chỉ so giá tham chiếu sỉ nên CK 25% trên giá lẻ lọt lưới → đổi thành MAX(khai báo, tham chiếu); (2) server test cũ chiếm cổng làm E2E chạy trên build cũ → diệt đúng PID trước khi test.
 - Chưa làm (đúng kế hoạch): trừ tồn kho khi bán (GĐ6 — kho chưa xây); hợp đồng từ template (GĐ7 đi cùng thiết kế/duyệt mẫu); PDF server-side (hiện in/Lưu PDF qua trình duyệt).
+
+## [GĐ5] 23/07/2026 — Thu tiền, công nợ, sổ quỹ HOÀN THÀNH
+- Schema + migration `gd5_finance`: CashAccount (quỹ tiền mặt/ngân hàng/COD chờ đối soát), CashTransaction (PT- thu / PC- chi / CQ- chuyển quỹ / HT- hoàn tiền; BẤT BIẾN — không có API sửa/xóa; idempotencyKey unique; kỳ sổ; liên kết hoàn tiền refundOf; liên kết đơn hàng), PeriodLock (khóa sổ theo kỳ).
+- MỌI thao tác tiền qua 1 hàm createCashTx: chạy trong database transaction, request lặp (cùng idempotency key) trả về chứng từ cũ — không ghi đôi; chặn ghi vào kỳ đã khóa; phiếu chi của người không có quyền `finance.approve` (quyền mới, admin) → CHỜ DUYỆT, chưa tính vào số dư.
+- Số dư quỹ KHÔNG BAO GIỜ nhập tay: luôn = đầu kỳ + tổng chứng từ đã duyệt (balanceOf). Sổ quỹ theo tháng: đầu kỳ, tổng thu, tổng chi, cuối kỳ + drill-down từng chứng từ, đối chiếu cuối kỳ = đầu kỳ + thu − chi (E2E xác nhận).
+- Bán hàng GĐ4 nối vào sổ quỹ: thu tiền đơn/POS tự sinh chứng từ PT- cùng mã, vào đúng quỹ theo phương thức (tiền mặt→QTM, chuyển khoản→NH1).
+- Hoàn tiền = chứng từ HT- LIÊN KẾT phiếu thu gốc (không sửa/xóa phiếu cũ), không hoàn vượt số đã thu (kể cả cộng dồn nhiều lần hoàn); đơn hàng tự giảm số đã thu, chuyển PARTIAL/REFUNDED.
+- Chuyển quỹ = cặp chứng từ CQ- (đi + đến) cùng transferGroup trong 1 transaction; chặn chuyển quá số dư.
+- Khóa sổ theo kỳ: kỳ khóa chặn lập + duyệt chứng từ; mở khóa BẮT BUỘC lý do; cả 2 chiều ghi audit (E2E kiểm tra nhật ký).
+- Công nợ tính TỪ CHỨNG TỪ (đơn − phiếu thu): tuổi nợ 5 giỏ (chưa đến hạn/1-7/8-30/31-60/>60 ngày) theo hạn = ngày đơn + số ngày được nợ của khách; cảnh báo VƯỢT HẠN MỨC đỏ; nút thu nợ ngay tại chỗ.
+- UI /finance 5 tab: Tổng quan (số dư từng quỹ + dòng tiền tháng), Sổ quỹ, Thu/Chi (lập phiếu + duyệt + chuyển quỹ + hoàn tiền), Công nợ, Khóa sổ. In phiếu thu/chi A5 (/print/cash/[id]); xuất CSV sổ quỹ theo quyền.
+- Kiểm thử: lint ✅ · typecheck ✅ · unit 60/60 ✅ (7 test tài chính mới) · build ✅ · E2E 104/104 ✅ (GĐ5 thêm 32: idempotency không ghi đôi, phiếu chi chờ duyệt chưa trừ quỹ, chuyển quỹ khớp 2 đầu + chặn quá số dư, hoàn tiền liên kết + chặn hoàn vượt, đối chiếu sổ quỹ, khóa/mở kỳ + audit, tuổi nợ, kho/sale 403, export, trang in).
+- Chưa làm (đúng kế hoạch): COD gắn vận đơn thực tế + đối soát tự động (GĐ6 — giao hàng chưa xây, quỹ COD đã sẵn); chi lương (GĐ8); xuất Excel .xlsx (dùng CSV theo quyết định #10).

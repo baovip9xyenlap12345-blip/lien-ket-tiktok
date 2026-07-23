@@ -9,7 +9,7 @@ const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/inventory', label: '📦 Kho', perm: 'inventory.view', wip: true },
   { href: '/production', label: '🏭 Sản xuất', perm: 'production.view', wip: true },
   { href: '/partners', label: '🤝 Đối tác', perm: 'partner.view' },
-  { href: '/finance', label: '💰 Giao dịch & quỹ', perm: 'finance.view', wip: true },
+  { href: '/finance', label: '💰 Giao dịch & quỹ', perm: 'finance.view' },
   { href: '/hr', label: '👷 Nhân viên', perm: 'hr.manage', wip: true },
   { href: '/reports', label: '📊 Báo cáo', perm: 'report.view', wip: true },
   { href: '/admin/users', label: '👥 Tài khoản', perm: 'user.manage' },

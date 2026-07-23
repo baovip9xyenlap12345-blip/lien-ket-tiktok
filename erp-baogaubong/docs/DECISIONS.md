@@ -20,3 +20,6 @@
 | 17 | 23/07/2026 | POS không cho bán vượt quyền (báo lỗi hướng dẫn tạo báo giá xin duyệt); bán nợ tại POS bắt buộc chọn khách có hồ sơ | POS phải chốt ngay, không treo chờ duyệt | bán hàng |
 | 18 | 23/07/2026 | Doanh thu dashboard = đơn CONFIRMED + DONE (khớp quyết định #6: ghi nhận khi xác nhận) | thống nhất số liệu | báo cáo |
 | 19 | 23/07/2026 | In/PDF dùng print của trình duyệt (A4 + K80); PDF server-side + template hợp đồng để GĐ7/GĐ9 | không thêm thư viện nặng khi chưa cần | in ấn |
+| 20 | 23/07/2026 | Công nợ phải thu = tính trực tiếp từ chứng từ (đơn − phiếu thu/hoàn) thay vì bảng ledger riêng; không tồn tại chỗ nào nhập đè số dư | đơn giản, luôn khớp chứng từ, đúng yêu cầu "không nhập đè"; bảng ledger riêng cân nhắc lại khi có kế toán kép GĐ9 | tài chính |
+| 21 | 23/07/2026 | Chứng từ tiền bất biến: không có API sửa/xóa; sai thì lập chứng từ đối ứng (hoàn tiền/chi bù); duyệt là thời điểm tính vào số dư | audit sạch, khớp spec | tài chính |
+| 22 | 23/07/2026 | Phiếu thu gắn đơn dùng CHUNG mã với phiếu thu của đơn (PT-) — 1 sự kiện tiền 1 mã, hiện cả ở đơn lẫn sổ quỹ | tránh 2 mã cho 1 lần thu | tài chính, bán hàng |

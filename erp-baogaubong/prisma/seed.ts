@@ -58,5 +58,12 @@ async function main() {
     await prisma.partnerGroup.upsert({ where: { name }, update: {}, create: { name } });
   }
   console.log('Seed GD3: 3 nhom khach mac dinh.');
+  // GD5: 3 quy mac dinh (so du dau ky 0 — chu xuong tu dat khi len so thai)
+  const funds: [string, string, 'CASH'|'BANK'|'COD'][] = [
+    ['QTM', 'Quỹ tiền mặt', 'CASH'], ['NH1', 'Tài khoản ngân hàng', 'BANK'], ['COD', 'COD chờ đối soát', 'COD']];
+  for (const [code, name, kind] of funds) {
+    await prisma.cashAccount.upsert({ where: { code }, update: {}, create: { code, name, kind } });
+  }
+  console.log('Seed GD5: 3 quy mac dinh (QTM/NH1/COD).');
 }
 main().finally(() => prisma.$disconnect());

@@ -6,6 +6,7 @@ import { inScope } from '@/lib/scope';
 import { nextCode } from '@/lib/seq';
 import { paymentStatusOf } from '@/modules/sales/domain';
 import { logStatus } from '@/modules/sales/server';
+import { createCashTx, accountForMethod } from '@/modules/finance/server';
 
 /** Thu tien cho don hang (POS/ban hang). So cai cong no day du lam o GD5. */
 export const POST = guarded(async (req) => {
@@ -23,9 +24,14 @@ export const POST = guarded(async (req) => {
   const amount = Math.min(d.amount, remaining); // khach dua thua thi ghi nhan dung phan con no, tien thua tra lai
   const result = await prisma.$transaction(async (tx) => {
     const code = await nextCode(tx, 'PT-');
+    // Ghi vao so quy (GD5) — cung ma chung tu voi phieu thu cua don
+    const cash = await createCashTx(tx, { actor, kind: 'RECEIPT', code,
+      accountId: await accountForMethod(tx, d.method), amount,
+      partnerId: order.partnerId, partnerName: order.partnerName, orderId: order.id,
+      reason: `Thu tiền đơn ${order.code}`, note: d.note ?? null });
     const pay = await tx.payment.create({ data: {
       code, orderId: order.id, partnerId: order.partnerId, amount, method: d.method,
-      note: d.note ?? null, createdById: actor.id } });
+      note: d.note ?? null, cashTxId: cash.tx.id, createdById: actor.id } });
     const paidAmt = order.paidAmt + amount;
     const newStatus = paymentStatusOf(order.total, paidAmt);
     await tx.salesOrder.update({ where: { id: order.id }, data: { paidAmt, paymentStatus: newStatus } });

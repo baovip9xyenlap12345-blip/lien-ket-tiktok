@@ -632,6 +632,7 @@ model Payment {
   amount      Int
   method      PayMethod  @default(CASH)
   note        String?
+  cashTxId    Int?
   createdById Int
   createdAt   DateTime   @default(now())
   @@index([orderId])
@@ -650,4 +651,77 @@ model StatusHistory {
   byName    String
   createdAt DateTime @default(now())
   @@index([entity, entityId])
+}
+
+// ===== GD5: THU TIEN, CONG NO, SO QUY =====
+
+enum CashAccountKind {
+  CASH
+  BANK
+  COD
+}
+
+enum CashTxKind {
+  RECEIPT
+  PAYMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  REFUND
+}
+
+enum CashTxStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CashAccount {
+  id             Int             @id @default(autoincrement())
+  code           String          @unique
+  name           String
+  kind           CashAccountKind
+  openingBalance Int             @default(0)
+  active         Boolean         @default(true)
+  txs            CashTransaction[]
+  createdAt      DateTime        @default(now())
+}
+
+model CashTransaction {
+  id             Int          @id @default(autoincrement())
+  code           String       @unique
+  kind           CashTxKind
+  status         CashTxStatus @default(APPROVED)
+  accountId      Int
+  account        CashAccount  @relation(fields: [accountId], references: [id])
+  amount         Int
+  partnerId      Int?
+  partnerName    String?
+  orderId        Int?
+  reason         String?
+  note           String?
+  happenedAt     DateTime     @default(now())
+  period         String
+  transferGroup  String?
+  refundOfId     Int?
+  refundOf       CashTransaction?  @relation("RefundLink", fields: [refundOfId], references: [id])
+  refunds        CashTransaction[] @relation("RefundLink")
+  idempotencyKey String?      @unique
+  approvedById   Int?
+  approvedAt     DateTime?
+  createdById    Int
+  createdByName  String
+  createdAt      DateTime     @default(now())
+  @@index([accountId, period])
+  @@index([orderId])
+  @@index([partnerId])
+  @@index([happenedAt])
+}
+
+model PeriodLock {
+  period       String    @id
+  locked       Boolean   @default(true)
+  lockedById   Int
+  lockedByName String
+  lockedAt     DateTime  @default(now())
+  note         String?
 }

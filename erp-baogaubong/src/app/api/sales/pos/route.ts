@@ -5,6 +5,7 @@ import { audit } from '@/lib/audit';
 import { nextCode } from '@/lib/seq';
 import { paymentStatusOf } from '@/modules/sales/domain';
 import { priceAndApprove, logStatus } from '@/modules/sales/server';
+import { createCashTx, accountForMethod } from '@/modules/finance/server';
 
 /** Tra cuu nhanh theo barcode/SKU cho POS (quet ma vach). */
 export const GET = guarded(async (req) => {
@@ -67,8 +68,12 @@ export const POST = guarded(async (req) => {
     if (d.paidAmt > 0) {
       paid = Math.min(d.paidAmt, totals.total);
       payCode = await nextCode(tx, 'PT-');
+      const cash = await createCashTx(tx, { actor, kind: 'RECEIPT', code: payCode,
+        accountId: await accountForMethod(tx, d.method), amount: paid,
+        partnerId: d.partnerId ?? null, partnerName: d.partnerName || 'Khách lẻ', orderId: o.id,
+        reason: `Thu tiền POS ${o.code}`, note: 'POS' });
       await tx.payment.create({ data: { code: payCode, orderId: o.id, partnerId: d.partnerId ?? null,
-        amount: paid, method: d.method, note: 'POS', createdById: actor.id } });
+        amount: paid, method: d.method, note: 'POS', cashTxId: cash.tx.id, createdById: actor.id } });
       await tx.salesOrder.update({ where: { id: o.id },
         data: { paidAmt: paid, paymentStatus: paymentStatusOf(totals.total, paid) } });
       await logStatus(tx, 'order', o.id, 'payment', 'UNPAID', paymentStatusOf(totals.total, paid), actor, `${payCode} (POS)`);

@@ -17,6 +17,7 @@ export const PERMISSIONS: { code: string; name: string }[] = [
   { code: 'inventory.view', name: 'Xem kho' },
   { code: 'inventory.manage', name: 'Nghiệp vụ kho' },
   { code: 'finance.view', name: 'Xem thu chi/công nợ' },
+  { code: 'finance.approve', name: 'Duyệt phiếu chi/mở khóa sổ' },
   { code: 'finance.manage', name: 'Nghiệp vụ thu chi' },
   { code: 'cost.view', name: 'Xem giá vốn/lợi nhuận' },
   { code: 'production.view', name: 'Xem sản xuất' },
