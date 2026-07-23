@@ -32,7 +32,7 @@ an toàn, chỉ áp migration mới, không xóa dữ liệu).
 
 ```bash
 docker compose -f docker-compose.prod.yml exec app sh -c \
-  "ADMIN_USER=chuxuong ADMIN_PASS='MatKhauRatManh!' npx tsx scripts/create-admin.ts"
+  "ADMIN_USER=chuxuong ADMIN_PASS='MatKhauRatManh!' node create-admin.cjs"
 ```
 
 Script chỉ chạy khi database CHƯA có người dùng nào — không ghi đè được tài khoản thật.
