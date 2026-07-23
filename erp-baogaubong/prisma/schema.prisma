@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String
+  taxCode   String?
+  address   String?
+  phone     String?
+  web       String?
+  logoUrl   String?
+  branches  Branch[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Branch {
+  id         Int         @id @default(autoincrement())
+  companyId  Int
+  company    Company     @relation(fields: [companyId], references: [id])
+  code       String      @unique
+  name       String
+  address    String?
+  warehouses Warehouse[]
+  users      User[]
+  deletedAt  DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Warehouse {
+  id        Int       @id @default(autoincrement())
+  branchId  Int
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  code      String    @unique
+  name      String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Role {
+  id       Int              @id @default(autoincrement())
+  code     String           @unique
+  name     String
+  isSystem Boolean          @default(false)
+  perms    RolePermission[]
+  users    User[]
+}
+
+model Permission {
+  id    Int              @id @default(autoincrement())
+  code  String           @unique
+  name  String
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleId, permissionId])
+}
+
+enum DataScope {
+  OWN
+  TEAM
+  BRANCH
+  ALL
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  passwordHash String
+  name         String
+  email        String?
+  phone        String?
+  roleId       Int
+  role         Role      @relation(fields: [roleId], references: [id])
+  branchId     Int?
+  branch       Branch?   @relation(fields: [branchId], references: [id])
+  scope        DataScope @default(OWN)
+  active       Boolean   @default(true)
+  deletedAt    DateTime?
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  @@index([roleId])
+}
+
+model Session {
+  token     String   @id
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ip        String?
+  ua        String?
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}
+
+model DocumentSequence {
+  id         Int    @id @default(autoincrement())
+  prefix     String
+  branchCode String
+  period     String
+  nextNo     Int    @default(1)
+  @@unique([prefix, branchCode, period])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorId   Int?
+  actorName String
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  ua        String?
+  at        DateTime @default(now())
+  @@index([entity, entityId])
+  @@index([at])
+}

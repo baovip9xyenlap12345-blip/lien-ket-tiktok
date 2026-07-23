@@ -7,3 +7,6 @@
 | 4 | 22/07/2026 | Công nợ = ledger receivable_entry | SPEC cấm gõ đè số dư | tài chính |
 | 5 | 22/07/2026 | App 1 file hiện tại tiếp tục vận hành song song đến hết GĐ6, sau đó migrate | không gián đoạn kinh doanh | vận hành |
 | 6 | 22/07/2026 | GIẢ ĐỊNH tiền tố chứng từ mặc định "BG", giá vốn bình quân gia quyền, doanh thu ghi nhận khi đơn Đã xác nhận | chờ chủ DN xác nhận (câu hỏi GĐ0) | tài chính |
+| 7 | 22/07/2026 | "Quên mật khẩu" GĐ1 = Admin cấp lại trong màn Tài khoản; luồng email tự phục vụ làm ở GĐ10 (cần mail adapter) | chưa có hạ tầng email | auth |
+| 8 | 22/07/2026 | Build phải chạy NODE_ENV=production (script đã ép); môi trường dev đặt sẵn NODE_ENV=development gây trộn runtime | sự cố thực tế khi build | devops |
+| 9 | 22/07/2026 | Hồ sơ nhân sự chi tiết (employee) tách riêng ở GĐ8; GĐ1 gộp vào User | đủ cho phân quyền | hr |
