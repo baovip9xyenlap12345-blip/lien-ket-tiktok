@@ -8,6 +8,7 @@ const Body = z.object({
   settings: z.object({
     vat_percent: z.number().min(0).max(100), doc_prefix: z.string().min(1).max(8),
     session_idle_min: z.number().min(5).max(480),
+    max_discount_pct: z.number().min(0).max(100),
   }),
 });
 

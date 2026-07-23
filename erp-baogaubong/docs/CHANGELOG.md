@@ -31,3 +31,16 @@
 - Seed: chỉ 3 nhóm khách mặc định (Khách lẻ/Khách sỉ/Đại lý) — KHÔNG seed khách giả.
 - Kiểm thử: lint ✅ · typecheck ✅ · unit 32/32 ✅ (12 test mới: chuẩn hóa SĐT/MST, bắt trùng, scope) · build ✅ · E2E 41/41 ✅ (GĐ1 6 + GĐ2 14 + GĐ3 21: trùng 409→vẫn lưu, lịch nhắc, file .exe bị chặn, sale không thấy/không tìm/không export/không tải file khách người khác, kho 403, gộp khách + audit, trang chi tiết).
 - Chưa làm (đúng kế hoạch): timeline tự gom báo giá/đơn/thanh toán (chờ GĐ4-5, khung đã sẵn); nhắc qua thông báo đẩy/email (GĐ10); MinIO driver (GĐ10).
+
+## [GĐ4] 23/07/2026 — Báo giá, Đơn hàng, POS HOÀN THÀNH
+- Schema + migration `gd4_sales`: Quote (phiên bản + QuoteRevision snapshot JSON mỗi lần sửa), QuoteLine/OrderLine (snapshot sku/tên/ĐVT/giá tại thời điểm bán), SalesOrder với 4 TRỤC TRẠNG THÁI RIÊNG (đơn / thanh toán / sản xuất / giao hàng), Payment (PT-…), StatusHistory (lịch sử mọi bước chuyển, ai, lúc nào).
+- Công thức tiền trong domain thuần, 21 unit test: thành tiền dòng (CK dòng %, làm tròn VND), CK toàn đơn (% hoặc tiền — tiền ưu tiên, kẹp không âm), VAT bật/tắt + thuế suất cấu hình (mặc định 8 từ Cài đặt), phí khác + vận chuyển, đã thu/còn nợ, máy trạng thái 4 trục (DONE/CANCELLED là cuối).
+- Cơ chế XIN DUYỆT: chiết khấu hiệu dụng = MAX(CK khai báo, chênh so với giá tham chiếu bảng giá — bắt cả gõ giá tay thấp) > ngưỡng `max_discount_pct` (Cài đặt, mặc định 10%) HOẶC công nợ sau đơn vượt hạn mức khách → PENDING; quyền mới `sales.approve` (admin); chờ duyệt thì không gửi báo giá/không xác nhận đơn; khay "Chờ anh duyệt" ngay trên dashboard bán hàng.
+- Chuyển báo giá → đơn KHÔNG nhập lại; chống chuyển trùng bằng ràng buộc unique quoteId (lần 2 trả 409 kèm mã đơn cũ); đơn từ báo giá tự xét công nợ khách.
+- POS bán nhanh: tìm/quét barcode-SKU (Enter), giỏ hàng, khách lẻ hoặc chọn khách (nợ bắt buộc chọn khách), tiền mặt/chuyển khoản, khách đưa thừa tính tiền trả lại, tạo đơn CONFIRMED + phiếu thu trong 1 transaction, tự mở phiếu in K80.
+- Thu tiền nhiều lần / đơn: PT-… tự sinh, UNPAID→PARTIAL→PAID (thu thừa bị kẹp về đúng số còn nợ).
+- In ấn: /print/quote/[id] (báo giá A4 có chữ ký), /print/order/[id] (đơn A4) + ?k80=1 (phiếu POS 80mm) — in hoặc lưu PDF từ trình duyệt; kiểm quyền + phạm vi cả trang in.
+- Dashboard bán hàng SỐ LIỆU THẬT theo phạm vi người xem: doanh thu hôm nay/tháng, khách còn nợ, bán chạy tháng, đơn gần nhất.
+- Kiểm thử: lint ✅ · typecheck ✅ · unit 53/53 ✅ (21 test tiền mới) · build ✅ · E2E 72/72 ✅ (31 test GĐ4: tiền đúng từng đồng, nháp không chuyển đơn, chống chuyển trùng 409, sale không tự duyệt 403, chờ duyệt chặn gửi/xác nhận, thu 2 lần PARTIAL→PAID, DONE không hủy được, lịch sử ≥5 bước, CK 25% + gõ giá thấp đều bị bắt, POS trả lại tiền thừa, kho 403, trang in đủ thông tin).
+- Sự cố thật đã sửa: (1) chiết khấu chỉ so giá tham chiếu sỉ nên CK 25% trên giá lẻ lọt lưới → đổi thành MAX(khai báo, tham chiếu); (2) server test cũ chiếm cổng làm E2E chạy trên build cũ → diệt đúng PID trước khi test.
+- Chưa làm (đúng kế hoạch): trừ tồn kho khi bán (GĐ6 — kho chưa xây); hợp đồng từ template (GĐ7 đi cùng thiết kế/duyệt mẫu); PDF server-side (hiện in/Lưu PDF qua trình duyệt).

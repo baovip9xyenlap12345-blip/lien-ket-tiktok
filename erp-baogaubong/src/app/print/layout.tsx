@@ -1,0 +1,4 @@
+export const dynamic = 'force-dynamic';
+export default function PrintLayout({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto bg-white text-black">{children}</div>;
+}

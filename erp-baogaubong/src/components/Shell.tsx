@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/', label: '🏠 Tổng quan', perm: 'dashboard.view' },
-  { href: '/sales', label: '🧾 Bán hàng', perm: 'sales.view', wip: true },
+  { href: '/sales', label: '🧾 Bán hàng', perm: 'sales.view' },
   { href: '/catalog', label: '🧸 Sản phẩm', perm: 'catalog.view' },
   { href: '/inventory', label: '📦 Kho', perm: 'inventory.view', wip: true },
   { href: '/production', label: '🏭 Sản xuất', perm: 'production.view', wip: true },

@@ -452,3 +452,202 @@ model Attachment {
   createdAt    DateTime @default(now())
   @@index([entity, entityId])
 }
+
+// ===== GD4: BAO GIA, DON HANG, POS =====
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  DONE
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+enum ProductionStatus {
+  NONE
+  QUEUED
+  IN_PROGRESS
+  FINISHED
+}
+
+enum ShippingStatus {
+  NONE
+  PREPARING
+  SHIPPING
+  DELIVERED
+  RETURNED
+}
+
+enum PayMethod {
+  CASH
+  TRANSFER
+}
+
+model Quote {
+  id             Int            @id @default(autoincrement())
+  code           String         @unique
+  version        Int            @default(1)
+  partnerId      Int?
+  partnerName    String
+  priceListId    Int?
+  status         QuoteStatus    @default(DRAFT)
+  approvalStatus ApprovalStatus @default(NONE)
+  approvalReason String?
+  approvedById   Int?
+  approvedAt     DateTime?
+  vatEnabled     Boolean        @default(true)
+  vatPercent     Int            @default(8)
+  subtotal       Int            @default(0)
+  discountPct    Decimal        @db.Decimal(5, 2) @default(0)
+  discountAmt    Int            @default(0)
+  otherFee       Int            @default(0)
+  shippingFee    Int            @default(0)
+  taxAmt         Int            @default(0)
+  total          Int            @default(0)
+  validUntil     DateTime?
+  note           String?
+  lines          QuoteLine[]
+  revisions      QuoteRevision[]
+  order          SalesOrder?
+  assignedToId   Int?
+  createdById    Int
+  branchId       Int?
+  deletedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  @@index([partnerId])
+  @@index([status])
+}
+
+model QuoteLine {
+  id          Int     @id @default(autoincrement())
+  quoteId     Int
+  quote       Quote   @relation(fields: [quoteId], references: [id])
+  variantId   Int?
+  sku         String
+  name        String
+  unit        String
+  qty         Int
+  unitPrice   Int
+  discountPct Decimal @db.Decimal(5, 2) @default(0)
+  taxPercent  Int     @default(0)
+  lineTotal   Int
+  note        String?
+}
+
+model QuoteRevision {
+  id        Int      @id @default(autoincrement())
+  quoteId   Int
+  quote     Quote    @relation(fields: [quoteId], references: [id])
+  version   Int
+  data      Json
+  createdAt DateTime @default(now())
+  @@unique([quoteId, version])
+}
+
+model SalesOrder {
+  id               Int              @id @default(autoincrement())
+  code             String           @unique
+  quoteId          Int?             @unique
+  quote            Quote?           @relation(fields: [quoteId], references: [id])
+  partnerId        Int?
+  partnerName      String
+  orderStatus      OrderStatus      @default(NEW)
+  paymentStatus    PaymentStatus    @default(UNPAID)
+  productionStatus ProductionStatus @default(NONE)
+  shippingStatus   ShippingStatus   @default(NONE)
+  approvalStatus   ApprovalStatus   @default(NONE)
+  approvalReason   String?
+  approvedById     Int?
+  approvedAt       DateTime?
+  vatEnabled       Boolean          @default(true)
+  vatPercent       Int              @default(8)
+  subtotal         Int              @default(0)
+  discountPct      Decimal          @db.Decimal(5, 2) @default(0)
+  discountAmt      Int              @default(0)
+  otherFee         Int              @default(0)
+  shippingFee      Int              @default(0)
+  taxAmt           Int              @default(0)
+  total            Int              @default(0)
+  paidAmt          Int              @default(0)
+  isPos            Boolean          @default(false)
+  note             String?
+  lines            OrderLine[]
+  payments         Payment[]
+  assignedToId     Int?
+  createdById      Int
+  branchId         Int?
+  deletedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  @@index([partnerId])
+  @@index([orderStatus, paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderLine {
+  id          Int        @id @default(autoincrement())
+  orderId     Int
+  order       SalesOrder @relation(fields: [orderId], references: [id])
+  variantId   Int?
+  sku         String
+  name        String
+  unit        String
+  qty         Int
+  unitPrice   Int
+  discountPct Decimal    @db.Decimal(5, 2) @default(0)
+  taxPercent  Int        @default(0)
+  lineTotal   Int
+  note        String?
+}
+
+model Payment {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique
+  orderId     Int
+  order       SalesOrder @relation(fields: [orderId], references: [id])
+  partnerId   Int?
+  amount      Int
+  method      PayMethod  @default(CASH)
+  note        String?
+  createdById Int
+  createdAt   DateTime   @default(now())
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model StatusHistory {
+  id        Int      @id @default(autoincrement())
+  entity    String
+  entityId  Int
+  axis      String
+  fromVal   String
+  toVal     String
+  note      String?
+  byId      Int
+  byName    String
+  createdAt DateTime @default(now())
+  @@index([entity, entityId])
+}

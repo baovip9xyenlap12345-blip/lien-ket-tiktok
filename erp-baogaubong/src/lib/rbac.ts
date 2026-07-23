@@ -13,6 +13,7 @@ export const PERMISSIONS: { code: string; name: string }[] = [
   { code: 'partner.manage', name: 'Quản lý đối tác' },
   { code: 'sales.view', name: 'Xem bán hàng' },
   { code: 'sales.manage', name: 'Tạo/sửa báo giá, đơn' },
+  { code: 'sales.approve', name: 'Duyệt chiết khấu/công nợ vượt mức' },
   { code: 'inventory.view', name: 'Xem kho' },
   { code: 'inventory.manage', name: 'Nghiệp vụ kho' },
   { code: 'finance.view', name: 'Xem thu chi/công nợ' },

@@ -47,7 +47,7 @@ async function main() {
       create: { username, name, passwordHash: demoPass, roleId: roles[role], branchId: branch.id, scope },
     });
   }
-  const defaults: Record<string, string | number> = { vat_percent: 8, doc_prefix: 'BG', session_idle_min: 30 };
+  const defaults: Record<string, string | number> = { vat_percent: 8, doc_prefix: 'BG', session_idle_min: 30, max_discount_pct: 10 };
   for (const [k, v] of Object.entries(defaults)) {
     await prisma.setting.upsert({ where: { key: k }, update: {}, create: { key: k, value: { v } } });
   }

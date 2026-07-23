@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 type C = { name: string; taxCode: string; address: string; phone: string; web: string };
-type S = { vat_percent: number; doc_prefix: string; session_idle_min: number };
+type S = { vat_percent: number; doc_prefix: string; session_idle_min: number; max_discount_pct: number };
 
 export default function SettingsClient({ company, settings }: { company: C; settings: S }) {
   const [c, setC] = useState(company); const [s, setS] = useState(settings); const [msg, setMsg] = useState('');
@@ -35,6 +35,8 @@ export default function SettingsClient({ company, settings }: { company: C; sett
             <input className="inp" value={s.doc_prefix} onChange={(e) => setS({ ...s, doc_prefix: e.target.value.toUpperCase() })} /></div>
           <div><label className="lbl">Tự đăng xuất sau (phút)</label>
             <input className="inp" type="number" value={s.session_idle_min} onChange={(e) => setS({ ...s, session_idle_min: +e.target.value })} /></div>
+          <div><label className="lbl">Chiết khấu tối đa của NV (%)</label>
+            <input className="inp" type="number" value={s.max_discount_pct} onChange={(e) => setS({ ...s, max_discount_pct: +e.target.value })} /></div>
         </div>
         <p className="text-xs text-slate-400">Múi giờ nghiệp vụ: Asia/Ho_Chi_Minh · Tiền tệ: VND (số nguyên) · Ngày: dd/MM/yyyy</p>
       </div>

@@ -1,13 +1,17 @@
 import Forbidden from '@/components/Forbidden';
 import { getSessionUser } from '@/lib/auth';
-export default async function WIP() {
+import { prisma } from '@/lib/db';
+import SalesClient from './ui';
+
+export default async function SalesPage() {
   const user = await getSessionUser();
   if (!user?.perms.includes('sales.view')) return <Forbidden />;
+  const vat = await prisma.setting.findUnique({ where: { key: 'vat_percent' } });
   return (
-    <div className="card mx-auto mt-10 max-w-md p-8 text-center">
-      <div className="text-4xl">🚧</div>
-      <h1 className="mt-2 text-lg font-extrabold">Bán hàng</h1>
-      <p className="mt-1 text-sm text-slate-500">Phân hệ này thuộc giai đoạn GĐ4 của kế hoạch và chưa được triển khai. Hệ thống không hiển thị dữ liệu giả.</p>
-    </div>
+    <SalesClient
+      canManage={user.perms.includes('sales.manage')}
+      canApprove={user.perms.includes('sales.approve')}
+      vatDefault={Number((vat?.value as { v?: number } | null)?.v ?? 8)}
+    />
   );
 }

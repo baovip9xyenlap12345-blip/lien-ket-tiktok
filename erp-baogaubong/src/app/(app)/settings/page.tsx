@@ -16,5 +16,6 @@ export default async function SettingsPage() {
       vat_percent: Number((map['vat_percent'] as { v?: number } | undefined)?.v ?? 8),
       doc_prefix: String((map['doc_prefix'] as { v?: string } | undefined)?.v ?? 'BG'),
       session_idle_min: Number((map['session_idle_min'] as { v?: number } | undefined)?.v ?? 30),
+      max_discount_pct: Number((map['max_discount_pct'] as { v?: number } | undefined)?.v ?? 10),
     }} />;
 }
