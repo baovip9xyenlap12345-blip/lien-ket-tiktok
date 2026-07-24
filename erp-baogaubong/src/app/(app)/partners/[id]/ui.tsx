@@ -8,7 +8,7 @@ type P = {
   id: number; code: string; name: string; type: string;
   isCustomer: boolean; isSupplier: boolean; isAgent: boolean;
   phone: string | null; email: string | null; taxCode: string | null;
-  source: string | null; channel: string | null; creditLimit: number; creditDays: number;
+  source: string | null; channel: string | null; creditLimit: number; creditDays: number; isVip?: boolean;
   note: string | null; group: { name: string } | null; assignedTo: { id: number; name: string } | null;
   contacts: { id: number; name: string; phone: string | null; email: string | null; position: string | null }[];
   addresses: { id: number; label: string | null; address: string; isBilling: boolean; isShipping: boolean }[];
@@ -83,9 +83,17 @@ export default function PartnerDetailClient({ id, canManage }: { id: number; can
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link className="btn-ghost" href="/partners">←</Link>
         <h1 className="text-xl font-extrabold">{p.name} <span className="font-mono text-sm text-slate-400">{p.code}</span></h1>
+        {p.isVip && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700">⭐ VIP</span>}
+        {p.source === 'online' && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-bold text-blue-700">🌐 Khách online</span>}
         <span className="text-xs text-slate-500">
           {[p.isCustomer && 'Khách hàng', p.isAgent && 'Đại lý', p.isSupplier && 'NCC'].filter(Boolean).join(' · ')}
         </span>
+        {canManage && (
+          <button className="btn-ghost" onClick={async () => {
+            const res = await fetch('/api/partners/vip', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: p.id, vip: !p.isVip }) });
+            if ((await res.json()).ok) setP({ ...p, isVip: !p.isVip });
+          }}>{p.isVip ? '☆ Bỏ VIP' : '⭐ Đánh dấu VIP'}</button>)}
         {canManage && (
           <span className="ml-auto flex gap-1">
             <button className="btn-ghost" onClick={async () => {

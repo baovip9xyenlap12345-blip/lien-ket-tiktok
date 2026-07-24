@@ -13,6 +13,7 @@ export const GET = guarded(async (req) => {
   const q = url.searchParams.get('q')?.trim() ?? '';
   const role = url.searchParams.get('role') ?? '';           // customer | supplier | agent
   const groupId = Number(url.searchParams.get('groupId')) || 0;
+  const flag = url.searchParams.get('flag') ?? '';           // online | vip
   const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
   const take = 20;
   const where: Prisma.PartnerWhereInput = {
@@ -20,6 +21,7 @@ export const GET = guarded(async (req) => {
     ...scopeWhere(user),
     ...(role === 'customer' ? { isCustomer: true } : role === 'supplier' ? { isSupplier: true }
       : role === 'agent' ? { isAgent: true } : {}),
+    ...(flag === 'online' ? { source: 'online' } : flag === 'vip' ? { isVip: true } : {}),
     ...(groupId ? { groupId } : {}),
     ...(q ? { AND: [{ OR: [
       { name: { contains: q, mode: 'insensitive' } },

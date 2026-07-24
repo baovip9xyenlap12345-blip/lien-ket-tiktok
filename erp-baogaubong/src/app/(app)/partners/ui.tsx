@@ -13,7 +13,7 @@ type Partner = { id: number; code: string; name: string; type: string;
   phone: string | null; email: string | null; taxCode: string | null;
   groupId: number | null; source: string | null; channel: string | null;
   priceListId: number | null; assignedToId: number | null;
-  creditLimit: number; creditDays: number; note: string | null;
+  creditLimit: number; creditDays: number; isVip?: boolean; note: string | null;
   group: Opt | null; assignedTo: Opt | null;
   contacts?: Contact[]; addresses?: Addr[] };
 type Dupe = { id: number; code: string; name: string; reasons: string[] };
@@ -27,6 +27,7 @@ export default function PartnersClient({ meta, canManage, myScope }: {
   canManage: boolean; myScope: string;
 }) {
   const [role, setRole] = useState<'customer' | 'supplier' | 'agent' | ''>('customer');
+  const [flag, setFlag] = useState<'' | 'online' | 'vip'>('');
   const [q, setQ] = useState(''); const [groupId, setGroupId] = useState(0);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ rows: Partner[]; total: number; take: number } | null>(null);
@@ -37,10 +38,10 @@ export default function PartnersClient({ meta, canManage, myScope }: {
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/partners?q=${encodeURIComponent(q)}&role=${role}&groupId=${groupId || ''}&page=${page}`);
+    const res = await fetch(`/api/partners?q=${encodeURIComponent(q)}&role=${role}&flag=${flag}&groupId=${groupId || ''}&page=${page}`);
     const j = await res.json();
     if (j.ok) setData(j);
-  }, [q, role, groupId, page]);
+  }, [q, role, flag, groupId, page]);
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
   useEffect(() => {
     fetch('/api/partners/care?due=1').then((r) => r.json()).then((j) => { if (j.ok) setDue(j.rows); }).catch(() => {});
@@ -67,11 +68,18 @@ export default function PartnersClient({ meta, canManage, myScope }: {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-extrabold">Đối tác & CRM</h1>
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {([['customer', 'Khách hàng'], ['agent', 'Đại lý'], ['supplier', 'Nhà cung cấp'], ['', 'Tất cả']] as const)
-            .map(([k, label]) => (
-            <button key={k} className={`rounded-lg px-3 py-1.5 text-sm font-bold ${role === k ? 'bg-white shadow' : 'text-slate-500'}`}
-              onClick={() => { setRole(k); setPage(1); }}>{label}</button>))}
+        <div className="flex flex-wrap gap-2">
+          <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+            {([['customer', 'Khách hàng'], ['agent', 'Đại lý'], ['supplier', 'Nhà cung cấp'], ['', 'Tất cả']] as const)
+              .map(([k, label]) => (
+              <button key={k} className={`rounded-lg px-3 py-1.5 text-sm font-bold ${role === k ? 'bg-white shadow' : 'text-slate-500'}`}
+                onClick={() => { setRole(k); setPage(1); }}>{label}</button>))}
+          </div>
+          <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+            {([['', 'Tất cả'], ['online', '🌐 Khách online'], ['vip', '⭐ VIP']] as const).map(([k, label]) => (
+              <button key={k} className={`rounded-lg px-3 py-1.5 text-sm font-bold ${flag === k ? 'bg-white shadow' : 'text-slate-500'}`}
+                onClick={() => { setFlag(k); setPage(1); }}>{label}</button>))}
+          </div>
         </div>
       </div>
 
@@ -122,6 +130,8 @@ export default function PartnersClient({ meta, canManage, myScope }: {
                 </td>
                 <td className="td">
                   <Link className="font-semibold hover:underline" href={`/partners/${p.id}`}>{p.name}</Link>
+                  {p.isVip && <span className="ml-1 rounded bg-amber-100 px-1 text-xs font-bold text-amber-700">⭐ VIP</span>}
+                  {p.source === 'online' && <span className="ml-1 rounded bg-blue-100 px-1 text-xs font-bold text-blue-700">🌐 Online</span>}
                   <div className="text-xs text-slate-400">
                     {[p.isCustomer && 'Khách', p.isAgent && 'Đại lý', p.isSupplier && 'NCC'].filter(Boolean).join(' · ')}
                     {p.type === 'COMPANY' ? ' · Doanh nghiệp' : ''}

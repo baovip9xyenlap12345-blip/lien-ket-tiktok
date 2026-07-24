@@ -377,6 +377,7 @@ model Partner {
   branchId     Int?
   creditLimit  Int         @default(0)
   creditDays   Int         @default(0)
+  isVip        Boolean     @default(false)
   note         String?
   mergedIntoId Int?
   contacts     PartnerContact[]
