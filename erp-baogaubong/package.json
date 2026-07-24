@@ -2,6 +2,10 @@
   "name": "erp-baogaubong",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "NODE_ENV=production next build",
