@@ -1,8 +1,12 @@
 'use client';
 // Gio hang luu tren trinh duyet khach (localStorage). Doi tab van con.
+import { priceForQty } from '@/modules/shop/util';
 
 export type CartItem = { variantId: number; code: string; name: string; opt: string;
-  price: number; qty: number; cover: string | null };
+  price: number; qty: number; cover: string | null; tiers?: { minQty: number; price: number }[] };
+
+/** Don gia thuc te theo so luong (ap bac gia si). */
+export function unitPrice(it: CartItem): number { return priceForQty(it.tiers ?? [], it.qty, it.price) ?? it.price; }
 
 const KEY = 'bgb_shop_cart';
 
@@ -27,4 +31,4 @@ export function setQty(variantId: number, qty: number) {
 export function removeItem(variantId: number) { writeCart(readCart().filter((x) => x.variantId !== variantId)); }
 export function clearCart() { writeCart([]); }
 export function cartCount(): number { return readCart().reduce((s, x) => s + x.qty, 0); }
-export function cartTotal(): number { return readCart().reduce((s, x) => s + x.qty * x.price, 0); }
+export function cartTotal(): number { return readCart().reduce((s, x) => s + x.qty * unitPrice(x), 0); }

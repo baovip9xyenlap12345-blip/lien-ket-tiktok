@@ -12,6 +12,7 @@ type Grp = { name: string; options: string[]; optionImages?: (string | null)[] }
 type Product = { id: number; code: string; name: string; type: string; status: string;
   categoryId: number | null; unitId: number; desc?: string | null; note?: string | null;
   imageUrls?: string[]; videoUrl?: string | null; variantGroups?: Grp[] | null;
+  qtyTiers?: { minQty: number; discount: number }[] | null;
   unit: Unit; category: Cat | null; variants: Variant[] };
 type Rule = { id: number; priceListId: number; minQty: number; price: number;
   priceList: PList; variant: { id: number; sku: string; product: { name: string } } };
@@ -281,6 +282,29 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
   );
 }
 
+/** Nhap bac gia si: mua tu X tro len giam Y%. */
+function QtyTierEditor({ tiers, onChange }: { tiers: { minQty: number; discount: number }[]; onChange: (t: { minQty: number; discount: number }[]) => void }) {
+  const num = (s: string) => +s.replace(/\D/g, '') || 0;
+  const set = (i: number, patch: Partial<{ minQty: number; discount: number }>) => onChange(tiers.map((t, j) => j === i ? { ...t, ...patch } : t));
+  return (
+    <div className="rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200">
+      <div className="text-sm font-bold">🎁 Giá sỉ — mua nhiều giảm nhiều (tùy chọn)</div>
+      <p className="mb-2 text-xs text-slate-500">Giảm % trên giá bán khi khách mua nhiều. VD: từ 50 giảm 5%, từ 100 giảm 10%. Áp cho mọi phân loại.</p>
+      {tiers.map((t, i) => (
+        <div key={i} className="mb-1 flex flex-wrap items-center gap-2 text-sm">
+          <span>Mua từ</span>
+          <input className="inp w-20" inputMode="numeric" value={t.minQty || ''} placeholder="50" onChange={(e) => set(i, { minQty: num(e.target.value) })} />
+          <span>trở lên, giảm</span>
+          <input className="inp w-16" inputMode="numeric" value={t.discount || ''} placeholder="5" onChange={(e) => set(i, { discount: Math.min(90, num(e.target.value)) })} />
+          <span>%</span>
+          <button type="button" className="text-red-600" onClick={() => onChange(tiers.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+      <button type="button" className="text-sm font-semibold text-pink-700" onClick={() => onChange([...tiers, { minQty: 0, discount: 0 }])}>＋ Thêm bậc giá sỉ</button>
+    </div>
+  );
+}
+
 /* ============================ TAB SAN PHAM ============================ */
 function ProductsTab({ meta, canManage, showCost, setCategories }: {
   meta: { units: Unit[]; categories: Cat[]; priceLists: PList[] }; canManage: boolean; showCost: boolean;
@@ -332,7 +356,7 @@ function ProductsTab({ meta, canManage, showCost, setCategories }: {
           <a className="btn-ghost" href="/api/catalog/export">⬇️ Xuất CSV</a>
           {canManage && <button className="btn-ghost" onClick={() => setShowCatMgr(true)}>🏷️ Nhóm hàng</button>}
           {canManage && <button className="btn-ghost" onClick={() => setShowImport(true)}>⬆️ Nhập CSV</button>}
-          {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variantGroups: [], variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
+          {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variantGroups: [], qtyTiers: [], variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
         </div>
       </div>
       <div className="card overflow-x-auto">
@@ -434,6 +458,9 @@ function ProductsTab({ meta, canManage, showCost, setCategories }: {
             <div className="mb-3">
               <VariantBuilder groups={edit.variantGroups ?? []} variants={edit.variants} showCost={showCost}
                 onChange={(g, vs) => setEdit({ ...edit, variantGroups: g, variants: vs })} />
+            </div>
+            <div className="mb-3">
+              <QtyTierEditor tiers={edit.qtyTiers ?? []} onChange={(t) => setEdit({ ...edit, qtyTiers: t })} />
             </div>
             {err && <p className="mb-2 text-sm font-semibold text-red-600">{err}</p>}
             <div className="flex justify-end gap-2">

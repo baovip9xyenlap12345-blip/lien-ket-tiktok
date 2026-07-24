@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fmtVND } from '@/lib/format';
-import { readCart, clearCart, type CartItem } from '../cart';
+import { readCart, clearCart, unitPrice, type CartItem } from '../cart';
 
 type Me = { partnerName: string; username: string } | null;
 
@@ -30,7 +30,7 @@ export default function CheckoutPage() {
     const t = setTimeout(() => { window.location.href = 'https://zalo.me/g/qolxci436'; }, 6000);
     return () => clearTimeout(t);
   }, [done]);
-  const total = items.reduce((s, x) => s + x.qty * x.price, 0);
+  const total = items.reduce((s, x) => s + x.qty * unitPrice(x), 0);
 
   async function submit() {
     setErr(''); setBusy(true);
@@ -97,7 +97,7 @@ export default function CheckoutPage() {
           {items.map((it) => (
             <div key={it.variantId} className="flex justify-between border-b py-1.5 text-sm last:border-0">
               <span className="min-w-0 flex-1 truncate">{it.name} <span className="text-slate-400">{it.opt}</span> ×{it.qty}</span>
-              <span className="ml-2 font-semibold">{fmtVND(it.price * it.qty)}</span>
+              <span className="ml-2 font-semibold">{fmtVND(unitPrice(it) * it.qty)}</span>
             </div>
           ))}
           <div className="mt-3 flex justify-between text-lg font-extrabold">

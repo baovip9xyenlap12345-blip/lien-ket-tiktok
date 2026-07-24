@@ -64,6 +64,7 @@ const ProductIn = z.object({
   videoUrl: z.string().trim().max(500).nullable().optional(),
   variantGroups: z.array(z.object({ name: z.string().trim(), options: z.array(z.string().trim()),
     optionImages: z.array(z.string().nullable()).optional() })).max(2).nullable().optional(),
+  qtyTiers: z.array(z.object({ minQty: z.number().int().min(2), discount: z.number().min(0).max(90) })).max(5).nullable().optional(),
   tags: z.array(z.string()).default([]),
   taxPercent: z.number().int().min(0).max(100).nullable().optional(),
   deductMode: z.enum(['BUNDLE','COMPONENTS']).nullable().optional(),
@@ -88,7 +89,9 @@ export const POST = guarded(async (req) => {
       categoryId: d.categoryId ?? null, unitId: d.unitId, desc: d.desc ?? null, note: d.note ?? null,
       imageUrls: d.imageUrls.slice(0, 9), videoUrl: d.videoUrl?.trim() || null,
       variantGroups: (d.variantGroups && d.variantGroups.length ? d.variantGroups : Prisma.JsonNull) as never,
+      qtyTiers: (d.qtyTiers && d.qtyTiers.length ? d.qtyTiers : Prisma.JsonNull) as never,
       tags: d.tags, taxPercent: d.taxPercent ?? null, deductMode: d.deductMode ?? null };
+    const tierList = (d.qtyTiers ?? []).filter((t) => t.minQty >= 2 && t.discount > 0).sort((a, b) => a.minQty - b.minQty);
     const p = d.id
       ? await tx.product.update({ where: { id: d.id }, data: { ...base, version: { increment: 1 } } })
       : await tx.product.create({ data: base });
@@ -106,14 +109,23 @@ export const POST = guarded(async (req) => {
       keepIds.push(saved.id);
       // Ton dau ky: CHI ghi cho bien the MOI tao (khong id) → tranh cong don khi sua/luu lai.
       if (!v.id && v.openingStock != null && v.openingStock > 0) openingLines.push({ variantId: saved.id, qty: v.openingStock });
-      // Gia ban le (bac SL >= 1): co gia thi upsert, de trong thi xoa bac cu.
+      // Gia ban le theo BAC so luong: minQty=1 la gia goc; cac bac si = gia goc * (1 - giam%).
       if (v.salePrice != null && v.salePrice > 0) {
         if (!retail) retail = await tx.priceList.create({ data: { kind: 'RETAIL', name: 'Giá bán lẻ', priority: 0, active: true } });
+        const keep = [1];
         await tx.priceRule.upsert({
           where: { priceListId_variantId_minQty: { priceListId: retail.id, variantId: saved.id, minQty: 1 } },
           update: { price: v.salePrice }, create: { priceListId: retail.id, variantId: saved.id, minQty: 1, price: v.salePrice } });
+        for (const t of tierList) {
+          const tp = Math.max(0, Math.round(v.salePrice * (1 - t.discount / 100)));
+          await tx.priceRule.upsert({
+            where: { priceListId_variantId_minQty: { priceListId: retail.id, variantId: saved.id, minQty: t.minQty } },
+            update: { price: tp }, create: { priceListId: retail.id, variantId: saved.id, minQty: t.minQty, price: tp } });
+          keep.push(t.minQty);
+        }
+        await tx.priceRule.deleteMany({ where: { priceListId: retail.id, variantId: saved.id, minQty: { notIn: keep } } });
       } else if (retail) {
-        await tx.priceRule.deleteMany({ where: { priceListId: retail.id, variantId: saved.id, minQty: 1 } });
+        await tx.priceRule.deleteMany({ where: { priceListId: retail.id, variantId: saved.id } });
       }
     }
     await tx.productVariant.updateMany({

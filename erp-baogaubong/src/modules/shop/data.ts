@@ -2,13 +2,16 @@
 // gia = bang gia ban le (PriceRule kind=RETAIL, minQty=1).
 import { prisma } from '@/lib/db';
 
+export type PriceTier = { minQty: number; price: number };
 export type ShopVariant = { id: number; sku: string; size: string | null; color: string | null;
-  weightGr: number | null; price: number | null; stock: number };
+  weightGr: number | null; price: number | null; stock: number; tiers: PriceTier[] };
 export type ShopCard = { id: number; code: string; name: string; categoryId: number | null;
   categoryName: string | null; cover: string | null; hasVideo: boolean; minPrice: number | null; stock: number };
 export type ShopGroup = { name: string; options: string[]; optionImages?: (string | null)[] };
+export type QtyTier = { minQty: number; discount: number };
 export type ShopDetail = ShopCard & { desc: string | null; videoUrl: string | null;
-  images: string[]; unitName: string; variants: ShopVariant[]; variantGroups: ShopGroup[] | null };
+  images: string[]; unitName: string; variants: ShopVariant[]; variantGroups: ShopGroup[] | null;
+  qtyTiers: QtyTier[] | null };
 
 /** Ban gia ban le (minQty=1) cho danh sach bien the. */
 async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
@@ -17,6 +20,17 @@ async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
     where: { variantId: { in: variantIds }, minQty: 1, priceList: { kind: 'RETAIL' } },
     select: { variantId: true, price: true } });
   return new Map(rules.map((r) => [r.variantId, r.price]));
+}
+
+/** Cac bac gia (minQty -> price) cho tung bien the — de gian hang ap gia theo so luong. */
+async function tiersMap(variantIds: number[]): Promise<Map<number, PriceTier[]>> {
+  if (!variantIds.length) return new Map();
+  const rules = await prisma.priceRule.findMany({
+    where: { variantId: { in: variantIds }, priceList: { kind: 'RETAIL' } },
+    select: { variantId: true, minQty: true, price: true }, orderBy: { minQty: 'asc' } });
+  const m = new Map<number, PriceTier[]>();
+  for (const r of rules) { const a = m.get(r.variantId) ?? []; a.push({ minQty: r.minQty, price: r.price }); m.set(r.variantId, a); }
+  return m;
 }
 
 /** Ton KHA DUNG (onHand - reserved, tong cac kho) — da tru phan khach dang giu cho. */
@@ -65,15 +79,17 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
     include: { category: true, unit: true,
       variants: { where: { deletedAt: null, status: 'ACTIVE' }, orderBy: { id: 'asc' } } } });
   if (!p) return null;
-  const [pm, sm] = await Promise.all([priceMap(p.variants.map((v) => v.id)), stockMap(p.variants.map((v) => v.id))]);
+  const vids = p.variants.map((v) => v.id);
+  const [pm, sm, tm] = await Promise.all([priceMap(vids), stockMap(vids), tiersMap(vids)]);
   const variants: ShopVariant[] = p.variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size,
-    color: v.color, weightGr: v.weightGr, price: pm.get(v.id) ?? null, stock: sm.get(v.id) ?? 0 }));
+    color: v.color, weightGr: v.weightGr, price: pm.get(v.id) ?? null, stock: sm.get(v.id) ?? 0, tiers: tm.get(v.id) ?? [] }));
   const prices = variants.map((v) => v.price).filter((x): x is number => x != null && x > 0);
   return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
     categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null, hasVideo: !!p.videoUrl,
     minPrice: prices.length ? Math.min(...prices) : null, desc: p.desc, videoUrl: p.videoUrl,
     images: p.imageUrls, unitName: p.unit.name, variants, stock: variants.reduce((s, v) => s + v.stock, 0),
-    variantGroups: (p.variantGroups as unknown as ShopGroup[] | null) ?? null };
+    variantGroups: (p.variantGroups as unknown as ShopGroup[] | null) ?? null,
+    qtyTiers: (p.qtyTiers as unknown as QtyTier[] | null) ?? null };
 }
 
 /** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */

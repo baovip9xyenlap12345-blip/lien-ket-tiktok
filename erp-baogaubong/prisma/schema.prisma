@@ -208,6 +208,7 @@ model Product {
   imageUrls  String[]      @default([])
   videoUrl   String?
   variantGroups Json?
+  qtyTiers   Json?
   taxPercent Int?
   costRef    Int           @default(0)
   deductMode String?

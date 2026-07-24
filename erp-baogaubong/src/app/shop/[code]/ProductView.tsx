@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
-import { shopImg, videoEmbed } from '@/modules/shop/util';
+import { shopImg, videoEmbed, priceForQty } from '@/modules/shop/util';
 import type { ShopDetail } from '@/modules/shop/data';
 import { addToCart } from '../cart';
 
@@ -22,14 +22,16 @@ export default function ProductView({ p }: { p: ShopDetail }) {
   const [msg, setMsg] = useState('');
   const v = p.variants.find((x) => x.id === variantId) ?? null;
   function pick(x: typeof p.variants[number]) { setVariantId(x.id); const im = optImgOf(x.size); if (im) setShown(im); }
-  const price = v?.price ?? p.minPrice ?? null;
+  const basePrice = v?.price ?? p.minPrice ?? null;
+  const price = v ? (priceForQty(v.tiers, qty, v.price) ?? basePrice) : basePrice;   // gia da ap bac theo so luong
+  const tiers = p.qtyTiers ?? [];
   const vid = videoEmbed(p.videoUrl);
 
   function optText(x: typeof p.variants[number]) { return [x.size, x.color].filter(Boolean).join(' · ') || x.sku; }
   function add(goCart: boolean) {
     if (!v || v.price == null || v.price <= 0) { setMsg('Vui lòng chọn phân loại có giá.'); return; }
     addToCart({ variantId: v.id, code: p.code, name: p.name, opt: optText(v),
-      price: v.price, qty, cover: gallery[0] ?? null });
+      price: v.price, qty, cover: gallery[0] ?? null, tiers: v.tiers });
     if (goCart) router.push('/shop/cart');
     else { setMsg('✅ Đã thêm vào giỏ!'); setTimeout(() => setMsg(''), 2000); }
   }
@@ -72,6 +74,27 @@ export default function ProductView({ p }: { p: ShopDetail }) {
         </div>
         {v && <div className="mt-1 text-sm text-slate-500">
           {v.stock > 0 ? `Còn ${v.stock} ${p.unitName} trong kho` : 'Hàng đặt trước — làm theo yêu cầu'}</div>}
+
+        {/* Bang gia si — mua nhieu giam nhieu */}
+        {tiers.length > 0 && basePrice != null && (
+          <div className="mt-3 rounded-xl border border-pink-200 bg-pink-50 p-3">
+            <div className="mb-1.5 text-sm font-extrabold text-pink-700">🎁 Mua càng nhiều, giá càng rẻ (giá sỉ)</div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between"><span>Mua 1–{tiers[0].minQty - 1} {p.unitName}</span><span className="font-semibold">{fmtVND(basePrice)}đ</span></div>
+              {tiers.map((t, i) => {
+                const tp = Math.round(basePrice * (1 - t.discount / 100));
+                const next = tiers[i + 1];
+                const range = next ? `${t.minQty}–${next.minQty - 1}` : `từ ${t.minQty}`;
+                return (
+                  <div key={i} className={`flex justify-between ${qty >= t.minQty && (!next || qty < next.minQty) ? 'rounded bg-pink-100 px-1 font-bold' : ''}`}>
+                    <span>Mua {range} {p.unitName} <span className="text-green-600">−{t.discount}%</span></span>
+                    <span className="font-bold text-pink-700">{fmtVND(tp)}đ</span>
+                  </div>);
+              })}
+            </div>
+            <div className="mt-1 text-xs text-slate-400">Giá tự động áp dụng khi bạn chọn số lượng.</div>
+          </div>
+        )}
 
         {p.variants.length > 0 && (
           <div className="mt-4">

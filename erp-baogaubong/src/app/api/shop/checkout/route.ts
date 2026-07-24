@@ -24,13 +24,14 @@ export const POST = guarded(async (req) => {
   const variants = await prisma.productVariant.findMany({
     where: { id: { in: d.items.map((i) => i.variantId) }, deletedAt: null, status: 'ACTIVE' },
     include: { product: { include: { unit: true } },
-      priceRules: { where: { minQty: 1, priceList: { kind: 'RETAIL' } }, select: { price: true }, take: 1 } } });
+      priceRules: { where: { priceList: { kind: 'RETAIL' } }, select: { minQty: true, price: true } } } });
   const vMap = new Map(variants.map((v) => [v.id, v]));
 
   const lines = d.items.map((it) => {
     const v = vMap.get(it.variantId);
     if (!v) throw jsonError(400, 'Có sản phẩm không còn bán, vui lòng xem lại giỏ hàng.');
-    const price = v.priceRules[0]?.price ?? 0;
+    // Ap dung BAC gia theo so luong: chon bac co minQty lon nhat <= so luong khach mua.
+    const price = v.priceRules.filter((r) => r.minQty <= it.qty).sort((a, b) => b.minQty - a.minQty)[0]?.price ?? 0;
     if (price <= 0) throw jsonError(400, `Sản phẩm "${v.product.name}" chưa có giá — vui lòng liên hệ shop.`);
     const qty = it.qty;
     return { variantId: v.id, sku: v.sku,

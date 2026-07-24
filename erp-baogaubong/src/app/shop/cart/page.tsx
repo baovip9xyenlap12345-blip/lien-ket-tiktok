@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
 import { shopImg } from '@/modules/shop/util';
-import { readCart, setQty, removeItem, type CartItem } from '../cart';
+import { readCart, setQty, removeItem, unitPrice, type CartItem } from '../cart';
 
 export default function CartPage() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function CartPage() {
     window.addEventListener('cart-changed', sync);
     return () => window.removeEventListener('cart-changed', sync);
   }, []);
-  const total = items.reduce((s, x) => s + x.qty * x.price, 0);
+  const total = items.reduce((s, x) => s + x.qty * unitPrice(x), 0);
   if (!ready) return null;
 
   return (
@@ -40,7 +40,7 @@ export default function CartPage() {
                 <div className="min-w-0 flex-1">
                   <div className="line-clamp-1 text-sm font-semibold">{it.name}</div>
                   <div className="text-xs text-slate-400">{it.opt}</div>
-                  <div className="font-bold text-pink-700">{fmtVND(it.price)}</div>
+                  <div className="font-bold text-pink-700">{fmtVND(unitPrice(it))}đ{unitPrice(it) < it.price && <span className="ml-1 text-xs text-slate-400 line-through">{fmtVND(it.price)}</span>}</div>
                 </div>
                 <div className="flex items-center rounded-lg border text-sm">
                   <button className="px-2 py-1" onClick={() => setQty(it.variantId, it.qty - 1)}>−</button>

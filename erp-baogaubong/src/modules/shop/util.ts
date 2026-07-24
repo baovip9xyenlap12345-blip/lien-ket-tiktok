@@ -6,6 +6,12 @@ export function shopImg(key: string | null | undefined): string | null {
   return /^https?:\/\//.test(key) ? key : `/api/shop/media/${encodeURIComponent(key)}`;
 }
 
+/** Gia ap dung theo so luong mua: chon bac co minQty lon nhat <= qty; khong co thi lay gia goc. */
+export function priceForQty(tiers: { minQty: number; price: number }[], qty: number, base: number | null): number | null {
+  const hit = tiers.filter((t) => t.minQty <= qty).sort((a, b) => b.minQty - a.minQty)[0];
+  return hit ? hit.price : base;
+}
+
 /** Nhan dien link video de nhung (YouTube/TikTok) hoac phat truc tiep (file). */
 export function videoEmbed(url: string | null | undefined): { kind: 'iframe' | 'file' | 'link'; src: string } | null {
   if (!url) return null;
