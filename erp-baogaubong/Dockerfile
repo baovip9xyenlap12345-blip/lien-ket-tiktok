@@ -7,6 +7,8 @@ COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY . .
 RUN npx prisma generate && NODE_ENV=production pnpm build
+# Du an chua co thu muc public → tao rong de COPY o runner khong loi (app phuc vu asset tu .next)
+RUN mkdir -p public
 # Goi tao admin dau tien: dong goi thanh 1 file JS chay bang `node`.
 # Chi de @prisma/client ngoai (co san + engine o runner); bcryptjs GOI GON vao file (khong co san trong node_modules runner).
 RUN node_modules/.bin/esbuild scripts/create-admin.ts --bundle --platform=node --format=cjs \
