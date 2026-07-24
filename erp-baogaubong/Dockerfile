@@ -2,7 +2,8 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable
+# openssl de Prisma nhan dung phien ban (khong se generate engine sai target)
+RUN apk add --no-cache openssl && corepack enable
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY . .
@@ -20,7 +21,7 @@ RUN mkdir -p /export && cp -rL node_modules/.pnpm/@prisma+client@*/node_modules/
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000
-RUN apk add --no-cache postgresql-client && addgroup -S app && adduser -S app -G app
+RUN apk add --no-cache postgresql-client openssl && addgroup -S app && adduser -S app -G app
 # next output standalone: server.js + node_modules toi thieu (da bao gom @prisma/client + bcryptjs bundled)
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
@@ -33,7 +34,7 @@ COPY docker-entrypoint.sh ./
 # Prisma CLI rieng, chi de chay `migrate deploy` (khong dinh toi node_modules cua app)
 RUN mkdir -p /opt/prisma-cli && cd /opt/prisma-cli && npm init -y >/dev/null 2>&1 \
     && npm install --no-save prisma@5.22.0 && npm cache clean --force
-RUN chmod +x docker-entrypoint.sh && mkdir -p uploads && chown -R app:app /app
+RUN chmod +x docker-entrypoint.sh && mkdir -p uploads && chown -R app:app /app /opt/prisma-cli
 USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
