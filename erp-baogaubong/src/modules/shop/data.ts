@@ -18,12 +18,12 @@ async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
   return new Map(rules.map((r) => [r.variantId, r.price]));
 }
 
-/** Ton kho hien tai (tong cac kho) cho danh sach bien the. */
+/** Ton KHA DUNG (onHand - reserved, tong cac kho) — da tru phan khach dang giu cho. */
 async function stockMap(variantIds: number[]): Promise<Map<number, number>> {
   if (!variantIds.length) return new Map();
   const b = await prisma.inventoryBalance.groupBy({ by: ['variantId'],
-    where: { variantId: { in: variantIds } }, _sum: { onHand: true } });
-  return new Map(b.map((x) => [x.variantId, x._sum.onHand ?? 0]));
+    where: { variantId: { in: variantIds } }, _sum: { onHand: true, reserved: true } });
+  return new Map(b.map((x) => [x.variantId, Math.max(0, (x._sum.onHand ?? 0) - (x._sum.reserved ?? 0))]));
 }
 
 /** Danh sach san pham cong khai (loc theo tim kiem + nhom hang). */

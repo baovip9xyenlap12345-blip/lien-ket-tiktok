@@ -54,6 +54,21 @@ export const POST = guarded(async (req) => {
       note: noteBlock, isPos: false,
       assignedToId: partner?.assignedToId ?? null, createdById: partner?.assignedToId ?? 1 } });
     await tx.orderLine.createMany({ data: lines.map((l) => ({ ...l, orderId: o.id })) });
+    // Giu cho ton kho khi khach dat: giu phan KHA DUNG (onHand - reserved); phan thieu = hang dat truoc.
+    // Khi nhan vien giao hang, luong Shipment se tru onHand + nha giu cho (da co san).
+    const wh = await tx.warehouse.findFirst({ orderBy: { id: 'asc' } });
+    if (wh) {
+      for (const l of lines) {
+        const bal = await tx.inventoryBalance.findUnique({
+          where: { warehouseId_variantId: { warehouseId: wh.id, variantId: l.variantId } } });
+        const take = Math.min(l.qty, Math.max(0, (bal?.onHand ?? 0) - (bal?.reserved ?? 0)));
+        if (take <= 0) continue;
+        const n = await tx.$executeRaw`UPDATE "InventoryBalance" SET "reserved" = "reserved" + ${take}
+          WHERE "warehouseId" = ${wh.id} AND "variantId" = ${l.variantId} AND "onHand" - "reserved" >= ${take}`;
+        if (Number(n) > 0) await tx.stockReservation.create({
+          data: { orderId: o.id, warehouseId: wh.id, variantId: l.variantId, qty: take } });
+      }
+    }
     return o;
   });
   await audit({ actorId: null, actorName: `shop:${me.username}`, action: 'shop_order',

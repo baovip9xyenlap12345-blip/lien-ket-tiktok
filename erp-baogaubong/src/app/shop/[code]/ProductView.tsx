@@ -75,7 +75,7 @@ export default function ProductView({ p }: { p: ShopDetail }) {
                 return (
                   <button key={x.id} disabled={!ok} onClick={() => setVariantId(x.id)}
                     className={`rounded-lg border px-3 py-1.5 text-sm ${variantId === x.id ? 'border-pink-600 bg-pink-50 font-bold text-pink-700' : 'border-slate-200 bg-white'} ${!ok ? 'cursor-not-allowed opacity-40' : ''}`}>
-                    {optText(x)}{!ok && ' (hết)'}
+                    {optText(x)}{!ok && ' (ngừng bán)'}
                   </button>);
               })}
             </div>

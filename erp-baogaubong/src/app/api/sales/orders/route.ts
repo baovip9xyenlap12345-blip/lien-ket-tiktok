@@ -5,6 +5,7 @@ import { requirePerm, guarded, jsonError } from '@/lib/auth';
 import { scopeWhere, inScope } from '@/lib/scope';
 import { assertTransition } from '@/modules/sales/domain';
 import { logStatus } from '@/modules/sales/server';
+import { releaseReserved } from '@/modules/inventory/server';
 
 export const GET = guarded(async (req) => {
   const user = await requirePerm('sales.view');
@@ -61,6 +62,14 @@ export const PATCH = guarded(async (req) => {
   await prisma.$transaction(async (tx) => {
     await tx.salesOrder.update({ where: { id: cur.id }, data: { [field]: b.data.to } });
     await logStatus(tx, 'order', cur.id, b.data.axis, fromVal, b.data.to, actor);
+    // Huy don → nha het giu cho kho (tra lai ton kha dung) de kho khong bi ket.
+    if (b.data.axis === 'order' && b.data.to === 'CANCELLED') {
+      const rows = await tx.stockReservation.findMany({ where: { orderId: cur.id, released: false } });
+      for (const r of rows) {
+        await releaseReserved(tx, r.warehouseId, r.variantId, r.qty);
+        await tx.stockReservation.update({ where: { id: r.id }, data: { released: true } });
+      }
+    }
   });
   return Response.json({ ok: true });
 });
