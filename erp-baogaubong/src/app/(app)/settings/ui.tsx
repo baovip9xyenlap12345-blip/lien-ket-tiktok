@@ -4,6 +4,11 @@ import { useState } from 'react';
 type C = { name: string; taxCode: string; address: string; phone: string; web: string };
 type S = { vat_percent: number; doc_prefix: string; session_idle_min: number; max_discount_pct: number };
 
+// O nhap dinh nghia o MODULE (ngoai component) — giu on dinh, khong bi "dung lai" moi lan go → khong mat con tro.
+function F({ label, v, set }: { label: string; v: string; set: (x: string) => void }) {
+  return <div><label className="lbl">{label}</label><input className="inp" value={v} onChange={(e) => set(e.target.value)} /></div>;
+}
+
 export default function SettingsClient({ company, settings }: { company: C; settings: S }) {
   const [c, setC] = useState(company); const [s, setS] = useState(settings); const [msg, setMsg] = useState('');
   async function save() {
@@ -11,8 +16,6 @@ export default function SettingsClient({ company, settings }: { company: C; sett
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: c, settings: s }) });
     const j = await res.json(); setMsg(j.ok ? '✅ Đã lưu cài đặt' : j.error);
   }
-  const F = ({ label, v, set }: { label: string; v: string; set: (x: string) => void }) => (
-    <div><label className="lbl">{label}</label><input className="inp" value={v} onChange={(e) => set(e.target.value)} /></div>);
   return (
     <div className="max-w-2xl">
       <h1 className="mb-4 text-xl font-extrabold">Cài đặt hệ thống</h1>
