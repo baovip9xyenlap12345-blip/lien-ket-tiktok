@@ -1,0 +1,80 @@
+// Du lieu cho gian hang online (cong khai). Chi lay san pham DANG BAN (ACTIVE),
+// gia = bang gia ban le (PriceRule kind=RETAIL, minQty=1).
+import { prisma } from '@/lib/db';
+
+export type ShopVariant = { id: number; sku: string; size: string | null; color: string | null;
+  weightGr: number | null; price: number | null };
+export type ShopCard = { id: number; code: string; name: string; categoryId: number | null;
+  categoryName: string | null; cover: string | null; hasVideo: boolean; minPrice: number | null };
+export type ShopDetail = ShopCard & { desc: string | null; videoUrl: string | null;
+  images: string[]; unitName: string; variants: ShopVariant[] };
+
+/** Ban gia ban le (minQty=1) cho danh sach bien the. */
+async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
+  if (!variantIds.length) return new Map();
+  const rules = await prisma.priceRule.findMany({
+    where: { variantId: { in: variantIds }, minQty: 1, priceList: { kind: 'RETAIL' } },
+    select: { variantId: true, price: true } });
+  return new Map(rules.map((r) => [r.variantId, r.price]));
+}
+
+/** Danh sach san pham cong khai (loc theo tim kiem + nhom hang). */
+export async function listShopProducts(opts: { q?: string; categoryId?: number; page?: number; take?: number }) {
+  const take = opts.take ?? 24;
+  const page = Math.max(1, opts.page ?? 1);
+  const where = {
+    deletedAt: null, status: 'ACTIVE' as const,
+    type: { in: ['FINISHED', 'COMBO', 'CUSTOM', 'AI_BEAR', 'SERVICE'] as never },
+    ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
+    ...(opts.q ? { OR: [
+      { name: { contains: opts.q, mode: 'insensitive' as const } },
+      { code: { contains: opts.q, mode: 'insensitive' as const } },
+    ] } : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.product.findMany({ where, include: {
+      category: true, variants: { where: { deletedAt: null, status: 'ACTIVE' }, select: { id: true } } },
+      orderBy: { updatedAt: 'desc' }, skip: (page - 1) * take, take }),
+    prisma.product.count({ where }),
+  ]);
+  const pm = await priceMap(rows.flatMap((p) => p.variants.map((v) => v.id)));
+  const cards: ShopCard[] = rows.map((p) => {
+    const prices = p.variants.map((v) => pm.get(v.id)).filter((x): x is number => x != null && x > 0);
+    return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
+      categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null,
+      hasVideo: !!p.videoUrl, minPrice: prices.length ? Math.min(...prices) : null };
+  });
+  return { cards, total, page, take };
+}
+
+/** Chi tiet 1 san pham cong khai theo ma. */
+export async function shopProductByCode(code: string): Promise<ShopDetail | null> {
+  const p = await prisma.product.findFirst({
+    where: { code, deletedAt: null, status: 'ACTIVE' },
+    include: { category: true, unit: true,
+      variants: { where: { deletedAt: null, status: 'ACTIVE' }, orderBy: { id: 'asc' } } } });
+  if (!p) return null;
+  const pm = await priceMap(p.variants.map((v) => v.id));
+  const variants: ShopVariant[] = p.variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size,
+    color: v.color, weightGr: v.weightGr, price: pm.get(v.id) ?? null }));
+  const prices = variants.map((v) => v.price).filter((x): x is number => x != null && x > 0);
+  return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
+    categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null, hasVideo: !!p.videoUrl,
+    minPrice: prices.length ? Math.min(...prices) : null, desc: p.desc, videoUrl: p.videoUrl,
+    images: p.imageUrls, unitName: p.unit.name, variants };
+}
+
+/** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */
+export async function keyBelongsToProduct(key: string): Promise<boolean> {
+  const p = await prisma.product.findFirst({
+    where: { deletedAt: null, OR: [{ imageUrls: { has: key } }, { videoUrl: key }] }, select: { id: true } });
+  return !!p;
+}
+
+/** Nhom hang co san pham dang ban (cho thanh loc). */
+export async function shopCategories() {
+  const cats = await prisma.category.findMany({ where: { deletedAt: null,
+    products: { some: { deletedAt: null, status: 'ACTIVE' } } }, orderBy: { name: 'asc' },
+    select: { id: true, name: true } });
+  return cats;
+}

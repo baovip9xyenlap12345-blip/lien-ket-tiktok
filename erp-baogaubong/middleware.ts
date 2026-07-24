@@ -16,6 +16,10 @@ export function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/portal') || req.nextUrl.pathname.startsWith('/api/portal')) {
     return NextResponse.next();
   }
+  // Gian hang online (cong khai) — khach xem/mua khong can phien nhan vien; phien khach kiem o API shop.
+  if (req.nextUrl.pathname.startsWith('/shop') || req.nextUrl.pathname.startsWith('/api/shop')) {
+    return NextResponse.next();
+  }
   const has = req.cookies.get('bgb_session');
   if (!has) {
     if (req.nextUrl.pathname.startsWith('/api/')) {

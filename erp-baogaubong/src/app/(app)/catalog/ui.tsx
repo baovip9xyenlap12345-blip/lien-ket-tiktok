@@ -170,6 +170,7 @@ function ProductsTab({ meta, canManage, showCost }: {
           {Object.entries(TYPE_VI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <div className="ml-auto flex gap-2">
+          <a className="btn-ghost" href="/shop" target="_blank" rel="noreferrer">🛍️ Xem gian hàng</a>
           <a className="btn-ghost" href="/api/catalog/export">⬇️ Xuất CSV</a>
           {canManage && <button className="btn-ghost" onClick={() => setShowImport(true)}>⬆️ Nhập CSV</button>}
           {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
