@@ -53,6 +53,7 @@ const ProductIn = z.object({
   desc: z.string().optional().nullable(), note: z.string().optional().nullable(),
   imageUrls: z.array(z.string()).max(9, 'Tối đa 9 ảnh').default([]),
   videoUrl: z.string().trim().max(500).nullable().optional(),
+  variantGroups: z.array(z.object({ name: z.string().trim(), options: z.array(z.string().trim()) })).max(2).nullable().optional(),
   tags: z.array(z.string()).default([]),
   taxPercent: z.number().int().min(0).max(100).nullable().optional(),
   deductMode: z.enum(['BUNDLE','COMPONENTS']).nullable().optional(),
@@ -76,6 +77,7 @@ export const POST = guarded(async (req) => {
     const base = { code: d.code, name: d.name, type: d.type, status: d.status,
       categoryId: d.categoryId ?? null, unitId: d.unitId, desc: d.desc ?? null, note: d.note ?? null,
       imageUrls: d.imageUrls.slice(0, 9), videoUrl: d.videoUrl?.trim() || null,
+      variantGroups: (d.variantGroups && d.variantGroups.length ? d.variantGroups : Prisma.JsonNull) as never,
       tags: d.tags, taxPercent: d.taxPercent ?? null, deductMode: d.deductMode ?? null };
     const p = d.id
       ? await tx.product.update({ where: { id: d.id }, data: { ...base, version: { increment: 1 } } })

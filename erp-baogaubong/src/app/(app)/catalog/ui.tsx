@@ -8,9 +8,10 @@ type PList = { id: number; kind: string; name: string; priority: number; active:
 type Variant = { id?: number; sku?: string; barcode?: string | null; size?: string | null;
   color?: string | null; material?: string | null; costPrice: number; weightGr?: number | null;
   salePrice?: number | null };
+type Grp = { name: string; options: string[] };
 type Product = { id: number; code: string; name: string; type: string; status: string;
   categoryId: number | null; unitId: number; desc?: string | null; note?: string | null;
-  imageUrls?: string[]; videoUrl?: string | null;
+  imageUrls?: string[]; videoUrl?: string | null; variantGroups?: Grp[] | null;
   unit: Unit; category: Cat | null; variants: Variant[] };
 type Rule = { id: number; priceListId: number; minQty: number; price: number;
   priceList: PList; variant: { id: number; sku: string; product: { name: string } } };
@@ -125,6 +126,122 @@ function VideoField({ url, setUrl, canManage }: { url: string; setUrl: (u: strin
   );
 }
 
+/* ===================== TRINH TAO PHAN LOAI (Shopee-style) ===================== */
+const vkey = (s?: string | null, c?: string | null) => `${s ?? ''}||${c ?? ''}`;
+
+/** Sinh danh sach to hop tu cac nhom (nhom1 x nhom2), giu lai gia/SKU da nhap theo key. */
+function genVariants(groups: Grp[], existing: Variant[]): Variant[] {
+  const g1 = (groups[0]?.options ?? []).map((o) => o.trim()).filter(Boolean);
+  const g2 = (groups[1]?.options ?? []).map((o) => o.trim()).filter(Boolean);
+  const ex = new Map(existing.map((v) => [vkey(v.size, v.color), v] as const));
+  const base = (s: string | null, c: string | null): Variant => {
+    const e = ex.get(vkey(s, c));
+    return e ? { ...e, size: s, color: c } : { size: s, color: c, costPrice: 0, salePrice: null, weightGr: null };
+  };
+  if (g1.length && g2.length) return g1.flatMap((s) => g2.map((c) => base(s, c)));
+  if (g1.length) return g1.map((s) => base(s, null));
+  return [existing[0] ? { ...existing[0], size: null, color: null } : { costPrice: 0, salePrice: null, weightGr: null }];
+}
+
+/** Suy ra nhom phan loai khi mo SUA (uu tien ban luu, khong co thi doan tu size/mau). */
+function deriveGroups(p: Partial<Product> & { variants: Variant[] }): Grp[] {
+  if (p.variantGroups && p.variantGroups.length) return p.variantGroups.map((g) => ({ name: g.name, options: [...g.options] }));
+  const sizes = [...new Set(p.variants.map((v) => v.size).filter(Boolean))] as string[];
+  const colors = [...new Set(p.variants.map((v) => v.color).filter(Boolean))] as string[];
+  const g: Grp[] = [];
+  if (sizes.length) g.push({ name: 'Kích thước', options: sizes });
+  if (colors.length) g.push({ name: 'Màu sắc', options: colors });
+  return g;
+}
+
+function VariantBuilder({ groups, variants, showCost, onChange }: {
+  groups: Grp[]; variants: Variant[]; showCost: boolean;
+  onChange: (groups: Grp[], variants: Variant[]) => void;
+}) {
+  const [bulk, setBulk] = useState({ price: '', cost: '', weight: '' });
+  const num = (s: string) => +s.replace(/\D/g, '') || 0;
+  const regen = (g: Grp[]) => onChange(g, genVariants(g, variants));
+  const setName = (gi: number, name: string) => onChange(groups.map((g, i) => i === gi ? { ...g, name } : g), variants);
+  const setOpt = (gi: number, oi: number, val: string) => regen(groups.map((g, i) => i === gi ? { ...g, options: g.options.map((o, j) => j === oi ? val : o) } : g));
+  const addOpt = (gi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: [...g.options, ''] } : g));
+  const delOpt = (gi: number, oi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: g.options.filter((_, j) => j !== oi) } : g));
+  const addGroup = () => regen([...groups, { name: '', options: [''] }]);
+  const delGroup = (gi: number) => regen(groups.filter((_, i) => i !== gi));
+  const setVar = (i: number, patch: Partial<Variant>) => onChange(groups, variants.map((v, j) => j === i ? { ...v, ...patch } : v));
+  const applyBulk = () => onChange(groups, variants.map((v) => ({ ...v,
+    salePrice: bulk.price ? num(bulk.price) : v.salePrice,
+    costPrice: bulk.cost ? num(bulk.cost) : v.costPrice,
+    weightGr: bulk.weight ? num(bulk.weight) : v.weightGr })));
+  const hasGroups = groups.length > 0;
+
+  return (
+    <div>
+      {/* Cac nhom phan loai */}
+      {groups.map((g, gi) => (
+        <div key={gi} className="mb-2 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-bold">Nhóm phân loại {gi + 1}</span>
+            <input className="inp flex-1" placeholder="VD: Kích thước / Màu sắc"
+              value={g.name} onChange={(e) => setName(gi, e.target.value)} />
+            <button type="button" className="text-slate-400 hover:text-red-500" onClick={() => delGroup(gi)}>✕</button>
+          </div>
+          <div className="space-y-1 pl-2">
+            {g.options.map((o, oi) => (
+              <div key={oi} className="flex items-center gap-2">
+                <input className="inp max-w-xs" placeholder="VD: 30cm / Đỏ" value={o} onChange={(e) => setOpt(gi, oi, e.target.value)} />
+                <button type="button" className="text-slate-400 hover:text-red-500" disabled={g.options.length <= 1} onClick={() => delOpt(gi, oi)}>✕</button>
+              </div>
+            ))}
+            <button type="button" className="text-sm font-semibold text-pink-700" onClick={() => addOpt(gi)}>＋ Thêm tùy chọn</button>
+          </div>
+        </div>
+      ))}
+      {groups.length < 2 && (
+        <button type="button" className="mb-3 w-full rounded-lg border-2 border-dashed border-slate-300 py-2 text-sm font-semibold text-slate-500 hover:border-pink-400 hover:text-pink-600"
+          onClick={addGroup}>＋ Thêm nhóm phân loại {groups.length + 1} (VD: {groups.length === 0 ? 'Kích thước' : 'Màu sắc'})</button>
+      )}
+
+      {/* Ap dung hang loat */}
+      {hasGroups && variants.length > 1 && (
+        <div className="mb-2 flex flex-wrap items-end gap-2 rounded-lg bg-pink-50 p-2">
+          <span className="text-sm font-bold">Điền nhanh tất cả:</span>
+          <input className="inp w-28" placeholder="Giá bán" inputMode="numeric" value={bulk.price} onChange={(e) => setBulk({ ...bulk, price: e.target.value })} />
+          {showCost && <input className="inp w-28" placeholder="Giá vốn" inputMode="numeric" value={bulk.cost} onChange={(e) => setBulk({ ...bulk, cost: e.target.value })} />}
+          <input className="inp w-24" placeholder="Nặng (gr)" inputMode="numeric" value={bulk.weight} onChange={(e) => setBulk({ ...bulk, weight: e.target.value })} />
+          <button type="button" className="btn" onClick={applyBulk}>Áp dụng</button>
+        </div>
+      )}
+
+      {/* Bang to hop */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr>
+            {hasGroups && <th className="th">{groups[0]?.name || 'Phân loại 1'}</th>}
+            {groups.length >= 2 && <th className="th">{groups[1]?.name || 'Phân loại 2'}</th>}
+            <th className="th">Giá bán (VND)</th>{showCost && <th className="th">Giá vốn (VND)</th>}
+            <th className="th">Nặng (gr)</th><th className="th">SKU (trống = tự sinh)</th>
+          </tr></thead>
+          <tbody>{variants.map((v, i) => (
+            <tr key={i}>
+              {hasGroups && <td className="td font-semibold">{v.size || '—'}</td>}
+              {groups.length >= 2 && <td className="td font-semibold">{v.color || '—'}</td>}
+              <td className="td"><input className="inp w-28" inputMode="numeric" placeholder="0" value={v.salePrice ?? ''}
+                onChange={(e) => setVar(i, { salePrice: e.target.value ? num(e.target.value) : null })} /></td>
+              {showCost && <td className="td"><input className="inp w-28" inputMode="numeric" value={v.costPrice}
+                onChange={(e) => setVar(i, { costPrice: num(e.target.value) })} /></td>}
+              <td className="td"><input className="inp w-20" inputMode="numeric" value={v.weightGr ?? ''}
+                onChange={(e) => setVar(i, { weightGr: e.target.value ? num(e.target.value) : null })} /></td>
+              <td className="td"><input className="inp font-mono text-xs" value={v.sku ?? ''}
+                onChange={(e) => setVar(i, { sku: e.target.value })} /></td>
+            </tr>))}
+          </tbody>
+        </table>
+      </div>
+      {!hasGroups && <p className="mt-1 text-xs text-slate-400">Sản phẩm 1 loại duy nhất. Muốn bán nhiều size/màu → bấm “Thêm nhóm phân loại” ở trên.</p>}
+    </div>
+  );
+}
+
 /* ============================ TAB SAN PHAM ============================ */
 function ProductsTab({ meta, canManage, showCost }: {
   meta: { units: Unit[]; categories: Cat[]; priceLists: PList[] }; canManage: boolean; showCost: boolean;
@@ -173,7 +290,7 @@ function ProductsTab({ meta, canManage, showCost }: {
           <a className="btn-ghost" href="/shop" target="_blank" rel="noreferrer">🛍️ Xem gian hàng</a>
           <a className="btn-ghost" href="/api/catalog/export">⬇️ Xuất CSV</a>
           {canManage && <button className="btn-ghost" onClick={() => setShowImport(true)}>⬆️ Nhập CSV</button>}
-          {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
+          {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variantGroups: [], variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
         </div>
       </div>
       <div className="card overflow-x-auto">
@@ -212,7 +329,7 @@ function ProductsTab({ meta, canManage, showCost }: {
                   <div key={v.id} className="py-0.5 text-sm">{fmtMoney(v.costPrice)}</div>))}</td>}
                 <td className="td whitespace-nowrap">
                   {canManage && <>
-                    <button className="btn-ghost" onClick={() => setEdit({ ...p, variants: p.variants.map((v) => ({ ...v })) })}>✏️</button>
+                    <button className="btn-ghost" onClick={() => setEdit({ ...p, variantGroups: deriveGroups(p), variants: p.variants.map((v) => ({ ...v })) })}>✏️</button>
                     <button className="btn-ghost text-red-600" onClick={() => del(p)}>🗑️</button>
                   </>}
                 </td>
@@ -271,33 +388,10 @@ function ProductsTab({ meta, canManage, showCost }: {
               <VideoField url={edit.videoUrl ?? ''} canManage={canManage}
                 setUrl={(u) => setEdit({ ...edit, videoUrl: u })} />
             </div>
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-sm font-extrabold">Phân loại: size / màu — giá bán — cân nặng</span>
-              <button className="btn-ghost" onClick={() => setEdit({ ...edit, variants: [...edit.variants, { costPrice: 0 }] })}>＋ Thêm biến thể</button>
-            </div>
-            <div className="mb-3 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr><th className="th">SKU (trống = tự sinh)</th><th className="th">Size</th><th className="th">Màu</th>
-                  <th className="th">Giá bán (VND)</th>{showCost && <th className="th">Giá vốn (VND)</th>}<th className="th">Nặng (gr)</th><th className="th"></th></tr></thead>
-                <tbody>{edit.variants.map((v, i) => (
-                  <tr key={i}>
-                    <td className="td"><input className="inp font-mono text-xs" value={v.sku ?? ''}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, sku: e.target.value } : x) })} /></td>
-                    <td className="td"><input className="inp w-20" value={v.size ?? ''}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, size: e.target.value } : x) })} /></td>
-                    <td className="td"><input className="inp w-24" value={v.color ?? ''}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, color: e.target.value } : x) })} /></td>
-                    <td className="td"><input className="inp w-28" inputMode="numeric" placeholder="0" value={v.salePrice ?? ''}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, salePrice: e.target.value ? (+e.target.value.replace(/\D/g, '') || 0) : null } : x) })} /></td>
-                    {showCost && <td className="td"><input className="inp w-28" inputMode="numeric" value={v.costPrice}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, costPrice: +e.target.value.replace(/\D/g, '') || 0 } : x) })} /></td>}
-                    <td className="td"><input className="inp w-20" inputMode="numeric" value={v.weightGr ?? ''}
-                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, weightGr: e.target.value ? +e.target.value : null } : x) })} /></td>
-                    <td className="td"><button className="btn-ghost text-red-600" disabled={edit.variants.length <= 1}
-                      onClick={() => setEdit({ ...edit, variants: edit.variants.filter((_, j) => j !== i) })}>✕</button></td>
-                  </tr>))}
-                </tbody>
-              </table>
+            <div className="mb-1 text-sm font-extrabold">Phân loại hàng</div>
+            <div className="mb-3">
+              <VariantBuilder groups={edit.variantGroups ?? []} variants={edit.variants} showCost={showCost}
+                onChange={(g, vs) => setEdit({ ...edit, variantGroups: g, variants: vs })} />
             </div>
             {err && <p className="mb-2 text-sm font-semibold text-red-600">{err}</p>}
             <div className="flex justify-end gap-2">
