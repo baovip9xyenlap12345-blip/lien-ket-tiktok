@@ -58,8 +58,10 @@ export default function SalesClient({ canManage, canApprove, vatDefault }: {
 
 /* ============================ DASHBOARD ============================ */
 function DashTab({ canApprove }: { canApprove: boolean }) {
-  type Dash = { today: { revenue: number; orders: number }; month: { revenue: number; orders: number };
+  type Dash = { today: { revenue: number; orders: number }; month: { revenue: number; orders: number; profit: number };
     debt: { amount: number; orders: number }; pendingQuotes: number; pendingApprovals: number;
+    newOrders: number; transactions: number;
+    daily: { label: string; revenue: number; orders: number }[]; statusPie: { status: string; count: number }[];
     top: { sku: string; name: string; qty: number; amount: number }[]; recent: Order[] };
   const [d, setD] = useState<Dash | null>(null);
   const [appr, setAppr] = useState<{ quotes: { id: number; code: string; partnerName: string; total: number; approvalReason: string | null }[];
@@ -86,8 +88,24 @@ function DashTab({ canApprove }: { canApprove: boolean }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Doanh thu hôm nay" value={`${fmtVND(d.today.revenue)}đ`} sub={`${d.today.orders} đơn`} />
         <Stat label="Doanh thu tháng này" value={`${fmtVND(d.month.revenue)}đ`} sub={`${d.month.orders} đơn`} />
+        <Stat label="Lợi nhuận gộp (tháng)" value={`${fmtVND(d.month.profit)}đ`} sub="doanh thu − giá vốn" warn={d.month.profit < 0} />
+        <Stat label="Đơn mới cần xử lý" value={`${d.newOrders}`} sub="đơn khách vừa đặt" warn={d.newOrders > 0} />
+        <Stat label="Số giao dịch (tháng)" value={`${d.transactions}`} sub="lượt thu tiền" />
         <Stat label="Khách còn nợ" value={`${fmtVND(d.debt.amount)}đ`} sub={`${d.debt.orders} đơn chưa thu đủ`} warn={d.debt.amount > 0} />
-        <Stat label="Báo giá đang mở / chờ duyệt" value={`${d.pendingQuotes} / ${d.pendingApprovals}`} warn={d.pendingApprovals > 0} />
+        <Stat label="Báo giá mở / chờ duyệt" value={`${d.pendingQuotes} / ${d.pendingApprovals}`} warn={d.pendingApprovals > 0} />
+      </div>
+
+      {/* Bieu do */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="card p-4">
+          <h2 className="mb-3 font-extrabold">📊 Doanh thu 7 ngày gần nhất</h2>
+          <BarChart data={d.daily} />
+        </div>
+        <div className="card p-4">
+          <h2 className="mb-3 font-extrabold">🥧 Cơ cấu đơn tháng này</h2>
+          <PieChart data={d.statusPie.map((s) => ({ label: OS_VI[s.status] ?? s.status, value: s.count,
+            color: ({ NEW: '#f59e0b', CONFIRMED: '#3b82f6', DONE: '#22c55e', CANCELLED: '#94a3b8' } as Record<string, string>)[s.status] ?? '#c2185b' }))} />
+        </div>
       </div>
       {canApprove && pending.length > 0 && (
         <div className="card mt-3 border-l-4 border-amber-400 p-3">
@@ -136,6 +154,52 @@ function Stat({ label, value, sub, warn }: { label: string; value: string; sub?:
       <div className="text-xs font-bold text-slate-400">{label}</div>
       <div className="mt-1 text-xl font-extrabold">{value}</div>
       {sub && <div className="text-xs text-slate-500">{sub}</div>}
+    </div>
+  );
+}
+
+/** Bieu do cot (CSS) — doanh thu theo ngay. */
+function BarChart({ data }: { data: { label: string; revenue: number; orders: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.revenue));
+  if (data.every((d) => d.revenue === 0)) return <p className="py-8 text-center text-sm text-slate-400">Chưa có doanh thu trong 7 ngày.</p>;
+  return (
+    <div className="flex h-44 items-end gap-1.5">
+      {data.map((d, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
+          <div className="text-[9px] font-semibold text-pink-700">{d.revenue > 0 ? `${Math.round(d.revenue / 1000)}k` : ''}</div>
+          <div className="w-full rounded-t-md bg-gradient-to-t from-pink-600 to-pink-400"
+            style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 3 : 0)}%` }} title={`${fmtVND(d.revenue)}đ · ${d.orders} đơn`} />
+          <div className="text-[10px] text-slate-400">{d.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Bieu do tron (SVG donut) — co cau theo trang thai. */
+function PieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return <p className="py-8 text-center text-sm text-slate-400">Chưa có đơn trong tháng.</p>;
+  const C = 2 * Math.PI * 60;
+  let acc = 0;
+  return (
+    <div className="flex flex-wrap items-center gap-5">
+      <svg viewBox="0 0 160 160" className="h-36 w-36 -rotate-90">
+        {data.map((d, i) => {
+          const dash = (d.value / total) * C;
+          const el = <circle key={i} cx="80" cy="80" r="60" fill="none" stroke={d.color} strokeWidth="26"
+            strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={-acc} />;
+          acc += dash;
+          return el;
+        })}
+      </svg>
+      <div className="space-y-1.5 text-sm">
+        {data.map((d, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
+            <span>{d.label}: <b>{d.value}</b> ({Math.round((d.value / total) * 100)}%)</span>
+          </div>))}
+      </div>
     </div>
   );
 }
