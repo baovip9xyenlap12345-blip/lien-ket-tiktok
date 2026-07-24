@@ -48,12 +48,13 @@ model Warehouse {
 }
 
 model Role {
-  id       Int              @id @default(autoincrement())
-  code     String           @unique
-  name     String
-  isSystem Boolean          @default(false)
-  perms    RolePermission[]
-  users    User[]
+  id         Int              @id @default(autoincrement())
+  code       String           @unique
+  name       String
+  isSystem   Boolean          @default(false)
+  perms      RolePermission[]
+  users      User[]           @relation("UserPrimaryRole")
+  extraUsers User[]           @relation("UserExtraRoles")
 }
 
 model Permission {
@@ -86,7 +87,8 @@ model User {
   email        String?
   phone        String?
   roleId       Int
-  role         Role      @relation(fields: [roleId], references: [id])
+  role         Role      @relation("UserPrimaryRole", fields: [roleId], references: [id])
+  extraRoles   Role[]    @relation("UserExtraRoles")
   branchId     Int?
   branch       Branch?   @relation(fields: [branchId], references: [id])
   scope        DataScope @default(OWN)

@@ -29,15 +29,16 @@ export async function createSession(userId: number, ip?: string, ua?: string) {
 
 export type SessionUser = {
   id: number; username: string; name: string; roleCode: string; roleName: string;
-  scope: string; branchId: number | null; perms: string[];
+  roleNames: string[]; scope: string; branchId: number | null; perms: string[];
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
+  const permInclude = { perms: { include: { permission: true } } };
   const s = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { role: { include: { perms: { include: { permission: true } } } } } } },
+    include: { user: { include: { role: { include: permInclude }, extraRoles: { include: permInclude } } } },
   });
   if (!s || s.expiresAt < new Date() || !s.user.active || s.user.deletedAt) {
     if (s) await prisma.session.delete({ where: { token } }).catch(() => {});
@@ -49,10 +50,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     where: { token }, data: { expiresAt: new Date(Date.now() + mins * 60_000) },
   }).catch(() => {});
   const u = s.user;
+  // Quyen = GOP tat ca vai tro (vai tro chinh + cac vai tro kiem nhiem) → nhan vien lam nhieu viec.
+  const allRoles = [u.role, ...u.extraRoles];
+  const perms = Array.from(new Set(allRoles.flatMap((r) => r.perms.map((rp) => rp.permission.code))));
   return {
     id: u.id, username: u.username, name: u.name, roleCode: u.role.code, roleName: u.role.name,
-    scope: u.scope, branchId: u.branchId,
-    perms: u.role.perms.map((rp) => rp.permission.code),
+    roleNames: allRoles.map((r) => r.name), scope: u.scope, branchId: u.branchId, perms,
   };
 }
 

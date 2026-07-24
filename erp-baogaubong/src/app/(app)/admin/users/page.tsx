@@ -7,13 +7,17 @@ export default async function UsersPage() {
   const user = await getSessionUser();
   if (!user?.perms.includes('user.manage')) return <Forbidden />;
   const [users, roles, branches] = await Promise.all([
-    prisma.user.findMany({ where: { deletedAt: null }, include: { role: true, branch: true }, orderBy: { id: 'asc' } }),
+    prisma.user.findMany({ where: { deletedAt: null }, include: { role: true, extraRoles: true, branch: true }, orderBy: { id: 'asc' } }),
     prisma.role.findMany({ orderBy: { id: 'asc' } }),
     prisma.branch.findMany({ where: { deletedAt: null } }),
   ]);
   return <UsersClient
-    users={users.map(u => ({ id: u.id, username: u.username, name: u.name, phone: u.phone, active: u.active,
-      roleId: u.roleId, roleName: u.role.name, branchId: u.branchId, branchName: u.branch?.name ?? null, scope: u.scope }))}
+    users={users.map(u => {
+      const roleIds = [u.roleId, ...u.extraRoles.map((r) => r.id)];
+      const roleNames = [u.role.name, ...u.extraRoles.map((r) => r.name)];
+      return { id: u.id, username: u.username, name: u.name, phone: u.phone, active: u.active,
+        roleIds, roleNames, branchId: u.branchId, branchName: u.branch?.name ?? null, scope: u.scope };
+    })}
     roles={roles.map(r => ({ id: r.id, name: r.name }))}
     branches={branches.map(b => ({ id: b.id, name: b.name }))} />;
 }
