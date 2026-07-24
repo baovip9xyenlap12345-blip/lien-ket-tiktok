@@ -96,7 +96,12 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
 export async function keyBelongsToProduct(key: string): Promise<boolean> {
   const p = await prisma.product.findFirst({
     where: { deletedAt: null, status: 'ACTIVE', OR: [{ imageUrls: { has: key } }, { videoUrl: key }] }, select: { id: true } });
-  return !!p;
+  if (p) return true;
+  // Anh cua tung lua chon (mau sac) nam trong variantGroups (JSON) — kiem qua text (key la UUID nen an toan).
+  const rows = await prisma.$queryRaw<{ one: number }[]>`
+    SELECT 1 AS one FROM "Product"
+    WHERE "deletedAt" IS NULL AND status::text = 'ACTIVE' AND "variantGroups"::text LIKE ${'%' + key + '%'} LIMIT 1`;
+  return rows.length > 0;
 }
 
 /** Trang chu 'Tat ca' — chia san pham theo tung nhom hang (moi nhom vai san pham + 'Xem tat ca'). */
