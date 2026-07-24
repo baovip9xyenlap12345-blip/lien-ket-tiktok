@@ -3,12 +3,12 @@
 # Log truy cap: docker compose logs caddy.
 
 # Ten mien CHINH — khach vao /shop, nhan vien dang nhap o trang chu.
-muagaubong.vn, www.muagaubong.vn {
+muagaubong.com, www.muagaubong.com {
 	reverse_proxy app:3000
 	encode gzip
 }
 
-# Ten mien du phong (giu tam de khong gian doan; co the bo sau khi muagaubong.vn chay on).
+# Ten mien du phong (giu tam de khong gian doan; co the bo sau khi muagaubong.com chay on).
 app.baogaubong.vn {
 	reverse_proxy app:3000
 	encode gzip
