@@ -83,6 +83,16 @@ export async function keyBelongsToProduct(key: string): Promise<boolean> {
   return !!p;
 }
 
+/** Trang chu 'Tat ca' — chia san pham theo tung nhom hang (moi nhom vai san pham + 'Xem tat ca'). */
+export async function shopHomeSections(perCat = 8): Promise<{ category: { id: number; name: string }; cards: ShopCard[] }[]> {
+  const cats = await shopCategories();
+  const sections = await Promise.all(cats.map(async (c) => {
+    const { cards } = await listShopProducts({ categoryId: c.id, take: perCat });
+    return { category: c, cards };
+  }));
+  return sections.filter((s) => s.cards.length > 0);
+}
+
 /** San pham cung loai (cung nhom hang) — goi y xem them o trang chi tiet. */
 export async function relatedProducts(categoryId: number | null, excludeId: number, limit = 8): Promise<ShopCard[]> {
   const { cards } = await listShopProducts({ categoryId: categoryId ?? undefined, take: limit + 1 });

@@ -28,6 +28,7 @@ export default function CatalogClient({ meta, canManage, showCost }: {
   canManage: boolean; showCost: boolean;
 }) {
   const [tab, setTab] = useState<'sp' | 'bom'>('sp');
+  const [categories, setCategories] = useState<Cat[]>(meta.categories);
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -40,7 +41,7 @@ export default function CatalogClient({ meta, canManage, showCost }: {
         </div>
       </div>
       {tab === 'sp'
-        ? <ProductsTab meta={meta} canManage={canManage} showCost={showCost} />
+        ? <ProductsTab meta={{ ...meta, categories }} canManage={canManage} showCost={showCost} setCategories={setCategories} />
         : <BomTab canManage={canManage} />}
     </div>
   );
@@ -281,9 +282,11 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
 }
 
 /* ============================ TAB SAN PHAM ============================ */
-function ProductsTab({ meta, canManage, showCost }: {
+function ProductsTab({ meta, canManage, showCost, setCategories }: {
   meta: { units: Unit[]; categories: Cat[]; priceLists: PList[] }; canManage: boolean; showCost: boolean;
+  setCategories: (c: Cat[]) => void;
 }) {
+  const [showCatMgr, setShowCatMgr] = useState(false);
   const [q, setQ] = useState(''); const [type, setType] = useState('');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ rows: Product[]; total: number; take: number } | null>(null);
@@ -327,6 +330,7 @@ function ProductsTab({ meta, canManage, showCost }: {
         <div className="ml-auto flex gap-2">
           <a className="btn-ghost" href="/shop" target="_blank" rel="noreferrer">🛍️ Xem gian hàng</a>
           <a className="btn-ghost" href="/api/catalog/export">⬇️ Xuất CSV</a>
+          {canManage && <button className="btn-ghost" onClick={() => setShowCatMgr(true)}>🏷️ Nhóm hàng</button>}
           {canManage && <button className="btn-ghost" onClick={() => setShowImport(true)}>⬆️ Nhập CSV</button>}
           {canManage && <button className="btn" onClick={() => setEdit({ type: 'FINISHED', status: 'ACTIVE', variantGroups: [], variants: [{ costPrice: 0 }] })}>＋ Thêm sản phẩm</button>}
         </div>
@@ -443,6 +447,7 @@ function ProductsTab({ meta, canManage, showCost }: {
       {priceOf && <PriceModal variantId={priceOf.variantId} sku={priceOf.sku}
         lists={meta.priceLists} canManage={canManage} onClose={() => setPriceOf(null)} />}
       {showImport && <ImportModal onClose={() => { setShowImport(false); load(); }} />}
+      {showCatMgr && <CategoryManager cats={meta.categories} setCats={setCategories} onClose={() => setShowCatMgr(false)} />}
     </div>
   );
 }
@@ -504,6 +509,61 @@ function PriceModal({ variantId, sku, lists, canManage, onClose }: {
           </div>)}
         {err && <p className="mt-2 text-sm font-semibold text-red-600">{err}</p>}
         <div className="mt-3 flex justify-end"><button className="btn-ghost" onClick={onClose}>Đóng</button></div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== QUAN LY NHOM HANG ===================== */
+function CategoryManager({ cats, setCats, onClose }: { cats: Cat[]; setCats: (c: Cat[]) => void; onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [edit, setEdit] = useState<{ id: number; name: string } | null>(null);
+  const [err, setErr] = useState('');
+  async function add() {
+    if (!name.trim()) return;
+    const j = await (await fetch('/api/catalog/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) })).json();
+    if (j.ok) { setCats([...cats, { id: j.id, name: j.name }]); setName(''); setErr(''); } else setErr(j.error || 'Lỗi');
+  }
+  async function rename() {
+    if (!edit || !edit.name.trim()) return;
+    const j = await (await fetch('/api/catalog/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: edit.id, name: edit.name.trim() }) })).json();
+    if (j.ok) { setCats(cats.map((c) => c.id === edit.id ? { ...c, name: j.name } : c)); setEdit(null); setErr(''); } else setErr(j.error || 'Lỗi');
+  }
+  async function del(id: number) {
+    if (!confirm('Xóa nhóm hàng này?')) return;
+    const j = await (await fetch(`/api/catalog/categories?id=${id}`, { method: 'DELETE' })).json();
+    if (j.ok) { setCats(cats.filter((c) => c.id !== id)); setErr(''); } else setErr(j.error || 'Lỗi');
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="card my-6 w-full max-w-md p-5">
+        <h2 className="mb-1 font-extrabold">🏷️ Quản lý nhóm hàng</h2>
+        <p className="mb-3 text-xs text-slate-500">Thêm/sửa/xóa nhóm hàng. Khách sẽ thấy các nhóm này ở gian hàng để lọc sản phẩm.</p>
+        <div className="mb-2 flex gap-2">
+          <input className="inp flex-1" placeholder="Tên nhóm mới (VD: Gấu bông in logo)" value={name}
+            onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <button type="button" className="btn" onClick={add}>＋ Thêm</button>
+        </div>
+        {err && <p className="mb-2 text-sm font-semibold text-red-600">{err}</p>}
+        <div className="max-h-80 space-y-1 overflow-y-auto">
+          {cats.length === 0 && <p className="text-sm text-slate-400">Chưa có nhóm nào.</p>}
+          {cats.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 rounded-lg bg-slate-50 p-2">
+              {edit?.id === c.id
+                ? <>
+                    <input className="inp flex-1" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && rename()} />
+                    <button type="button" className="btn-ghost text-green-700" onClick={rename}>Lưu</button>
+                    <button type="button" className="btn-ghost" onClick={() => setEdit(null)}>Hủy</button>
+                  </>
+                : <>
+                    <span className="flex-1 font-semibold">{c.name}</span>
+                    <button type="button" className="btn-ghost" onClick={() => setEdit({ id: c.id, name: c.name })}>✏️</button>
+                    <button type="button" className="btn-ghost text-red-600" onClick={() => del(c.id)}>🗑️</button>
+                  </>}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex justify-end"><button type="button" className="btn-ghost" onClick={onClose}>Đóng</button></div>
       </div>
     </div>
   );
