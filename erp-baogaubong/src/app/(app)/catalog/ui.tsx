@@ -6,9 +6,11 @@ type Unit = { id: number; code: string; name: string };
 type Cat = { id: number; name: string };
 type PList = { id: number; kind: string; name: string; priority: number; active: boolean };
 type Variant = { id?: number; sku?: string; barcode?: string | null; size?: string | null;
-  color?: string | null; material?: string | null; costPrice: number; weightGr?: number | null };
+  color?: string | null; material?: string | null; costPrice: number; weightGr?: number | null;
+  salePrice?: number | null };
 type Product = { id: number; code: string; name: string; type: string; status: string;
   categoryId: number | null; unitId: number; desc?: string | null; note?: string | null;
+  imageUrls?: string[]; videoUrl?: string | null;
   unit: Unit; category: Cat | null; variants: Variant[] };
 type Rule = { id: number; priceListId: number; minQty: number; price: number;
   priceList: PList; variant: { id: number; sku: string; product: { name: string } } };
@@ -39,6 +41,86 @@ export default function CatalogClient({ meta, canManage, showCost }: {
       {tab === 'sp'
         ? <ProductsTab meta={meta} canManage={canManage} showCost={showCost} />
         : <BomTab canManage={canManage} />}
+    </div>
+  );
+}
+
+/* ============================ MEDIA (ANH / VIDEO) ============================ */
+// Key noi bo -> phuc vu qua API; link http -> giu nguyen (YouTube/TikTok/Drive).
+function mediaSrc(key: string): string {
+  return /^https?:\/\//.test(key) ? key : `/api/catalog/media/${encodeURIComponent(key)}`;
+}
+
+function ImageGallery({ urls, setUrls, canManage }: { urls: string[]; setUrls: (u: string[]) => void; canManage: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  async function onPick(files: FileList | null) {
+    if (!files || !files.length) return;
+    setBusy(true);
+    const added: string[] = [];
+    for (const f of Array.from(files).slice(0, 9 - urls.length)) {
+      const fd = new FormData(); fd.append('file', f);
+      const j = await (await fetch('/api/catalog/media', { method: 'POST', body: fd })).json();
+      if (j.ok) added.push(j.key); else alert(j.error || 'Tải ảnh lỗi');
+    }
+    setBusy(false);
+    setUrls([...urls, ...added].slice(0, 9));
+    if (inputRef.current) inputRef.current.value = '';
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir; if (j < 0 || j >= urls.length) return;
+    const next = [...urls]; [next[i], next[j]] = [next[j], next[i]]; setUrls(next);
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {urls.map((u, i) => (
+        <div key={u + i} className="relative h-20 w-20 overflow-hidden rounded-lg border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mediaSrc(u)} alt={`Ảnh ${i + 1}`} className="h-full w-full object-cover" />
+          {i === 0 && <span className="absolute left-0 top-0 rounded-br bg-pink-600 px-1 text-[10px] font-bold text-white">Bìa</span>}
+          {canManage && <>
+            <button type="button" className="absolute right-0 top-0 bg-black/60 px-1 text-xs leading-4 text-white"
+              onClick={() => setUrls(urls.filter((_, j) => j !== i))}>✕</button>
+            <div className="absolute bottom-0 flex w-full justify-between bg-black/40 text-white">
+              <button type="button" className="px-1 text-xs" onClick={() => move(i, -1)}>◀</button>
+              <button type="button" className="px-1 text-xs" onClick={() => move(i, 1)}>▶</button>
+            </div>
+          </>}
+        </div>
+      ))}
+      {canManage && urls.length < 9 && (
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}
+          className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 text-slate-400 hover:border-pink-400 hover:text-pink-500">
+          <span className="text-2xl leading-none">＋</span>
+          <span className="mt-1 text-[10px]">{busy ? 'Đang tải…' : `Thêm ảnh ${urls.length}/9`}</span>
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(e) => onPick(e.target.files)} />
+    </div>
+  );
+}
+
+function VideoField({ url, setUrl, canManage }: { url: string; setUrl: (u: string) => void; canManage: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  async function onPick(files: FileList | null) {
+    const f = files?.[0]; if (!f) return;
+    setBusy(true);
+    const fd = new FormData(); fd.append('file', f);
+    const j = await (await fetch('/api/catalog/media', { method: 'POST', body: fd })).json();
+    setBusy(false);
+    if (j.ok) setUrl(j.key); else alert(j.error || 'Tải video lỗi');
+    if (inputRef.current) inputRef.current.value = '';
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input className="inp flex-1" placeholder="Dán link YouTube / TikTok / Drive…"
+        value={url} onChange={(e) => setUrl(e.target.value)} />
+      {canManage && <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {busy ? 'Đang tải…' : '⬆️ Tải video ≤30MB'}</button>}
+      {url && <a className="text-xs font-semibold text-pink-700 underline" href={mediaSrc(url)} target="_blank" rel="noreferrer">Xem</a>}
+      {url && canManage && <button type="button" className="text-xs text-red-600" onClick={() => setUrl('')}>Xóa</button>}
+      <input ref={inputRef} type="file" accept="video/*" hidden onChange={(e) => onPick(e.target.files)} />
     </div>
   );
 }
@@ -104,7 +186,16 @@ function ProductsTab({ meta, canManage, showCost }: {
             {data?.rows.map((p) => (
               <tr key={p.id} className="align-top">
                 <td className="td font-bold">{p.code}</td>
-                <td className="td">{p.name}{p.category && <div className="text-xs text-slate-400">{p.category.name}</div>}</td>
+                <td className="td">
+                  <div className="flex items-center gap-2">
+                    {p.imageUrls && p.imageUrls[0]
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={mediaSrc(p.imageUrls[0])} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+                      : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-slate-100 text-slate-300">🧸</span>}
+                    <div>{p.name}{p.category && <div className="text-xs text-slate-400">{p.category.name}</div>}
+                      {p.videoUrl && <span className="ml-1 text-xs text-pink-600">🎬</span>}</div>
+                  </div>
+                </td>
                 <td className="td">{TYPE_VI[p.type] ?? p.type}</td>
                 <td className="td">{p.unit.name}</td>
                 <td className="td">
@@ -142,6 +233,11 @@ function ProductsTab({ meta, canManage, showCost }: {
           onClick={(e) => e.target === e.currentTarget && setEdit(null)}>
           <div className="card my-6 w-full max-w-2xl p-5">
             <h2 className="mb-3 font-extrabold">{edit.id ? 'Sửa' : 'Thêm'} sản phẩm</h2>
+            <label className="lbl">Hình ảnh sản phẩm (tối đa 9 — ảnh đầu là ảnh bìa)</label>
+            <div className="mb-3">
+              <ImageGallery urls={edit.imageUrls ?? []} canManage={canManage}
+                setUrls={(u) => setEdit({ ...edit, imageUrls: u })} />
+            </div>
             <div className="mb-2 grid grid-cols-2 gap-2">
               <div><label className="lbl">Mã sản phẩm</label>
                 <input className="inp" value={edit.code ?? ''} onChange={(e) => setEdit({ ...edit, code: e.target.value })} /></div>
@@ -168,15 +264,20 @@ function ProductsTab({ meta, canManage, showCost }: {
                 </select></div>
             </div>
             <label className="lbl">Mô tả (hiện cho khách khi báo giá)</label>
-            <textarea className="inp mb-3" rows={2} value={edit.desc ?? ''} onChange={(e) => setEdit({ ...edit, desc: e.target.value })} />
+            <textarea className="inp mb-3" rows={3} value={edit.desc ?? ''} onChange={(e) => setEdit({ ...edit, desc: e.target.value })} />
+            <label className="lbl">Video sản phẩm (dán link hoặc tải file ngắn)</label>
+            <div className="mb-3">
+              <VideoField url={edit.videoUrl ?? ''} canManage={canManage}
+                setUrl={(u) => setEdit({ ...edit, videoUrl: u })} />
+            </div>
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-sm font-extrabold">Biến thể (size / màu)</span>
+              <span className="text-sm font-extrabold">Phân loại: size / màu — giá bán — cân nặng</span>
               <button className="btn-ghost" onClick={() => setEdit({ ...edit, variants: [...edit.variants, { costPrice: 0 }] })}>＋ Thêm biến thể</button>
             </div>
             <div className="mb-3 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr><th className="th">SKU (trống = tự sinh)</th><th className="th">Size</th><th className="th">Màu</th>
-                  {showCost && <th className="th">Giá vốn (VND)</th>}<th className="th">Nặng (gr)</th><th className="th"></th></tr></thead>
+                  <th className="th">Giá bán (VND)</th>{showCost && <th className="th">Giá vốn (VND)</th>}<th className="th">Nặng (gr)</th><th className="th"></th></tr></thead>
                 <tbody>{edit.variants.map((v, i) => (
                   <tr key={i}>
                     <td className="td"><input className="inp font-mono text-xs" value={v.sku ?? ''}
@@ -185,6 +286,8 @@ function ProductsTab({ meta, canManage, showCost }: {
                       onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, size: e.target.value } : x) })} /></td>
                     <td className="td"><input className="inp w-24" value={v.color ?? ''}
                       onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, color: e.target.value } : x) })} /></td>
+                    <td className="td"><input className="inp w-28" inputMode="numeric" placeholder="0" value={v.salePrice ?? ''}
+                      onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, salePrice: e.target.value ? (+e.target.value.replace(/\D/g, '') || 0) : null } : x) })} /></td>
                     {showCost && <td className="td"><input className="inp w-28" inputMode="numeric" value={v.costPrice}
                       onChange={(e) => setEdit({ ...edit, variants: edit.variants.map((x, j) => j === i ? { ...x, costPrice: +e.target.value.replace(/\D/g, '') || 0 } : x) })} /></td>}
                     <td className="td"><input className="inp w-20" inputMode="numeric" value={v.weightGr ?? ''}

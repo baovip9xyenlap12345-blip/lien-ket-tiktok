@@ -22,11 +22,17 @@ export const GET = guarded(async (req) => {
     ] } : {}),
   };
   const [rows, total] = await Promise.all([
-    prisma.product.findMany({ where, include: { variants: { where: { deletedAt: null } }, unit: true, category: true },
+    prisma.product.findMany({ where, include: {
+      variants: { where: { deletedAt: null }, include: {
+        priceRules: { where: { minQty: 1, priceList: { kind: 'RETAIL' } }, select: { price: true }, take: 1 } } },
+      unit: true, category: true },
       orderBy: { id: 'asc' }, skip: (page - 1) * take, take }),
     prisma.product.count({ where }),
   ]);
-  return Response.json({ ok: true, rows, total, page, take });
+  // Gan gia ban le (bac SL>=1) vao tung bien the cho form hien thi.
+  const outRows = rows.map((p) => ({ ...p,
+    variants: p.variants.map(({ priceRules, ...v }) => ({ ...v, salePrice: priceRules[0]?.price ?? null })) }));
+  return Response.json({ ok: true, rows: outRows, total, page, take });
 });
 
 const VariantIn = z.object({
@@ -35,6 +41,7 @@ const VariantIn = z.object({
   size: z.string().trim().optional().nullable(), color: z.string().trim().optional().nullable(),
   material: z.string().trim().optional().nullable(),
   costPrice: z.number().int().min(0).default(0), weightGr: z.number().int().min(0).nullable().optional(),
+  salePrice: z.number().int().min(0).nullable().optional(), // gia ban le (bac SL>=1)
 });
 const ProductIn = z.object({
   id: z.number().int().optional(),
@@ -44,6 +51,8 @@ const ProductIn = z.object({
   categoryId: z.number().int().nullable().optional(),
   unitId: z.number().int(),
   desc: z.string().optional().nullable(), note: z.string().optional().nullable(),
+  imageUrls: z.array(z.string()).max(9, 'Tối đa 9 ảnh').default([]),
+  videoUrl: z.string().trim().max(500).nullable().optional(),
   tags: z.array(z.string()).default([]),
   taxPercent: z.number().int().min(0).max(100).nullable().optional(),
   deductMode: z.enum(['BUNDLE','COMPONENTS']).nullable().optional(),
@@ -66,11 +75,14 @@ export const POST = guarded(async (req) => {
   const result = await prisma.$transaction(async (tx) => {
     const base = { code: d.code, name: d.name, type: d.type, status: d.status,
       categoryId: d.categoryId ?? null, unitId: d.unitId, desc: d.desc ?? null, note: d.note ?? null,
+      imageUrls: d.imageUrls.slice(0, 9), videoUrl: d.videoUrl?.trim() || null,
       tags: d.tags, taxPercent: d.taxPercent ?? null, deductMode: d.deductMode ?? null };
     const p = d.id
       ? await tx.product.update({ where: { id: d.id }, data: { ...base, version: { increment: 1 } } })
       : await tx.product.create({ data: base });
     const keepIds: number[] = [];
+    // Bang gia ban le mac dinh — tao neu chua co (de luu "gia ban" ngay tren tung size).
+    let retail = await tx.priceList.findFirst({ where: { kind: 'RETAIL', deletedAt: null }, orderBy: { priority: 'desc' } });
     for (let i = 0; i < d.variants.length; i++) {
       const v = d.variants[i];
       const data = { sku: skus[i], barcode: v.barcode || null, size: v.size ?? null, color: v.color ?? null,
@@ -79,6 +91,15 @@ export const POST = guarded(async (req) => {
         ? await tx.productVariant.update({ where: { id: v.id }, data })
         : await tx.productVariant.create({ data: { ...data, productId: p.id } });
       keepIds.push(saved.id);
+      // Gia ban le (bac SL >= 1): co gia thi upsert, de trong thi xoa bac cu.
+      if (v.salePrice != null && v.salePrice > 0) {
+        if (!retail) retail = await tx.priceList.create({ data: { kind: 'RETAIL', name: 'Giá bán lẻ', priority: 0, active: true } });
+        await tx.priceRule.upsert({
+          where: { priceListId_variantId_minQty: { priceListId: retail.id, variantId: saved.id, minQty: 1 } },
+          update: { price: v.salePrice }, create: { priceListId: retail.id, variantId: saved.id, minQty: 1, price: v.salePrice } });
+      } else if (retail) {
+        await tx.priceRule.deleteMany({ where: { priceListId: retail.id, variantId: saved.id, minQty: 1 } });
+      }
     }
     await tx.productVariant.updateMany({
       where: { productId: p.id, id: { notIn: keepIds }, deletedAt: null },

@@ -25,6 +25,22 @@ export const ALLOWED_MIME = new Set([
   'text/csv', 'text/plain',
 ]);
 
+// Media san pham (anh 9 tam + video ngan). Video nang hon nen gioi han rieng.
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB / anh
+export const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30MB / video
+export const ALLOWED_IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+export const ALLOWED_VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+
+/** Suy ra Content-Type tu duoi file trong storageKey (de phuc vu <img>/<video>). */
+export function mimeFromKey(key: string): string {
+  const ext = key.toLowerCase().split('.').pop() ?? '';
+  const map: Record<string, string> = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+  };
+  return map[ext] ?? 'application/octet-stream';
+}
+
 export async function storagePut(buf: Buffer, fileName: string): Promise<string> {
   if (!existsSync(ROOT)) mkdirSync(ROOT, { recursive: true });
   const safe = fileName.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
