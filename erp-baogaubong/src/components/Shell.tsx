@@ -9,6 +9,7 @@ const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/inventory', label: '📦 Kho', perm: 'inventory.view' },
   { href: '/production', label: '🏭 Sản xuất', perm: 'production.view' },
   { href: '/partners', label: '🤝 Đối tác', perm: 'partner.view' },
+  { href: '/admin/customers', label: '👤 Tài khoản khách', perm: 'partner.manage' },
   { href: '/finance', label: '💰 Giao dịch & quỹ', perm: 'finance.view' },
   { href: '/hr', label: '👷 Nhân viên & lương' },
   { href: '/reports', label: '📊 Báo cáo', perm: 'report.view' },
