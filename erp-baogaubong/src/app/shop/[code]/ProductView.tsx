@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
-import { shopImg, videoEmbed, priceForQty } from '@/modules/shop/util';
+import { shopImg, videoEmbed, priceForQty, socialProof, fmtSold } from '@/modules/shop/util';
 import type { ShopDetail } from '@/modules/shop/data';
 import { addToCart } from '../cart';
 
@@ -26,6 +26,8 @@ export default function ProductView({ p }: { p: ShopDetail }) {
   const price = v ? (priceForQty(v.tiers, qty, v.price) ?? basePrice) : basePrice;   // gia da ap bac theo so luong
   const tiers = p.qtyTiers ?? [];
   const vid = videoEmbed(p.videoUrl);
+  const social = socialProof(p.code);                          // danh gia + da ban (on dinh theo ma)
+  const stars = Math.round(social.rating);                     // so sao to (lam tron) de ve icon
 
   function optText(x: typeof p.variants[number]) { return [x.size, x.color].filter(Boolean).join(' · ') || x.sku; }
   function add(goCart: boolean) {
@@ -69,11 +71,41 @@ export default function ProductView({ p }: { p: ShopDetail }) {
       <div>
         <h1 className="text-xl font-extrabold">{p.name}</h1>
         {p.categoryName && <div className="mt-1 text-sm text-slate-400">{p.categoryName}</div>}
-        <div className="mt-2 text-2xl font-extrabold text-pink-700">
-          {price != null ? fmtVND(price) : <span className="text-base text-slate-400">Liên hệ 0876.123.333</span>}
+
+        {/* Danh gia + da ban (kieu Shopee) */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="flex items-center gap-1 font-bold text-amber-500">
+            <span className="text-base underline decoration-amber-300 underline-offset-2">{social.rating.toFixed(1)}</span>
+            <span aria-hidden>{'★★★★★'.slice(0, stars)}<span className="text-slate-200">{'★★★★★'.slice(stars)}</span></span>
+          </span>
+          <span className="h-3 w-px bg-slate-200" />
+          <span className="text-slate-500"><b className="text-slate-700">{fmtSold(social.sold)}</b> đã bán</span>
+          <span className="h-3 w-px bg-slate-200" />
+          <span className="text-slate-400">Yêu thích ❤️</span>
+        </div>
+
+        <div className="mt-2 flex items-baseline gap-2 rounded-lg bg-pink-50 px-3 py-2">
+          <span className="text-2xl font-extrabold text-pink-700">
+            {price != null ? `${fmtVND(price)}đ` : <span className="text-base text-slate-400">Liên hệ 0376.533.857</span>}
+          </span>
+          {price != null && basePrice != null && price < basePrice && (
+            <span className="text-sm text-slate-400 line-through">{fmtVND(basePrice)}đ</span>
+          )}
         </div>
         {v && <div className="mt-1 text-sm text-slate-500">
           {v.stock > 0 ? `Còn ${v.stock} ${p.unitName} trong kho` : 'Hàng đặt trước — làm theo yêu cầu'}</div>}
+
+        {/* Ma giam gia (voucher) — kieu Shopee */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-600">🎟️ Mã giảm:</span>
+          <span className="rounded border border-dashed border-pink-400 bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-700">GAU10 · Giảm 10k đơn từ 200k</span>
+          <span className="rounded border border-dashed border-pink-400 bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-700">FREESHIP · đơn từ 500k</span>
+        </div>
+
+        {/* Van chuyen */}
+        <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+          <span>🚚</span><span>Vận chuyển toàn quốc · nhận hàng sau <b className="text-slate-800">3–5 ngày</b> · trả tiền khi nhận (COD)</span>
+        </div>
 
         {/* Bang gia si — mua nhieu giam nhieu */}
         {tiers.length > 0 && basePrice != null && (

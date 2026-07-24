@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { fmtVND } from '@/lib/format';
 import { listShopProducts, shopCategories, shopHomeSections, type ShopCard } from '@/modules/shop/data';
-import { shopImg } from '@/modules/shop/util';
+import { shopImg, socialProof, fmtSold } from '@/modules/shop/util';
 
 export const dynamic = 'force-dynamic';
 
 function Card({ p }: { p: ShopCard }) {
+  const social = socialProof(p.code);
   return (
     <Link href={`/shop/${encodeURIComponent(p.code)}`}
       className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -25,6 +26,10 @@ function Card({ p }: { p: ShopCard }) {
           {p.minPrice != null
             ? <span className="text-base font-extrabold text-pink-700">{fmtVND(p.minPrice)}đ</span>
             : <span className="text-sm font-semibold text-slate-400">Liên hệ</span>}
+          <div className="mt-0.5 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="font-semibold text-amber-500">★ {social.rating.toFixed(1)}</span>
+            <span>Đã bán {fmtSold(social.sold)}</span>
+          </div>
         </div>
       </div>
     </Link>
