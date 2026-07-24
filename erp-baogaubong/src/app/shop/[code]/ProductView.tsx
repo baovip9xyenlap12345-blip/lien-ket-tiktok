@@ -95,16 +95,27 @@ export default function ProductView({ p }: { p: ShopDetail }) {
 
         {msg && <p className="mt-3 text-sm font-semibold text-green-600">{msg}</p>}
 
-        <div className="mt-5 flex gap-3">
+        {/* Nut mua — man hinh may tinh */}
+        <div className="mt-5 hidden gap-3 md:flex">
           <button onClick={() => add(false)} className="flex-1 rounded-xl border-2 border-pink-600 py-3 font-bold text-pink-700 transition hover:bg-pink-50">🛒 Thêm vào giỏ</button>
           <button onClick={() => add(true)} className="flex-1 rounded-xl bg-pink-700 py-3 font-bold text-white transition hover:bg-pink-800">Mua ngay</button>
+        </div>
+
+        {/* Thanh mua co dinh — dien thoai */}
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-slate-200 bg-white p-2 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] md:hidden">
+          <div className="pl-1 leading-tight">
+            <div className="text-[10px] text-slate-400">Giá</div>
+            <div className="font-extrabold text-pink-700">{price != null ? `${fmtVND(price)}đ` : 'Liên hệ'}</div>
+          </div>
+          <button onClick={() => add(false)} className="ml-auto rounded-xl border-2 border-pink-600 px-4 py-2.5 text-sm font-bold text-pink-700">🛒 Giỏ</button>
+          <button onClick={() => add(true)} className="rounded-xl bg-pink-700 px-5 py-2.5 text-sm font-bold text-white">Mua ngay</button>
         </div>
 
         <div className="mt-5 space-y-1.5 rounded-xl bg-pink-50 p-3 text-sm text-slate-600">
           <div>✅ <b>Chính xưởng</b> — không qua trung gian, giá tốt nhất</div>
           <div>🚚 Giao tận nơi toàn quốc · Nhận hàng trả tiền (COD)</div>
           <div>🎨 Nhận <b>in / thêu logo</b> theo yêu cầu, số lượng lớn</div>
-          <div>📞 Tư vấn nhanh: <a href="tel:0876123333" className="font-bold text-pink-700">0876.123.333</a></div>
+          <div>📞 Tư vấn nhanh: <a href="tel:0376533857" className="font-bold text-pink-700">0376.533.857</a> · Zalo/Messenger góc phải ↘️</div>
         </div>
 
         {p.desc && (

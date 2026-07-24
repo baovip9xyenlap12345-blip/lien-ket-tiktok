@@ -26,7 +26,7 @@ export default async function ShopHome({ searchParams }: { searchParams: { q?: s
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">✅ Chính xưởng, giá gốc</span>
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">🚚 Giao toàn quốc</span>
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">💵 Nhận hàng trả tiền (COD)</span>
-            <a href="tel:0876123333" className="rounded-full bg-white px-3 py-1 font-bold text-pink-700">📞 0876.123.333</a>
+            <a href="tel:0376533857" className="rounded-full bg-white px-3 py-1 font-bold text-pink-700">📞 0376.533.857</a>
           </div>
         </section>
       )}

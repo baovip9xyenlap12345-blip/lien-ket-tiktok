@@ -81,6 +81,12 @@ export async function keyBelongsToProduct(key: string): Promise<boolean> {
   return !!p;
 }
 
+/** San pham cung loai (cung nhom hang) — goi y xem them o trang chi tiet. */
+export async function relatedProducts(categoryId: number | null, excludeId: number, limit = 8): Promise<ShopCard[]> {
+  const { cards } = await listShopProducts({ categoryId: categoryId ?? undefined, take: limit + 1 });
+  return cards.filter((c) => c.id !== excludeId).slice(0, limit);
+}
+
 /** Nhom hang co san pham dang ban (cho thanh loc). */
 export async function shopCategories() {
   const cats = await prisma.category.findMany({ where: { deletedAt: null,
