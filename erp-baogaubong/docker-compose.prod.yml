@@ -48,7 +48,24 @@ services:
     # chay backup hang ngay 2h sang (gio may chu)
     entrypoint: ["/bin/sh", "-c", "while true; do sleep 86400 & wait; sh /backup.sh; done"]
 
+  # Caddy: tu dong lay chung chi HTTPS mien phi (Let's Encrypt) + reverse proxy vao app.
+  # Yeu cau: ten mien da tro ve IP may chu + mo cong 80/443.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   db_data:
   uploads:
   backups:
+  caddy_data:
+  caddy_config:
