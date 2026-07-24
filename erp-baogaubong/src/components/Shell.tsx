@@ -26,7 +26,7 @@ export default function Shell({ user, children }:
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-56 flex-col border-r border-slate-200 bg-white p-3 md:flex">
-        <div className="px-2 py-3 text-lg font-extrabold text-brand">🧸 Bảo Gấu Bông</div>
+        <div className="px-2 py-3 text-lg font-extrabold text-brand">🧸 Xưởng Gấu Bảo</div>
         <nav className="flex-1 space-y-0.5">
           {items.map((m) => (
             <Link key={m.href} href={m.href}
@@ -43,7 +43,7 @@ export default function Shell({ user, children }:
       </aside>
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 md:hidden">
-          <span className="font-extrabold text-brand">🧸 Bảo Gấu Bông</span>
+          <span className="font-extrabold text-brand">🧸 Xưởng Gấu Bảo</span>
           <button onClick={logout} className="text-sm font-semibold text-red-600">Đăng xuất</button>
         </header>
         <main className="p-4 pb-20 md:p-6">{children}</main>

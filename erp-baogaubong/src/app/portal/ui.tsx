@@ -22,7 +22,7 @@ export default function PortalClient() {
     <div className="mx-auto min-h-screen max-w-3xl bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 border-b bg-white px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-extrabold text-pink-700">🧸 Bảo Gấu Bông</span>
+          <span className="text-lg font-extrabold text-pink-700">🧸 Xưởng Gấu Bảo</span>
           <span className="truncate text-sm font-bold">· {me.partnerName}</span>
           <button className="ml-auto text-sm text-red-600"
             onClick={async () => { await fetch('/api/portal/auth', { method: 'DELETE' }); refresh(); }}>Thoát</button>
@@ -63,7 +63,7 @@ function Login({ onOk }: { onOk: () => void }) {
         <div className="mb-4 text-center">
           <div className="text-3xl">🧸</div>
           <h1 className="text-lg font-extrabold text-pink-700">Cổng khách hàng & đại lý</h1>
-          <p className="text-xs text-slate-500">Bảo Gấu Bông — baogaubong.vn</p>
+          <p className="text-xs text-slate-500">Xưởng Gấu Bảo — baogaubong.vn</p>
         </div>
         <label className="lbl">Tài khoản</label>
         <input className="inp mb-2" value={u} onChange={(e) => setU(e.target.value)} />

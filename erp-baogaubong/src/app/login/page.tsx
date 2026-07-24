@@ -18,7 +18,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <form onSubmit={submit} className="card w-full max-w-sm p-6">
-        <h1 className="text-center text-xl font-extrabold text-brand">🧸 Bảo Gấu Bông</h1>
+        <h1 className="text-center text-xl font-extrabold text-brand">🧸 Xưởng Gấu Bảo</h1>
         <p className="mb-5 text-center text-xs text-slate-500">Hệ thống quản trị nội bộ</p>
         <label className="lbl">Tài khoản</label>
         <input name="u" className="inp mb-3" autoComplete="username" required />
