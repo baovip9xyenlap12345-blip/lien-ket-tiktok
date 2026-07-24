@@ -1,6 +1,14 @@
-# HTTPS tu dong cho ERP Bao Gau Bong.
-# Caddy tu xin chung chi Let's Encrypt cho ten mien duoi day (ten mien phai tro ve IP may chu).
-# Doi ten mien tai day neu can. Log truy cap ghi ra stdout (xem bang: docker compose logs caddy).
+# HTTPS tu dong cho app Xuong Gau Bao.
+# Caddy tu xin chung chi Let's Encrypt cho moi ten mien duoi day (ten mien phai tro ve IP may chu).
+# Log truy cap: docker compose logs caddy.
+
+# Ten mien CHINH — khach vao /shop, nhan vien dang nhap o trang chu.
+muagaubong.vn, www.muagaubong.vn {
+	reverse_proxy app:3000
+	encode gzip
+}
+
+# Ten mien du phong (giu tam de khong gian doan; co the bo sau khi muagaubong.vn chay on).
 app.baogaubong.vn {
 	reverse_proxy app:3000
 	encode gzip
