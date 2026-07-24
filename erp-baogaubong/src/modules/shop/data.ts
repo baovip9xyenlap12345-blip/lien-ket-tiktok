@@ -6,8 +6,9 @@ export type ShopVariant = { id: number; sku: string; size: string | null; color:
   weightGr: number | null; price: number | null; stock: number };
 export type ShopCard = { id: number; code: string; name: string; categoryId: number | null;
   categoryName: string | null; cover: string | null; hasVideo: boolean; minPrice: number | null; stock: number };
+export type ShopGroup = { name: string; options: string[]; optionImages?: (string | null)[] };
 export type ShopDetail = ShopCard & { desc: string | null; videoUrl: string | null;
-  images: string[]; unitName: string; variants: ShopVariant[] };
+  images: string[]; unitName: string; variants: ShopVariant[]; variantGroups: ShopGroup[] | null };
 
 /** Ban gia ban le (minQty=1) cho danh sach bien the. */
 async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
@@ -71,7 +72,8 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
   return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
     categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null, hasVideo: !!p.videoUrl,
     minPrice: prices.length ? Math.min(...prices) : null, desc: p.desc, videoUrl: p.videoUrl,
-    images: p.imageUrls, unitName: p.unit.name, variants, stock: variants.reduce((s, v) => s + v.stock, 0) };
+    images: p.imageUrls, unitName: p.unit.name, variants, stock: variants.reduce((s, v) => s + v.stock, 0),
+    variantGroups: (p.variantGroups as unknown as ShopGroup[] | null) ?? null };
 }
 
 /** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */

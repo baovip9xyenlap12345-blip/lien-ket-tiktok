@@ -8,7 +8,7 @@ type PList = { id: number; kind: string; name: string; priority: number; active:
 type Variant = { id?: number; sku?: string; barcode?: string | null; size?: string | null;
   color?: string | null; material?: string | null; costPrice: number; weightGr?: number | null;
   salePrice?: number | null; stock?: number; openingStock?: number | null };
-type Grp = { name: string; options: string[] };
+type Grp = { name: string; options: string[]; optionImages?: (string | null)[] };
 type Product = { id: number; code: string; name: string; type: string; status: string;
   categoryId: number | null; unitId: number; desc?: string | null; note?: string | null;
   imageUrls?: string[]; videoUrl?: string | null; variantGroups?: Grp[] | null;
@@ -145,13 +145,40 @@ function genVariants(groups: Grp[], existing: Variant[]): Variant[] {
 
 /** Suy ra nhom phan loai khi mo SUA (uu tien ban luu, khong co thi doan tu size/mau). */
 function deriveGroups(p: Partial<Product> & { variants: Variant[] }): Grp[] {
-  if (p.variantGroups && p.variantGroups.length) return p.variantGroups.map((g) => ({ name: g.name, options: [...g.options] }));
+  if (p.variantGroups && p.variantGroups.length) return p.variantGroups.map((g) => ({ name: g.name, options: [...g.options], optionImages: g.optionImages ? [...g.optionImages] : undefined }));
   const sizes = [...new Set(p.variants.map((v) => v.size).filter(Boolean))] as string[];
   const colors = [...new Set(p.variants.map((v) => v.color).filter(Boolean))] as string[];
   const g: Grp[] = [];
   if (sizes.length) g.push({ name: 'Kích thước', options: sizes });
   if (colors.length) g.push({ name: 'Màu sắc', options: colors });
   return g;
+}
+
+/** O tai anh nho cho tung lua chon (nhom phan loai 1) — giong Shopee. */
+function OptImg({ img, onChange }: { img: string | null; onChange: (key: string | null) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  async function pick(f: File | undefined) {
+    if (!f) return; setBusy(true);
+    const fd = new FormData(); fd.append('file', f);
+    const j = await (await fetch('/api/catalog/media', { method: 'POST', body: fd })).json();
+    setBusy(false);
+    if (j.ok) onChange(j.key); else alert(j.error || 'Tải ảnh lỗi');
+    if (ref.current) ref.current.value = '';
+  }
+  return (
+    <div className="relative shrink-0">
+      <button type="button" onClick={() => ref.current?.click()} disabled={busy} title="Ảnh cho lựa chọn này"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded border-2 border-dashed border-slate-300 text-slate-400 hover:border-pink-400">
+        {img
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={mediaSrc(img)} alt="" className="h-full w-full object-cover" />
+          : <span className="text-sm">{busy ? '…' : '📷'}</span>}
+      </button>
+      {img && <button type="button" onClick={() => onChange(null)} className="absolute -right-1.5 -top-1.5 rounded-full bg-black/60 px-1 text-[10px] leading-4 text-white">✕</button>}
+      <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+    </div>
+  );
 }
 
 function VariantBuilder({ groups, variants, showCost, onChange }: {
@@ -162,9 +189,11 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
   const num = (s: string) => +s.replace(/\D/g, '') || 0;
   const regen = (g: Grp[]) => onChange(g, genVariants(g, variants));
   const setName = (gi: number, name: string) => onChange(groups.map((g, i) => i === gi ? { ...g, name } : g), variants);
+  const imgsOf = (g: Grp) => g.optionImages ?? g.options.map(() => null);
   const setOpt = (gi: number, oi: number, val: string) => regen(groups.map((g, i) => i === gi ? { ...g, options: g.options.map((o, j) => j === oi ? val : o) } : g));
-  const addOpt = (gi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: [...g.options, ''] } : g));
-  const delOpt = (gi: number, oi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: g.options.filter((_, j) => j !== oi) } : g));
+  const addOpt = (gi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: [...g.options, ''], optionImages: [...imgsOf(g), null] } : g));
+  const delOpt = (gi: number, oi: number) => regen(groups.map((g, i) => i === gi ? { ...g, options: g.options.filter((_, j) => j !== oi), optionImages: imgsOf(g).filter((_, j) => j !== oi) } : g));
+  const setOptImg = (gi: number, oi: number, key: string | null) => onChange(groups.map((g, i) => i === gi ? { ...g, optionImages: imgsOf(g).map((im, j) => j === oi ? key : im) } : g), variants);
   const addGroup = () => regen([...groups, { name: '', options: [''] }]);
   const delGroup = (gi: number) => regen(groups.filter((_, i) => i !== gi));
   const setVar = (i: number, patch: Partial<Variant>) => onChange(groups, variants.map((v, j) => j === i ? { ...v, ...patch } : v));
@@ -187,9 +216,11 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
               value={g.name} onChange={(e) => setName(gi, e.target.value)} />
             <button type="button" className="text-slate-400 hover:text-red-500" onClick={() => delGroup(gi)}>✕</button>
           </div>
+          {gi === 0 && <p className="mb-1 pl-2 text-xs text-slate-400">💡 Thêm ảnh cho từng lựa chọn (VD mỗi màu 1 ảnh) — khách bấm sẽ thấy ảnh đó.</p>}
           <div className="space-y-1 pl-2">
             {g.options.map((o, oi) => (
               <div key={oi} className="flex items-center gap-2">
+                {gi === 0 && <OptImg img={g.optionImages?.[oi] ?? null} onChange={(key) => setOptImg(gi, oi, key)} />}
                 <input className="inp max-w-xs" placeholder="VD: 30cm / Đỏ" value={o} onChange={(e) => setOpt(gi, oi, e.target.value)} />
                 <button type="button" className="text-slate-400 hover:text-red-500" disabled={g.options.length <= 1} onClick={() => delOpt(gi, oi)}>✕</button>
               </div>

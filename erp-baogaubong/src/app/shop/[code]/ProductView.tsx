@@ -9,12 +9,19 @@ import { addToCart } from '../cart';
 export default function ProductView({ p }: { p: ShopDetail }) {
   const router = useRouter();
   const gallery = p.images.length ? p.images : [];
-  const [main, setMain] = useState(0);
+  const g1 = p.variantGroups?.[0] ?? null;   // nhom phan loai 1 (co the co anh tung lua chon)
+  const optImgOf = (sizeVal: string | null): string | null => {
+    if (!g1 || sizeVal == null) return null;
+    const idx = g1.options.indexOf(sizeVal);
+    return idx >= 0 ? (g1.optionImages?.[idx] ?? null) : null;
+  };
   const sellable = p.variants.filter((v) => v.price != null && v.price > 0);
   const [variantId, setVariantId] = useState<number | null>(sellable[0]?.id ?? null);
+  const [shown, setShown] = useState<string | null>(optImgOf(sellable[0]?.size ?? null) ?? gallery[0] ?? null);
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState('');
   const v = p.variants.find((x) => x.id === variantId) ?? null;
+  function pick(x: typeof p.variants[number]) { setVariantId(x.id); const im = optImgOf(x.size); if (im) setShown(im); }
   const price = v?.price ?? p.minPrice ?? null;
   const vid = videoEmbed(p.videoUrl);
 
@@ -32,17 +39,17 @@ export default function ProductView({ p }: { p: ShopDetail }) {
       {/* Thu vien anh */}
       <div>
         <div className="aspect-square overflow-hidden rounded-xl bg-white ring-1 ring-slate-100">
-          {gallery[main]
+          {(shown ?? gallery[0])
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={shopImg(gallery[main])!} alt={p.name} className="h-full w-full object-cover" />
+            ? <img src={shopImg(shown ?? gallery[0])!} alt={p.name} className="h-full w-full object-cover" />
             : <div className="flex h-full items-center justify-center text-6xl text-slate-200">🧸</div>}
         </div>
         {gallery.length > 1 && (
           <div className="mt-2 flex gap-2 overflow-x-auto">
             {gallery.map((g, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={g + i} src={shopImg(g)!} alt="" onClick={() => setMain(i)}
-                className={`h-14 w-14 shrink-0 cursor-pointer rounded-lg object-cover ring-2 ${i === main ? 'ring-pink-600' : 'ring-transparent'}`} />
+              <img key={g + i} src={shopImg(g)!} alt="" onClick={() => setShown(g)}
+                className={`h-14 w-14 shrink-0 cursor-pointer rounded-lg object-cover ring-2 ${g === shown ? 'ring-pink-600' : 'ring-transparent'}`} />
             ))}
           </div>
         )}
@@ -72,10 +79,14 @@ export default function ProductView({ p }: { p: ShopDetail }) {
             <div className="flex flex-wrap gap-2">
               {p.variants.map((x) => {
                 const ok = x.price != null && x.price > 0;
+                const im = optImgOf(x.size);
                 return (
-                  <button key={x.id} disabled={!ok} onClick={() => setVariantId(x.id)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${variantId === x.id ? 'border-pink-600 bg-pink-50 font-bold text-pink-700' : 'border-slate-200 bg-white'} ${!ok ? 'cursor-not-allowed opacity-40' : ''}`}>
-                    {optText(x)}{!ok && ' (ngừng bán)'}
+                  <button key={x.id} disabled={!ok} onClick={() => pick(x)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm ${variantId === x.id ? 'border-pink-600 bg-pink-50 font-bold text-pink-700' : 'border-slate-200 bg-white'} ${!ok ? 'cursor-not-allowed opacity-40' : ''}`}>
+                    {im
+                      // eslint-disable-next-line @next/next/no-img-element
+                      && <img src={shopImg(im)!} alt="" className="h-6 w-6 rounded object-cover" />}
+                    <span>{optText(x)}{!ok && ' (ngừng bán)'}</span>
                   </button>);
               })}
             </div>
