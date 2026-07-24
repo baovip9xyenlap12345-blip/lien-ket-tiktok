@@ -21,9 +21,13 @@ export const GET = guarded(async (req) => {
       include: { lines: true, payments: { orderBy: { id: 'asc' } },
         quote: { select: { code: true } } } });
     if (!order || !inScope(user, order)) throw jsonError(404, 'Không tìm thấy đơn trong phạm vi của bạn.');
+    // SalesOrder khong co quan he partner truc tiep → lay lien he khach theo partnerId.
+    const partner = order.partnerId ? await prisma.partner.findUnique({ where: { id: order.partnerId },
+      select: { code: true, name: true, phone: true, email: true,
+        addresses: { where: { deletedAt: null }, select: { address: true } } } }) : null;
     const history = await prisma.statusHistory.findMany({
       where: { entity: 'order', entityId: id }, orderBy: { id: 'asc' } });
-    return Response.json({ ok: true, order, history });
+    return Response.json({ ok: true, order: { ...order, partner }, history });
   }
   const where: Prisma.SalesOrderWhereInput = {
     deletedAt: null, ...scopeWhere(user),
@@ -38,7 +42,12 @@ export const GET = guarded(async (req) => {
     prisma.salesOrder.findMany({ where, orderBy: { id: 'desc' }, skip: (page - 1) * take, take }),
     prisma.salesOrder.count({ where }),
   ]);
-  return Response.json({ ok: true, rows, total, page, take });
+  // SDT khach theo partnerId (SalesOrder khong co quan he partner truc tiep).
+  const pids = [...new Set(rows.map((r) => r.partnerId).filter((x): x is number => x != null))];
+  const partners = pids.length ? await prisma.partner.findMany({ where: { id: { in: pids } }, select: { id: true, phone: true } }) : [];
+  const phoneMap = new Map(partners.map((p) => [p.id, p.phone]));
+  const outRows = rows.map((o) => ({ ...o, partnerPhone: o.partnerId ? phoneMap.get(o.partnerId) ?? null : null }));
+  return Response.json({ ok: true, rows: outRows, total, page, take });
 });
 
 /** Chuyen trang thai 1 truc cua don (order/production/shipping). */

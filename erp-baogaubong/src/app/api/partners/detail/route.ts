@@ -22,5 +22,10 @@ export const GET = guarded(async (req) => {
     },
   });
   if (!p || !inScope(user, p)) throw jsonError(404, 'Không tìm thấy đối tác trong phạm vi của bạn.');
-  return Response.json({ ok: true, partner: p });
+  // Lich su don hang cua khach (de xem 1 khach da mua nhung don nao).
+  const orders = await prisma.salesOrder.findMany({
+    where: { partnerId: id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 100,
+    select: { id: true, code: true, total: true, paidAmt: true, orderStatus: true, paymentStatus: true, createdAt: true } });
+  const spent = orders.filter((o) => o.orderStatus !== 'CANCELLED').reduce((s, o) => s + o.total, 0);
+  return Response.json({ ok: true, partner: p, orders, summary: { orderCount: orders.length, spent } });
 });

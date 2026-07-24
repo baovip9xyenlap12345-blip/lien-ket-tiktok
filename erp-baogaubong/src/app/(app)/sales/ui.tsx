@@ -12,9 +12,10 @@ type Quote = { id: number; code: string; version: number; partnerId: number | nu
   otherFee: number; shippingFee: number; note: string | null; createdAt: string;
   order?: { id: number; code: string } | null;
   lines?: { variantId: number | null; sku: string; name: string; qty: number; unitPrice: number; discountPct: string }[] };
-type Order = { id: number; code: string; partnerName: string; total: number; paidAmt: number;
+type Order = { id: number; code: string; partnerName: string; partnerPhone?: string | null;
+  total: number; paidAmt: number;
   orderStatus: string; paymentStatus: string; productionStatus: string; shippingStatus: string;
-  approvalStatus: string; approvalReason: string | null; isPos: boolean; createdAt: string };
+  approvalStatus: string; approvalReason: string | null; isPos: boolean; note?: string | null; createdAt: string };
 
 const QS_VI: Record<string, string> = { DRAFT: 'Nháp', SENT: 'Đã gửi', ACCEPTED: 'Khách đồng ý',
   REJECTED: 'Khách từ chối', EXPIRED: 'Hết hạn', CANCELLED: 'Đã hủy' };
@@ -400,15 +401,16 @@ function OrdersTab({ canManage }: { canManage: boolean }) {
         onChange={(e) => { setQ(e.target.value); setPage(1); }} /></div>
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead><tr>{['Mã', 'Khách', 'Tổng', 'Đã thu', 'Đơn', 'Thanh toán', 'SX', 'Giao', ''].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+          <thead><tr>{['Mã', 'Khách', 'SĐT', 'Tổng', 'Đã thu', 'Đơn', 'Thanh toán', 'SX', 'Giao', ''].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
           <tbody>
-            {!data && <tr><td className="td text-slate-400" colSpan={9}>Đang tải…</td></tr>}
-            {data?.rows.length === 0 && <tr><td className="td text-slate-400" colSpan={9}>Chưa có đơn hàng.</td></tr>}
+            {!data && <tr><td className="td text-slate-400" colSpan={10}>Đang tải…</td></tr>}
+            {data?.rows.length === 0 && <tr><td className="td text-slate-400" colSpan={10}>Chưa có đơn hàng.</td></tr>}
             {data?.rows.map((o) => (
               <tr key={o.id} className="cursor-pointer hover:bg-pink-50/40" onClick={() => setDetail(o.id)}>
                 <td className="td font-mono font-bold">{o.code}{o.isPos && <span className="ml-1 text-xs text-slate-400">POS</span>}
                   {o.approvalStatus === 'PENDING' && <div><Chip label="Chờ duyệt" tone="amber" /></div>}</td>
                 <td className="td">{o.partnerName}</td>
+                <td className="td whitespace-nowrap text-xs">{o.partnerPhone || '—'}</td>
                 <td className="td text-right font-bold">{fmtVND(o.total)}đ</td>
                 <td className="td text-right">{fmtVND(o.paidAmt)}đ</td>
                 <td className="td"><Chip label={OS_VI[o.orderStatus]} tone={osTone(o.orderStatus) as never} /></td>
@@ -430,7 +432,8 @@ function OrdersTab({ canManage }: { canManage: boolean }) {
 function OrderDetail({ id, canManage, onClose }: { id: number; canManage: boolean; onClose: () => void }) {
   type Full = Order & { lines: { id: number; name: string; sku: string; qty: number; unitPrice: number; lineTotal: number }[];
     payments: { id: number; code: string; amount: number; method: string; createdAt: string }[];
-    quote: { code: string } | null; subtotal: number; discountAmt: number; taxAmt: number; vatEnabled: boolean; vatPercent: number };
+    quote: { code: string } | null; subtotal: number; discountAmt: number; taxAmt: number; vatEnabled: boolean; vatPercent: number;
+    partner: { code: string; name: string; phone: string | null; email: string | null; addresses: { address: string }[] } | null };
   const [o, setO] = useState<Full | null>(null);
   const [history, setHistory] = useState<{ id: number; axis: string; fromVal: string; toVal: string; byName: string; createdAt: string; note: string | null }[]>([]);
   const [pay, setPay] = useState<number | ''>(''); const [method, setMethod] = useState<'CASH' | 'TRANSFER'>('CASH');
@@ -472,6 +475,14 @@ function OrderDetail({ id, canManage, onClose }: { id: number; canManage: boolea
           <span className="text-sm">{o.partnerName}</span>
           <a className="btn-ghost ml-auto" href={`/print/order/${o.id}`} target="_blank">🖨️ A4</a>
           <a className="btn-ghost" href={`/print/order/${o.id}?k80=1`} target="_blank">🧾 K80</a>
+        </div>
+        <div className="mb-2 rounded-xl bg-slate-50 p-3 text-sm">
+          <div className="mb-1 font-bold">👤 Thông tin khách hàng</div>
+          <div><b>{o.partner?.name ?? o.partnerName}</b>{o.partner?.code && <span className="ml-1 text-xs text-slate-400">{o.partner.code}</span>}</div>
+          {o.partner?.phone && <div>📞 <a href={`tel:${o.partner.phone}`} className="font-semibold text-pink-700">{o.partner.phone}</a></div>}
+          {o.partner?.email && <div>✉️ {o.partner.email}</div>}
+          {o.partner?.addresses?.[0] && <div>📍 {o.partner.addresses[0].address}</div>}
+          {o.note && <div className="mt-1 whitespace-pre-wrap rounded-lg bg-white p-2 text-xs text-slate-600 ring-1 ring-slate-100">{o.note}</div>}
         </div>
         {o.approvalStatus === 'PENDING' && (
           <p className="mb-2 rounded-lg bg-amber-50 p-2 text-sm font-semibold text-amber-700">

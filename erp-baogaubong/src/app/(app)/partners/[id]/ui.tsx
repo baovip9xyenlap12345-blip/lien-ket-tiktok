@@ -18,8 +18,15 @@ type P = {
     uploadedBy: { name: string } }[];
 };
 
+type OrderRow = { id: number; code: string; total: number; paidAmt: number;
+  orderStatus: string; paymentStatus: string; createdAt: string };
+const OSVI: Record<string, string> = { NEW: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', DONE: 'Hoàn tất', CANCELLED: 'Đã hủy' };
+const PSVI: Record<string, string> = { UNPAID: 'Chưa thu', PARTIAL: 'Thu 1 phần', PAID: 'Đã thu đủ', REFUNDED: 'Đã hoàn' };
+
 export default function PartnerDetailClient({ id, canManage }: { id: number; canManage: boolean }) {
   const [p, setP] = useState<P | null>(null);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [summary, setSummary] = useState<{ orderCount: number; spent: number } | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [care, setCare] = useState({ kind: 'NOTE', content: '', dueAt: '' });
   const [showMerge, setShowMerge] = useState(false);
@@ -29,7 +36,7 @@ export default function PartnerDetailClient({ id, canManage }: { id: number; can
   const load = useCallback(async () => {
     const res = await fetch(`/api/partners/detail?id=${id}`);
     const j = await res.json();
-    if (j.ok) setP(j.partner); else setNotFound(true);
+    if (j.ok) { setP(j.partner); setOrders(j.orders ?? []); setSummary(j.summary ?? null); } else setNotFound(true);
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -134,6 +141,24 @@ export default function PartnerDetailClient({ id, canManage }: { id: number; can
         </div>
 
         <div className="lg:col-span-2">
+          <div className="card mb-3 p-4">
+            <h2 className="mb-2 font-extrabold">🛒 Đơn hàng đã mua
+              {summary && <span className="ml-1 text-sm font-normal text-slate-500">({summary.orderCount} đơn · tổng {fmtVND(summary.spent)}đ)</span>}</h2>
+            {orders.length === 0 ? <p className="text-sm text-slate-400">Khách chưa có đơn nào.</p> : (
+              <div className="overflow-x-auto"><table className="w-full text-sm">
+                <thead><tr><th className="th">Mã đơn</th><th className="th">Ngày</th><th className="th">Tổng</th><th className="th">Đã thu</th><th className="th">Trạng thái</th></tr></thead>
+                <tbody>{orders.map((o) => (
+                  <tr key={o.id}>
+                    <td className="td font-mono font-bold">{o.code}</td>
+                    <td className="td whitespace-nowrap text-xs">{new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+                    <td className="td text-right font-bold">{fmtVND(o.total)}đ</td>
+                    <td className="td text-right text-green-700">{fmtVND(o.paidAmt)}đ</td>
+                    <td className="td text-xs">{OSVI[o.orderStatus] ?? o.orderStatus} · {PSVI[o.paymentStatus] ?? o.paymentStatus}</td>
+                  </tr>))}
+                </tbody>
+              </table></div>
+            )}
+          </div>
           <div className="card p-4">
             <h2 className="mb-2 font-extrabold">Lịch sử chăm sóc & nhiệm vụ</h2>
             {canManage && (
