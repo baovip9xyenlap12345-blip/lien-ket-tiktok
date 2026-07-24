@@ -39,6 +39,9 @@ export const POST = guarded(async (req) => {
   });
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   const partner = await prisma.partner.findUnique({ where: { id: me.partnerId } });
+  // Nguoi tao don hop le: sale phu trach, khong thi lay 1 tai khoan noi bo dang hoat dong (tranh FK sai).
+  const sysUser = await prisma.user.findFirst({ where: { active: true, deletedAt: null }, orderBy: { id: 'asc' }, select: { id: true } });
+  const creatorId = partner?.assignedToId ?? sysUser?.id ?? 1;
   const noteBlock = [`[ĐƠN ONLINE — COD]`,
     `Người nhận: ${d.receiverName} · ${d.receiverPhone}`,
     `Địa chỉ giao: ${d.address}`,
@@ -52,21 +55,25 @@ export const POST = guarded(async (req) => {
       vatEnabled: false, vatPercent: 0,
       subtotal, discountAmt: 0, taxAmt: 0, total: subtotal, shippingFee: 0,
       note: noteBlock, isPos: false,
-      assignedToId: partner?.assignedToId ?? null, createdById: partner?.assignedToId ?? 1 } });
+      assignedToId: partner?.assignedToId ?? null, createdById: creatorId } });
     await tx.orderLine.createMany({ data: lines.map((l) => ({ ...l, orderId: o.id })) });
-    // Giu cho ton kho khi khach dat: giu phan KHA DUNG (onHand - reserved); phan thieu = hang dat truoc.
-    // Khi nhan vien giao hang, luong Shipment se tru onHand + nha giu cho (da co san).
-    const wh = await tx.warehouse.findFirst({ orderBy: { id: 'asc' } });
-    if (wh) {
-      for (const l of lines) {
+    // Giu cho ton kho khi khach dat: giu phan KHA DUNG (onHand - reserved) tren MOI kho — khop cach
+    // gian hang hien ton (gop tat ca kho). Phan thieu = hang dat truoc. Shipment se tru onHand + nha giu cho.
+    const warehouses = await tx.warehouse.findMany({ orderBy: { id: 'asc' }, select: { id: true } });
+    for (const l of lines) {
+      let need = l.qty;
+      for (const wh of warehouses) {
+        if (need <= 0) break;
         const bal = await tx.inventoryBalance.findUnique({
           where: { warehouseId_variantId: { warehouseId: wh.id, variantId: l.variantId } } });
-        const take = Math.min(l.qty, Math.max(0, (bal?.onHand ?? 0) - (bal?.reserved ?? 0)));
+        const take = Math.min(need, Math.max(0, (bal?.onHand ?? 0) - (bal?.reserved ?? 0)));
         if (take <= 0) continue;
         const n = await tx.$executeRaw`UPDATE "InventoryBalance" SET "reserved" = "reserved" + ${take}
           WHERE "warehouseId" = ${wh.id} AND "variantId" = ${l.variantId} AND "onHand" - "reserved" >= ${take}`;
-        if (Number(n) > 0) await tx.stockReservation.create({
-          data: { orderId: o.id, warehouseId: wh.id, variantId: l.variantId, qty: take } });
+        if (Number(n) > 0) {
+          await tx.stockReservation.create({ data: { orderId: o.id, warehouseId: wh.id, variantId: l.variantId, qty: take } });
+          need -= take;
+        }
       }
     }
     return o;

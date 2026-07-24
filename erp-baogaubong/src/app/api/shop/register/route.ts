@@ -19,6 +19,7 @@ export const POST = guarded(async (req) => {
   const ip = reqMeta().ip ?? 'unknown';
   const t = tries.get(ip);
   if (t && t.n >= 10 && Date.now() - t.at < 10 * 60000) throw jsonError(429, 'Thử lại sau ít phút.');
+  tries.set(ip, { n: (t?.n ?? 0) + 1, at: Date.now() });   // dem MOI lan thu (chong do/spam), khong chi khi thanh cong
   const b = Body.safeParse(await req.json());
   if (!b.success) throw jsonError(400, b.error.errors[0]?.message ?? 'Dữ liệu không hợp lệ');
   const normPhone = normalizePhone(b.data.phone);
@@ -28,13 +29,23 @@ export const POST = guarded(async (req) => {
 
   const passwordHash = await hashPassword(b.data.password);
   const account = await prisma.$transaction(async (tx) => {
-    const code = await nextCode(tx, 'KH');
-    const partner = await tx.partner.create({ data: {
-      code, name: b.data.name.trim(), type: 'PERSON', isCustomer: true,
-      phone: b.data.phone.trim(), normPhone, source: 'online', channel: 'shop' } });
-    return tx.portalAccount.create({ data: { partnerId: partner.id, username: normPhone, passwordHash } });
+    // Neu da co Partner khach cung SDT (nhan vien tao truoc) va chua co tai khoan → gan vao do,
+    // tranh tao Partner thu hai lam phan manh ho so CRM. Khong thi tao khach moi.
+    let partnerId: number | null = null;
+    const existingP = await tx.partner.findFirst({
+      where: { normPhone, isCustomer: true, deletedAt: null }, orderBy: { id: 'asc' }, select: { id: true } });
+    if (existingP && !(await tx.portalAccount.findUnique({ where: { partnerId: existingP.id } }))) {
+      partnerId = existingP.id;
+    }
+    if (!partnerId) {
+      const code = await nextCode(tx, 'KH');
+      const partner = await tx.partner.create({ data: {
+        code, name: b.data.name.trim(), type: 'PERSON', isCustomer: true,
+        phone: b.data.phone.trim(), normPhone, source: 'online', channel: 'shop' } });
+      partnerId = partner.id;
+    }
+    return tx.portalAccount.create({ data: { partnerId, username: normPhone, passwordHash } });
   });
-  tries.set(ip, { n: (t?.n ?? 0) + 1, at: Date.now() });
   await createPortalSession(account.id);
   await audit({ actorId: null, actorName: `shop:${normPhone}`, action: 'shop_register',
     entity: 'portal', entityId: String(account.partnerId), ip });

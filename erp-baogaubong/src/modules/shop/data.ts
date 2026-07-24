@@ -77,7 +77,7 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
 /** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */
 export async function keyBelongsToProduct(key: string): Promise<boolean> {
   const p = await prisma.product.findFirst({
-    where: { deletedAt: null, OR: [{ imageUrls: { has: key } }, { videoUrl: key }] }, select: { id: true } });
+    where: { deletedAt: null, status: 'ACTIVE', OR: [{ imageUrls: { has: key } }, { videoUrl: key }] }, select: { id: true } });
   return !!p;
 }
 

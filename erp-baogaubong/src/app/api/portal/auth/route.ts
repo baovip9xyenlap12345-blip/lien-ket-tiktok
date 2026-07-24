@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { guarded, jsonError, verifyPassword } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { createPortalSession, destroyPortalSession, getPortalUser } from '@/modules/portal/server';
+import { normalizePhone } from '@/modules/partners/domain';
 
 const attempts = new Map<string, { n: number; at: number }>();
 
@@ -15,7 +16,10 @@ export const POST = guarded(async (req) => {
   if (a && a.n >= 5 && Date.now() - a.at < 5 * 60000) {
     throw jsonError(429, 'Sai quá 5 lần — thử lại sau 5 phút.');
   }
-  const acc = await prisma.portalAccount.findUnique({ where: { username: key } });
+  let found = await prisma.portalAccount.findUnique({ where: { username: key } });
+  // Du phong: khach shop co username = SDT chuan hoa; neu go SDT dang khac (+84…) van dang nhap duoc.
+  if (!found) { const np = normalizePhone(b.data.u); if (np && np !== key) found = await prisma.portalAccount.findUnique({ where: { username: np } }); }
+  const acc = found;
   const ok = acc && acc.active && (await verifyPassword(b.data.p, acc.passwordHash));
   if (!ok) {
     attempts.set(key, { n: (a?.n ?? 0) + 1, at: Date.now() });
