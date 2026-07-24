@@ -31,15 +31,14 @@ export default async function ShopHome({ searchParams }: { searchParams: { q?: s
         </section>
       )}
 
-      {/* Danh muc */}
+      {/* Danh muc — DINH duoi header (top-16), cuon ngang khi nhieu nhom hang; san pham ben duoi troi */}
       {cats.length > 0 && (
-        <div className="mb-4">
-          <div className="mb-2 text-sm font-extrabold text-slate-700">Danh mục sản phẩm</div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/shop" className={`rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm ${!categoryId ? 'bg-pink-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-pink-300'}`}>Tất cả</Link>
+        <div className="sticky top-16 z-20 -mx-3 mb-3 border-b border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]">
+            <Link href="/shop" className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold ${!categoryId ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-pink-50'}`}>Tất cả</Link>
             {cats.map((c) => (
               <Link key={c.id} href={`/shop?cat=${c.id}`}
-                className={`rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm ${categoryId === c.id ? 'bg-pink-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-pink-300'}`}>{c.name}</Link>
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold ${categoryId === c.id ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-pink-50'}`}>{c.name}</Link>
             ))}
           </div>
         </div>

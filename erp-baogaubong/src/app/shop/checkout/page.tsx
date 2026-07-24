@@ -24,6 +24,12 @@ export default function CheckoutPage() {
       }
     }).finally(() => setAuthReady(true));
   }, []);
+  // Dat hang xong -> tu chuyen vao nhom Zalo sau 6 giay (khach van kip xem ma don + nut vao ngay).
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => { window.location.href = 'https://zalo.me/g/qolxci436'; }, 6000);
+    return () => clearTimeout(t);
+  }, [done]);
   const total = items.reduce((s, x) => s + x.qty * x.price, 0);
 
   async function submit() {
@@ -42,7 +48,10 @@ export default function CheckoutPage() {
       <p className="mt-2 text-slate-600">Mã đơn: <b className="text-pink-700">{done.code}</b></p>
       <p className="text-slate-600">Tổng tiền (COD): <b>{fmtVND(done.total)}</b></p>
       <p className="mt-2 text-sm text-slate-400">Xưởng sẽ gọi xác nhận & giao hàng. Bạn trả tiền khi nhận hàng.</p>
-      <div className="mt-5 flex justify-center gap-3">
+      <a href="https://zalo.me/g/qolxci436" target="_blank" rel="noreferrer"
+        className="mt-5 block rounded-xl bg-[#0068FF] py-3 font-bold text-white shadow">💬 Vào nhóm Zalo — nhận ưu đãi & theo dõi đơn</a>
+      <p className="mt-1 text-xs text-slate-400">Đang tự chuyển vào nhóm Zalo sau 6 giây…</p>
+      <div className="mt-4 flex justify-center gap-3">
         <Link href="/shop" className="rounded-xl border-2 border-pink-600 px-5 py-2 font-bold text-pink-700">Tiếp tục mua</Link>
         <Link href="/shop/account" className="rounded-xl bg-pink-700 px-5 py-2 font-bold text-white">Xem đơn của tôi</Link>
       </div>

@@ -19,7 +19,7 @@ export default function ShopHeader() {
   function search(e: React.FormEvent) { e.preventDefault(); router.push(`/shop?q=${encodeURIComponent(q.trim())}`); }
   return (
     <header className="sticky top-0 z-30 bg-pink-700 text-white shadow">
-      <div className="mx-auto flex max-w-5xl items-center gap-3 p-3">
+      <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-3">
         <Link href="/shop" className="whitespace-nowrap text-lg font-extrabold">🧸 Xưởng Gấu Bảo</Link>
         <form onSubmit={search} className="flex flex-1 items-center">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm sản phẩm…"
