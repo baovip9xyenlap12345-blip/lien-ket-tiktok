@@ -63,6 +63,8 @@ export default function ProductView({ p }: { p: ShopDetail }) {
         <div className="mt-2 text-2xl font-extrabold text-pink-700">
           {price != null ? fmtVND(price) : <span className="text-base text-slate-400">Liên hệ 0876.123.333</span>}
         </div>
+        {v && <div className="mt-1 text-sm text-slate-500">
+          {v.stock > 0 ? `Còn ${v.stock} ${p.unitName} trong kho` : 'Hàng đặt trước — làm theo yêu cầu'}</div>}
 
         {p.variants.length > 0 && (
           <div className="mt-4">

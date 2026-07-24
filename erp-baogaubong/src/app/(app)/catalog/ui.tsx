@@ -7,7 +7,7 @@ type Cat = { id: number; name: string };
 type PList = { id: number; kind: string; name: string; priority: number; active: boolean };
 type Variant = { id?: number; sku?: string; barcode?: string | null; size?: string | null;
   color?: string | null; material?: string | null; costPrice: number; weightGr?: number | null;
-  salePrice?: number | null };
+  salePrice?: number | null; stock?: number; openingStock?: number | null };
 type Grp = { name: string; options: string[] };
 type Product = { id: number; code: string; name: string; type: string; status: string;
   categoryId: number | null; unitId: number; desc?: string | null; note?: string | null;
@@ -158,7 +158,7 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
   groups: Grp[]; variants: Variant[]; showCost: boolean;
   onChange: (groups: Grp[], variants: Variant[]) => void;
 }) {
-  const [bulk, setBulk] = useState({ price: '', cost: '', weight: '' });
+  const [bulk, setBulk] = useState({ price: '', cost: '', weight: '', stock: '' });
   const num = (s: string) => +s.replace(/\D/g, '') || 0;
   const regen = (g: Grp[]) => onChange(g, genVariants(g, variants));
   const setName = (gi: number, name: string) => onChange(groups.map((g, i) => i === gi ? { ...g, name } : g), variants);
@@ -171,7 +171,9 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
   const applyBulk = () => onChange(groups, variants.map((v) => ({ ...v,
     salePrice: bulk.price ? num(bulk.price) : v.salePrice,
     costPrice: bulk.cost ? num(bulk.cost) : v.costPrice,
-    weightGr: bulk.weight ? num(bulk.weight) : v.weightGr })));
+    weightGr: bulk.weight ? num(bulk.weight) : v.weightGr,
+    // Ton dau ky chi ap cho bien the MOI (chua co id) — bien the cu chinh ton o muc Kho.
+    openingStock: (!v.id && bulk.stock) ? num(bulk.stock) : v.openingStock })));
   const hasGroups = groups.length > 0;
 
   return (
@@ -208,6 +210,7 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
           <input className="inp w-28" placeholder="Giá bán" inputMode="numeric" value={bulk.price} onChange={(e) => setBulk({ ...bulk, price: e.target.value })} />
           {showCost && <input className="inp w-28" placeholder="Giá vốn" inputMode="numeric" value={bulk.cost} onChange={(e) => setBulk({ ...bulk, cost: e.target.value })} />}
           <input className="inp w-24" placeholder="Nặng (gr)" inputMode="numeric" value={bulk.weight} onChange={(e) => setBulk({ ...bulk, weight: e.target.value })} />
+          <input className="inp w-24" placeholder="Tồn kho" inputMode="numeric" value={bulk.stock} onChange={(e) => setBulk({ ...bulk, stock: e.target.value })} />
           <button type="button" className="btn" onClick={applyBulk}>Áp dụng</button>
         </div>
       )}
@@ -219,7 +222,7 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
             {hasGroups && <th className="th">{groups[0]?.name || 'Phân loại 1'}</th>}
             {groups.length >= 2 && <th className="th">{groups[1]?.name || 'Phân loại 2'}</th>}
             <th className="th">Giá bán (VND)</th>{showCost && <th className="th">Giá vốn (VND)</th>}
-            <th className="th">Nặng (gr)</th><th className="th">SKU (trống = tự sinh)</th>
+            <th className="th">Nặng (gr)</th><th className="th">Kho</th><th className="th">SKU (trống = tự sinh)</th>
           </tr></thead>
           <tbody>{variants.map((v, i) => (
             <tr key={i}>
@@ -231,6 +234,10 @@ function VariantBuilder({ groups, variants, showCost, onChange }: {
                 onChange={(e) => setVar(i, { costPrice: num(e.target.value) })} /></td>}
               <td className="td"><input className="inp w-20" inputMode="numeric" value={v.weightGr ?? ''}
                 onChange={(e) => setVar(i, { weightGr: e.target.value ? num(e.target.value) : null })} /></td>
+              <td className="td">{v.id
+                ? <span className="whitespace-nowrap text-slate-500" title="Sửa tồn ở mục Kho">{v.stock ?? 0} <span className="text-[10px]">(ở Kho)</span></span>
+                : <input className="inp w-20" inputMode="numeric" placeholder="0" value={v.openingStock ?? ''}
+                    onChange={(e) => setVar(i, { openingStock: e.target.value ? num(e.target.value) : null })} />}</td>
               <td className="td"><input className="inp font-mono text-xs" value={v.sku ?? ''}
                 onChange={(e) => setVar(i, { sku: e.target.value })} /></td>
             </tr>))}

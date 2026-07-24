@@ -3,9 +3,9 @@
 import { prisma } from '@/lib/db';
 
 export type ShopVariant = { id: number; sku: string; size: string | null; color: string | null;
-  weightGr: number | null; price: number | null };
+  weightGr: number | null; price: number | null; stock: number };
 export type ShopCard = { id: number; code: string; name: string; categoryId: number | null;
-  categoryName: string | null; cover: string | null; hasVideo: boolean; minPrice: number | null };
+  categoryName: string | null; cover: string | null; hasVideo: boolean; minPrice: number | null; stock: number };
 export type ShopDetail = ShopCard & { desc: string | null; videoUrl: string | null;
   images: string[]; unitName: string; variants: ShopVariant[] };
 
@@ -16,6 +16,14 @@ async function priceMap(variantIds: number[]): Promise<Map<number, number>> {
     where: { variantId: { in: variantIds }, minQty: 1, priceList: { kind: 'RETAIL' } },
     select: { variantId: true, price: true } });
   return new Map(rules.map((r) => [r.variantId, r.price]));
+}
+
+/** Ton kho hien tai (tong cac kho) cho danh sach bien the. */
+async function stockMap(variantIds: number[]): Promise<Map<number, number>> {
+  if (!variantIds.length) return new Map();
+  const b = await prisma.inventoryBalance.groupBy({ by: ['variantId'],
+    where: { variantId: { in: variantIds } }, _sum: { onHand: true } });
+  return new Map(b.map((x) => [x.variantId, x._sum.onHand ?? 0]));
 }
 
 /** Danh sach san pham cong khai (loc theo tim kiem + nhom hang). */
@@ -37,12 +45,14 @@ export async function listShopProducts(opts: { q?: string; categoryId?: number; 
       orderBy: { updatedAt: 'desc' }, skip: (page - 1) * take, take }),
     prisma.product.count({ where }),
   ]);
-  const pm = await priceMap(rows.flatMap((p) => p.variants.map((v) => v.id)));
+  const varIds = rows.flatMap((p) => p.variants.map((v) => v.id));
+  const [pm, sm] = await Promise.all([priceMap(varIds), stockMap(varIds)]);
   const cards: ShopCard[] = rows.map((p) => {
     const prices = p.variants.map((v) => pm.get(v.id)).filter((x): x is number => x != null && x > 0);
+    const stock = p.variants.reduce((s, v) => s + (sm.get(v.id) ?? 0), 0);
     return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
       categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null,
-      hasVideo: !!p.videoUrl, minPrice: prices.length ? Math.min(...prices) : null };
+      hasVideo: !!p.videoUrl, minPrice: prices.length ? Math.min(...prices) : null, stock };
   });
   return { cards, total, page, take };
 }
@@ -54,14 +64,14 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
     include: { category: true, unit: true,
       variants: { where: { deletedAt: null, status: 'ACTIVE' }, orderBy: { id: 'asc' } } } });
   if (!p) return null;
-  const pm = await priceMap(p.variants.map((v) => v.id));
+  const [pm, sm] = await Promise.all([priceMap(p.variants.map((v) => v.id)), stockMap(p.variants.map((v) => v.id))]);
   const variants: ShopVariant[] = p.variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size,
-    color: v.color, weightGr: v.weightGr, price: pm.get(v.id) ?? null }));
+    color: v.color, weightGr: v.weightGr, price: pm.get(v.id) ?? null, stock: sm.get(v.id) ?? 0 }));
   const prices = variants.map((v) => v.price).filter((x): x is number => x != null && x > 0);
   return { id: p.id, code: p.code, name: p.name, categoryId: p.categoryId,
     categoryName: p.category?.name ?? null, cover: p.imageUrls[0] ?? null, hasVideo: !!p.videoUrl,
     minPrice: prices.length ? Math.min(...prices) : null, desc: p.desc, videoUrl: p.videoUrl,
-    images: p.imageUrls, unitName: p.unit.name, variants };
+    images: p.imageUrls, unitName: p.unit.name, variants, stock: variants.reduce((s, v) => s + v.stock, 0) };
 }
 
 /** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */

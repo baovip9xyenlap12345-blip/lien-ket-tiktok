@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { makeSku } from '@/modules/catalog/domain';
+import { applyMovements } from '@/modules/inventory/server';
 
 export const GET = guarded(async (req) => {
   await requirePerm('catalog.view');
@@ -29,9 +30,16 @@ export const GET = guarded(async (req) => {
       orderBy: { id: 'asc' }, skip: (page - 1) * take, take }),
     prisma.product.count({ where }),
   ]);
-  // Gan gia ban le (bac SL>=1) vao tung bien the cho form hien thi.
+  // Ton kho hien tai (tong cac kho) cho tung bien the.
+  const allVarIds = rows.flatMap((p) => p.variants.map((v) => v.id));
+  const balances = allVarIds.length
+    ? await prisma.inventoryBalance.groupBy({ by: ['variantId'], where: { variantId: { in: allVarIds } }, _sum: { onHand: true } })
+    : [];
+  const stockMap = new Map(balances.map((b) => [b.variantId, b._sum.onHand ?? 0]));
+  // Gan gia ban le (bac SL>=1) + ton kho vao tung bien the cho form hien thi.
   const outRows = rows.map((p) => ({ ...p,
-    variants: p.variants.map(({ priceRules, ...v }) => ({ ...v, salePrice: priceRules[0]?.price ?? null })) }));
+    variants: p.variants.map(({ priceRules, ...v }) => ({ ...v,
+      salePrice: priceRules[0]?.price ?? null, stock: stockMap.get(v.id) ?? 0 })) }));
   return Response.json({ ok: true, rows: outRows, total, page, take });
 });
 
@@ -42,6 +50,7 @@ const VariantIn = z.object({
   material: z.string().trim().optional().nullable(),
   costPrice: z.number().int().min(0).default(0), weightGr: z.number().int().min(0).nullable().optional(),
   salePrice: z.number().int().min(0).nullable().optional(), // gia ban le (bac SL>=1)
+  openingStock: z.number().int().min(0).nullable().optional(), // ton dau ky — CHI ghi khi tao bien the moi
 });
 const ProductIn = z.object({
   id: z.number().int().optional(),
@@ -83,6 +92,7 @@ export const POST = guarded(async (req) => {
       ? await tx.product.update({ where: { id: d.id }, data: { ...base, version: { increment: 1 } } })
       : await tx.product.create({ data: base });
     const keepIds: number[] = [];
+    const openingLines: { variantId: number; qty: number }[] = [];
     // Bang gia ban le mac dinh — tao neu chua co (de luu "gia ban" ngay tren tung size).
     let retail = await tx.priceList.findFirst({ where: { kind: 'RETAIL', deletedAt: null }, orderBy: { priority: 'desc' } });
     for (let i = 0; i < d.variants.length; i++) {
@@ -93,6 +103,8 @@ export const POST = guarded(async (req) => {
         ? await tx.productVariant.update({ where: { id: v.id }, data })
         : await tx.productVariant.create({ data: { ...data, productId: p.id } });
       keepIds.push(saved.id);
+      // Ton dau ky: CHI ghi cho bien the MOI tao (khong id) → tranh cong don khi sua/luu lai.
+      if (!v.id && v.openingStock != null && v.openingStock > 0) openingLines.push({ variantId: saved.id, qty: v.openingStock });
       // Gia ban le (bac SL >= 1): co gia thi upsert, de trong thi xoa bac cu.
       if (v.salePrice != null && v.salePrice > 0) {
         if (!retail) retail = await tx.priceList.create({ data: { kind: 'RETAIL', name: 'Giá bán lẻ', priority: 0, active: true } });
@@ -106,6 +118,12 @@ export const POST = guarded(async (req) => {
     await tx.productVariant.updateMany({
       where: { productId: p.id, id: { notIn: keepIds }, deletedAt: null },
       data: { deletedAt: new Date() } });
+    // Ghi ton dau ky = phieu NHAP kho (RECEIPT) vao kho mac dinh — qua applyMovements (bat bien + khoa dong).
+    if (openingLines.length) {
+      const wh = await tx.warehouse.findFirst({ orderBy: { id: 'asc' } });
+      if (wh) await applyMovements(tx, { actor, warehouseId: wh.id, kind: 'RECEIPT',
+        lines: openingLines, refType: 'product_opening', refId: p.code, note: 'Tồn đầu kỳ khi tạo sản phẩm' });
+    }
     return p;
   });
   const { ip, ua } = reqMeta();
