@@ -35,9 +35,10 @@ const psTone = (s: string) => s === 'PAID' ? 'green' : s === 'PARTIAL' ? 'amber'
 export default function SalesClient({ canManage, canApprove, vatDefault }: {
   canManage: boolean; canApprove: boolean; vatDefault: number;
 }) {
-  const [tab, setTab] = useState<'dash' | 'quotes' | 'orders' | 'pos'>('dash');
+  const [tab, setTab] = useState<'dash' | 'quotes' | 'orders' | 'carts' | 'pos'>('dash');
   const tabs: [typeof tab, string][] = [['dash', '📊 Tổng quan'], ['quotes', '📄 Báo giá'],
-    ['orders', '🧾 Đơn hàng'], ...(canManage ? [['pos', '🛒 Bán nhanh POS'] as [typeof tab, string]] : [])];
+    ['orders', '🧾 Đơn hàng'], ['carts', '🛒 Giỏ chưa mua'],
+    ...(canManage ? [['pos', '🛒 Bán nhanh POS'] as [typeof tab, string]] : [])];
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -51,7 +52,69 @@ export default function SalesClient({ canManage, canApprove, vatDefault }: {
       {tab === 'dash' && <DashTab canApprove={canApprove} />}
       {tab === 'quotes' && <QuotesTab canManage={canManage} vatDefault={vatDefault} />}
       {tab === 'orders' && <OrdersTab canManage={canManage} />}
+      {tab === 'carts' && <AbandonedCartsTab />}
       {tab === 'pos' && canManage && <PosTab />}
+    </div>
+  );
+}
+
+/* ============================ GIO HANG CHUA MUA (KHACH BO QUEN) ============================ */
+type CartGroup = { partnerId: number | null; partnerName: string; phone: string | null;
+  lastAt: string; itemCount: number; total: number;
+  items: { productName: string; optLabel: string | null; qty: number; unitPrice: number; at: string }[] };
+
+function AbandonedCartsTab() {
+  const [data, setData] = useState<{ groups: CartGroup[]; customers: number; totalValue: number } | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
+  useEffect(() => {
+    fetch('/api/sales/abandoned-carts').then((r) => r.json()).then((j) => { if (j.ok) setData(j); });
+  }, []);
+  if (!data) return <div className="rounded-xl bg-white p-8 text-center text-slate-400">Đang tải…</div>;
+
+  return (
+    <div>
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+          <div className="text-xs text-slate-400">Khách đã thêm giỏ, chưa mua</div>
+          <div className="text-2xl font-extrabold text-pink-700">{data.customers}</div>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+          <div className="text-xs text-slate-400">Giá trị giỏ đang chờ</div>
+          <div className="text-2xl font-extrabold text-slate-800">{fmtVND(data.totalValue)}đ</div>
+        </div>
+      </div>
+      <p className="mb-2 text-sm text-slate-500">💡 Đây là khách đã đăng nhập và thêm hàng vào giỏ nhưng chưa đặt. Gọi/nhắn Zalo để chốt đơn.</p>
+      {data.groups.length === 0 ? (
+        <div className="rounded-xl bg-white p-8 text-center text-slate-400">Chưa có giỏ hàng nào đang chờ.</div>
+      ) : (
+        <div className="space-y-2">
+          {data.groups.map((g, i) => (
+            <div key={i} className="rounded-xl bg-white ring-1 ring-slate-100">
+              <button className="flex w-full items-center justify-between gap-2 p-3 text-left" onClick={() => setOpen(open === i ? null : i)}>
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-800">{g.partnerName}</div>
+                  <div className="text-xs text-slate-400">{g.phone ? `📞 ${g.phone} · ` : ''}{g.itemCount} món · cập nhật {new Date(g.lastAt).toLocaleString('vi-VN')}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {g.phone && <a href={`tel:${g.phone}`} onClick={(e) => e.stopPropagation()} className="rounded-lg bg-green-500 px-2.5 py-1 text-xs font-bold text-white">Gọi</a>}
+                  <span className="font-extrabold text-pink-700">{fmtVND(g.total)}đ</span>
+                  <span className="text-slate-300">{open === i ? '▲' : '▼'}</span>
+                </div>
+              </button>
+              {open === i && (
+                <div className="border-t px-3 py-2 text-sm">
+                  {g.items.map((it, j) => (
+                    <div key={j} className="flex justify-between border-b py-1 last:border-0">
+                      <span className="min-w-0 flex-1 truncate">{it.productName} <span className="text-slate-400">{it.optLabel ?? ''}</span> ×{it.qty}</span>
+                      <span className="ml-2 font-semibold">{fmtVND(it.unitPrice * it.qty)}đ</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
 import { shopImg, videoEmbed, priceForQty, socialProof, fmtSold } from '@/modules/shop/util';
 import type { ShopDetail } from '@/modules/shop/data';
+import { type PromoView, promoLabel } from '@/modules/shop/promo';
 import { addToCart } from '../cart';
 
-export default function ProductView({ p }: { p: ShopDetail }) {
+export default function ProductView({ p, promos = [] }: { p: ShopDetail; promos?: PromoView[] }) {
   const router = useRouter();
   const gallery = p.images.length ? p.images : [];
   const g1 = p.variantGroups?.[0] ?? null;   // nhom phan loai 1 (co the co anh tung lua chon)
@@ -95,12 +96,19 @@ export default function ProductView({ p }: { p: ShopDetail }) {
         {v && <div className="mt-1 text-sm text-slate-500">
           {v.stock > 0 ? `Còn ${v.stock} ${p.unitName} trong kho` : 'Hàng đặt trước — làm theo yêu cầu'}</div>}
 
-        {/* Ma giam gia (voucher) — kieu Shopee */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-600">🎟️ Mã giảm:</span>
-          <span className="rounded border border-dashed border-pink-400 bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-700">GAU10 · Giảm 10k đơn từ 200k</span>
-          <span className="rounded border border-dashed border-pink-400 bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-700">FREESHIP · đơn từ 500k</span>
-        </div>
+        {/* Ma giam gia (voucher) — kieu Shopee, lay tu chuong trinh khuyen mai dang bat */}
+        {promos.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-600">🎟️ Mã giảm:</span>
+            {promos.slice(0, 4).map((pr) => (
+              <span key={pr.code} title={pr.name}
+                className="rounded border border-dashed border-pink-400 bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-700">
+                {pr.code} · {promoLabel(pr)}
+              </span>
+            ))}
+            <span className="text-xs text-slate-400">Nhập mã ở bước thanh toán</span>
+          </div>
+        )}
 
         {/* Van chuyen */}
         <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">

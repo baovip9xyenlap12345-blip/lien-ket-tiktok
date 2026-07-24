@@ -28,7 +28,7 @@ export default function CatalogClient({ meta, canManage, showCost }: {
   meta: { units: Unit[]; categories: Cat[]; priceLists: PList[] };
   canManage: boolean; showCost: boolean;
 }) {
-  const [tab, setTab] = useState<'sp' | 'bom'>('sp');
+  const [tab, setTab] = useState<'sp' | 'promo' | 'bom'>('sp');
   const [categories, setCategories] = useState<Cat[]>(meta.categories);
   return (
     <div>
@@ -37,13 +37,15 @@ export default function CatalogClient({ meta, canManage, showCost }: {
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           <button className={`rounded-lg px-3 py-1.5 text-sm font-bold ${tab === 'sp' ? 'bg-white shadow' : 'text-slate-500'}`}
             onClick={() => setTab('sp')}>Danh sách sản phẩm</button>
+          <button className={`rounded-lg px-3 py-1.5 text-sm font-bold ${tab === 'promo' ? 'bg-white shadow' : 'text-slate-500'}`}
+            onClick={() => setTab('promo')}>🎁 Khuyến mãi</button>
           <button className={`rounded-lg px-3 py-1.5 text-sm font-bold ${tab === 'bom' ? 'bg-white shadow' : 'text-slate-500'}`}
             onClick={() => setTab('bom')}>Định mức (BOM)</button>
         </div>
       </div>
-      {tab === 'sp'
-        ? <ProductsTab meta={{ ...meta, categories }} canManage={canManage} showCost={showCost} setCategories={setCategories} />
-        : <BomTab canManage={canManage} />}
+      {tab === 'sp' && <ProductsTab meta={{ ...meta, categories }} canManage={canManage} showCost={showCost} setCategories={setCategories} />}
+      {tab === 'promo' && <PromotionsTab canManage={canManage} />}
+      {tab === 'bom' && <BomTab canManage={canManage} />}
     </div>
   );
 }
@@ -749,6 +751,138 @@ function BomNewModal({ onClose }: { onClose: () => void }) {
           <button className="btn" onClick={save}>💾 Lưu định mức</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ============================ KHUYEN MAI (MA GIAM GIA) ============================ */
+type Promo = { id: number; code: string; name: string; type: 'PERCENT' | 'AMOUNT'; value: number;
+  minOrder: number; maxDiscount: number | null; active: boolean;
+  validFrom: string | null; validTo: string | null; imageUrl: string | null; videoUrl: string | null; note: string | null };
+
+const emptyPromo: Omit<Promo, 'id'> = { code: '', name: '', type: 'AMOUNT', value: 0, minOrder: 0,
+  maxDiscount: null, active: true, validFrom: null, validTo: null, imageUrl: null, videoUrl: null, note: null };
+
+function PromotionsTab({ canManage }: { canManage: boolean }) {
+  const [rows, setRows] = useState<Promo[]>([]);
+  const [edit, setEdit] = useState<(Omit<Promo, 'id'> & { id?: number }) | null>(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const j = await fetch('/api/catalog/promotions').then((r) => r.json());
+    if (j.ok) setRows(j.promos);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!edit) return;
+    setErr(''); setBusy(true);
+    const j = await fetch('/api/catalog/promotions', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(edit) }).then((r) => r.json());
+    setBusy(false);
+    if (j.ok) { setEdit(null); load(); } else setErr(j.error || 'Lỗi lưu');
+  }
+  async function del(p: Promo) {
+    if (!confirm(`Xóa mã "${p.code}"?`)) return;
+    await fetch(`/api/catalog/promotions?id=${p.id}`, { method: 'DELETE' });
+    load();
+  }
+  async function upload(f: File | undefined, set: (k: string) => void) {
+    if (!f) return;
+    const fd = new FormData(); fd.append('file', f);
+    const j = await fetch('/api/catalog/media', { method: 'POST', body: fd }).then((r) => r.json());
+    if (j.ok) set(j.key); else alert(j.error || 'Tải lên lỗi');
+  }
+  const label = (p: Promo) => p.type === 'PERCENT'
+    ? `Giảm ${p.value}%${p.maxDiscount ? ` (tối đa ${fmtMoney(p.maxDiscount)})` : ''}`
+    : `Giảm ${fmtMoney(p.value)}đ`;
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm text-slate-500">Mã giảm giá hiển thị trên gian hàng — khách nhập ở bước thanh toán để được giảm.</p>
+        {canManage && <button className="btn" onClick={() => setEdit({ ...emptyPromo })}>➕ Tạo khuyến mãi</button>}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((p) => (
+          <div key={p.id} className={`rounded-xl border bg-white p-3 ${p.active ? 'border-pink-200' : 'border-slate-200 opacity-60'}`}>
+            <div className="flex items-start gap-2">
+              {p.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mediaSrc(p.imageUrl)} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />)}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded bg-pink-600 px-1.5 py-0.5 text-xs font-bold text-white">{p.code}</span>
+                  {!p.active && <span className="text-xs text-slate-400">(tắt)</span>}
+                </div>
+                <div className="mt-0.5 truncate text-sm font-semibold">{p.name}</div>
+                <div className="text-xs text-pink-700">{label(p)}{p.minOrder > 0 ? ` · đơn từ ${fmtMoney(p.minOrder)}đ` : ''}</div>
+              </div>
+            </div>
+            {canManage && (
+              <div className="mt-2 flex gap-2">
+                <button className="btn-ghost px-2 py-1 text-xs" onClick={() => setEdit({ ...p })}>Sửa</button>
+                <button className="btn-ghost px-2 py-1 text-xs text-red-600" onClick={() => del(p)}>Xóa</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {rows.length === 0 && <p className="text-sm text-slate-400">Chưa có khuyến mãi nào.</p>}
+      </div>
+
+      {edit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" onClick={() => setEdit(null)}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 text-lg font-extrabold">{edit.id ? 'Sửa' : 'Tạo'} khuyến mãi</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block"><span className="text-sm font-semibold">Mã giảm giá</span>
+                <input className="inp uppercase" value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value.toUpperCase() })} placeholder="VD GAU10" /></label>
+              <label className="block"><span className="text-sm font-semibold">Tên chương trình</span>
+                <input className="inp" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="Chào hè giảm giá" /></label>
+              <label className="block"><span className="text-sm font-semibold">Kiểu giảm</span>
+                <select className="inp" value={edit.type} onChange={(e) => setEdit({ ...edit, type: e.target.value as 'PERCENT' | 'AMOUNT' })}>
+                  <option value="AMOUNT">Giảm số tiền (đ)</option>
+                  <option value="PERCENT">Giảm phần trăm (%)</option>
+                </select></label>
+              <label className="block"><span className="text-sm font-semibold">{edit.type === 'PERCENT' ? 'Số % giảm' : 'Số tiền giảm (đ)'}</span>
+                <input className="inp" inputMode="numeric" value={edit.value || ''} onChange={(e) => setEdit({ ...edit, value: +e.target.value.replace(/\D/g, '') || 0 })} /></label>
+              <label className="block"><span className="text-sm font-semibold">Đơn tối thiểu (đ)</span>
+                <input className="inp" inputMode="numeric" value={edit.minOrder || ''} onChange={(e) => setEdit({ ...edit, minOrder: +e.target.value.replace(/\D/g, '') || 0 })} /></label>
+              {edit.type === 'PERCENT' && (
+                <label className="block"><span className="text-sm font-semibold">Giảm tối đa (đ)</span>
+                  <input className="inp" inputMode="numeric" value={edit.maxDiscount || ''} onChange={(e) => setEdit({ ...edit, maxDiscount: +e.target.value.replace(/\D/g, '') || null })} /></label>)}
+              <label className="block"><span className="text-sm font-semibold">Bắt đầu (tùy chọn)</span>
+                <input type="date" className="inp" value={edit.validFrom?.slice(0, 10) ?? ''} onChange={(e) => setEdit({ ...edit, validFrom: e.target.value || null })} /></label>
+              <label className="block"><span className="text-sm font-semibold">Kết thúc (tùy chọn)</span>
+                <input type="date" className="inp" value={edit.validTo?.slice(0, 10) ?? ''} onChange={(e) => setEdit({ ...edit, validTo: e.target.value || null })} /></label>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div><span className="text-sm font-semibold">Ảnh khuyến mãi</span>
+                <div className="mt-1 flex items-center gap-2">
+                  {edit.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mediaSrc(edit.imageUrl)} alt="" className="h-14 w-14 rounded-lg object-cover" />)}
+                  <input type="file" accept="image/*" onChange={(e) => upload(e.target.files?.[0], (k) => setEdit((s) => s && { ...s, imageUrl: k }))} className="text-xs" />
+                  {edit.imageUrl && <button className="text-xs text-red-600" onClick={() => setEdit({ ...edit, imageUrl: null })}>Xóa</button>}
+                </div>
+              </div>
+              <label className="block"><span className="text-sm font-semibold">Link video (tùy chọn)</span>
+                <input className="inp" value={edit.videoUrl ?? ''} onChange={(e) => setEdit({ ...edit, videoUrl: e.target.value || null })} placeholder="YouTube/TikTok…" /></label>
+            </div>
+            <label className="mt-3 block"><span className="text-sm font-semibold">Ghi chú (tùy chọn)</span>
+              <input className="inp" value={edit.note ?? ''} onChange={(e) => setEdit({ ...edit, note: e.target.value || null })} /></label>
+            <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" checked={edit.active} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Đang bật (hiển thị trên gian hàng)</label>
+            {err && <p className="mt-2 text-sm font-semibold text-red-600">{err}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setEdit(null)}>Hủy</button>
+              <button className="btn" disabled={busy} onClick={save}>💾 Lưu</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

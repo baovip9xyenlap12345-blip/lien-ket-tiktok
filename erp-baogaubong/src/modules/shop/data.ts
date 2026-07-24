@@ -1,6 +1,7 @@
 // Du lieu cho gian hang online (cong khai). Chi lay san pham DANG BAN (ACTIVE),
 // gia = bang gia ban le (PriceRule kind=RETAIL, minQty=1).
 import { prisma } from '@/lib/db';
+import type { PromoView } from './promo';
 
 export type PriceTier = { minQty: number; price: number };
 export type ShopVariant = { id: number; sku: string; size: string | null; color: string | null;
@@ -101,7 +102,38 @@ export async function keyBelongsToProduct(key: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ one: number }[]>`
     SELECT 1 AS one FROM "Product"
     WHERE "deletedAt" IS NULL AND status::text = 'ACTIVE' AND "variantGroups"::text LIKE ${'%' + key + '%'} LIMIT 1`;
-  return rows.length > 0;
+  if (rows.length > 0) return true;
+  // Anh/video cua chuong trinh khuyen mai dang bat.
+  const promo = await prisma.promotion.findFirst({
+    where: { active: true, OR: [{ imageUrl: key }, { videoUrl: key }] }, select: { id: true } });
+  return !!promo;
+}
+
+function mapPromo(p: { code: string; name: string; type: string; value: number; minOrder: number;
+  maxDiscount: number | null; imageUrl: string | null; videoUrl: string | null }): PromoView {
+  return { code: p.code, name: p.name, type: p.type as 'PERCENT' | 'AMOUNT', value: p.value,
+    minOrder: p.minOrder, maxDiscount: p.maxDiscount, imageUrl: p.imageUrl, videoUrl: p.videoUrl };
+}
+
+/** Cac khuyen mai dang hieu luc (bat + trong khoang thoi gian) — de hien o gian hang. */
+export async function listActivePromotions(): Promise<PromoView[]> {
+  const now = new Date();
+  const rows = await prisma.promotion.findMany({
+    where: { active: true,
+      AND: [{ OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
+            { OR: [{ validTo: null }, { validTo: { gte: now } }] }] },
+    orderBy: [{ minOrder: 'asc' }, { id: 'asc' }] });
+  return rows.map(mapPromo);
+}
+
+/** Tim 1 ma giam gia con hieu luc theo code (khach nhap o thanh toan). */
+export async function findActivePromo(code: string): Promise<PromoView | null> {
+  const now = new Date();
+  const p = await prisma.promotion.findFirst({
+    where: { code: code.trim().toUpperCase(), active: true,
+      AND: [{ OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
+            { OR: [{ validTo: null }, { validTo: { gte: now } }] }] } });
+  return p ? mapPromo(p) : null;
 }
 
 /** Trang chu 'Tat ca' — chia san pham theo tung nhom hang (moi nhom vai san pham + 'Xem tat ca'). */

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
-import { shopProductByCode, relatedProducts } from '@/modules/shop/data';
+import { shopProductByCode, relatedProducts, listActivePromotions } from '@/modules/shop/data';
 import { shopImg } from '@/modules/shop/util';
 import ProductView from './ProductView';
 
@@ -10,11 +10,11 @@ export const dynamic = 'force-dynamic';
 export default async function ProductPage({ params }: { params: { code: string } }) {
   const p = await shopProductByCode(decodeURIComponent(params.code));
   if (!p) notFound();
-  const related = await relatedProducts(p.categoryId, p.id);
+  const [related, promos] = await Promise.all([relatedProducts(p.categoryId, p.id), listActivePromotions()]);
   return (
     <div>
       <Link href="/shop" className="mb-3 inline-block text-sm text-pink-700">← Về gian hàng</Link>
-      <ProductView p={p} />
+      <ProductView p={p} promos={promos} />
 
       {related.length > 0 && (
         <section className="mt-8">

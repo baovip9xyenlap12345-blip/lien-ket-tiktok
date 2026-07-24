@@ -1157,6 +1157,54 @@ model PortalSession {
   @@index([expiresAt])
 }
 
+// ===== GD11: GIAN HANG ONLINE — GIO HANG & KHUYEN MAI =====
+
+// Theo doi "khach da them vao gio nhung CHUA mua" — chi ghi khi khach da dang nhap cong.
+// converted=true khi khach dat don (checkout). Quan tri xem duoc gio bo quen de goi cham soc.
+model ShopCartActivity {
+  id            Int      @id @default(autoincrement())
+  partnerId     Int?
+  partnerName   String
+  phone         String?
+  variantId     Int
+  productCode   String
+  productName   String
+  optLabel      String?
+  qty           Int      @default(1)
+  unitPrice     Int      @default(0)
+  converted     Boolean  @default(false)
+  convertedCode String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([converted, updatedAt])
+  @@index([partnerId])
+}
+
+enum PromoType {
+  PERCENT
+  AMOUNT
+}
+
+// Khuyen mai / ma giam gia (kieu Shopee): quan tri tao — khach nhap ma o thanh toan de giam tien.
+model Promotion {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  type        PromoType @default(AMOUNT)
+  value       Int       @default(0)   // PERCENT: % giam; AMOUNT: so tien giam
+  minOrder    Int       @default(0)   // don toi thieu de ap dung
+  maxDiscount Int?                     // tran giam (cho PERCENT)
+  active      Boolean   @default(true)
+  validFrom   DateTime?
+  validTo     DateTime?
+  imageUrl    String?
+  videoUrl    String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  @@index([active])
+}
+
 // ===== GD10: TICH HOP & WEBHOOK =====
 
 enum IntegrationStatus {

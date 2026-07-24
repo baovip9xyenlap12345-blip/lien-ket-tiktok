@@ -11,9 +11,10 @@ export default function CheckoutPage() {
   const [me, setMe] = useState<Me>(null);
   const [authReady, setAuthReady] = useState(false);
   const [f, setF] = useState({ receiverName: '', receiverPhone: '', address: '', note: '' });
+  const [voucher, setVoucher] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ code: string; total: number } | null>(null);
+  const [done, setDone] = useState<{ code: string; total: number; discount?: number; voucher?: string | null } | null>(null);
 
   useEffect(() => { setItems(readCart()); }, []);
   useEffect(() => {
@@ -35,9 +36,9 @@ export default function CheckoutPage() {
   async function submit() {
     setErr(''); setBusy(true);
     const res = await fetch('/api/shop/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })), ...f }) });
+      body: JSON.stringify({ items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })), ...f, voucher: voucher.trim() || null }) });
     const j = await res.json(); setBusy(false);
-    if (j.ok) { clearCart(); setDone({ code: j.code, total: j.total }); }
+    if (j.ok) { clearCart(); setDone({ code: j.code, total: j.total, discount: j.discount, voucher: j.voucher }); }
     else setErr(j.error || 'Đặt hàng lỗi');
   }
 
@@ -46,6 +47,7 @@ export default function CheckoutPage() {
       <div className="text-5xl">✅</div>
       <h1 className="mt-3 text-xl font-extrabold">Đặt hàng thành công!</h1>
       <p className="mt-2 text-slate-600">Mã đơn: <b className="text-pink-700">{done.code}</b></p>
+      {done.discount ? <p className="text-green-600">Đã giảm {done.voucher ? `(${done.voucher})` : ''}: −{fmtVND(done.discount)}</p> : null}
       <p className="text-slate-600">Tổng tiền (COD): <b>{fmtVND(done.total)}</b></p>
       <p className="mt-2 text-sm text-slate-400">Xưởng sẽ gọi xác nhận & giao hàng. Bạn trả tiền khi nhận hàng.</p>
       <a href="https://zalo.me/g/qolxci436" target="_blank" rel="noreferrer"
@@ -100,6 +102,12 @@ export default function CheckoutPage() {
               <span className="ml-2 font-semibold">{fmtVND(unitPrice(it) * it.qty)}</span>
             </div>
           ))}
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-pink-300 bg-pink-50 p-2">
+            <span className="text-lg">🎟️</span>
+            <input className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm uppercase" placeholder="Nhập mã giảm giá (nếu có)"
+              value={voucher} onChange={(e) => setVoucher(e.target.value.toUpperCase())} />
+          </div>
+          <p className="mt-1 text-xs text-slate-400">Mã sẽ được kiểm tra khi đặt hàng — giảm trực tiếp vào tổng tiền.</p>
           <div className="mt-3 flex justify-between text-lg font-extrabold">
             <span>Tổng (COD)</span><span className="text-pink-700">{fmtVND(total)}</span>
           </div>

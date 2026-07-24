@@ -4,6 +4,8 @@ import { guarded, jsonError } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { nextCode } from '@/lib/seq';
 import { requirePortal } from '@/modules/portal/server';
+import { findActivePromo } from '@/modules/shop/data';
+import { promoDiscount } from '@/modules/shop/promo';
 
 const Body = z.object({
   items: z.array(z.object({ variantId: z.number().int(), qty: z.number().int().positive() }))
@@ -12,6 +14,7 @@ const Body = z.object({
   receiverPhone: z.string().trim().min(6, 'Nhập số điện thoại'),
   address: z.string().trim().min(5, 'Nhập địa chỉ giao hàng'),
   note: z.string().trim().max(500).optional().nullable(),
+  voucher: z.string().trim().max(30).optional().nullable(),
 });
 
 /** Khach dat hang COD (nhan hang tra tien). Tao don NEW + chua thu tien → nhan vien duyet/giao. */
@@ -39,6 +42,17 @@ export const POST = guarded(async (req) => {
       unit: v.product.unit.name, qty, unitPrice: price, taxPercent: 0, lineTotal: price * qty };
   });
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
+  // Ma giam gia (voucher) — kiem tra + tinh giam O SERVER de khong tin so tien tu trinh duyet.
+  let discountAmt = 0;
+  let voucherCode: string | null = null;
+  if (d.voucher) {
+    const promo = await findActivePromo(d.voucher);
+    if (!promo) throw jsonError(400, `Mã "${d.voucher}" không hợp lệ hoặc đã hết hạn.`);
+    if (subtotal < promo.minOrder) throw jsonError(400, `Mã "${promo.code}" cần đơn tối thiểu ${promo.minOrder.toLocaleString('vi-VN')}đ.`);
+    discountAmt = promoDiscount(promo, subtotal);
+    voucherCode = promo.code;
+  }
+  const total = Math.max(0, subtotal - discountAmt);
   const partner = await prisma.partner.findUnique({ where: { id: me.partnerId } });
   // Nguoi tao don hop le: sale phu trach, khong thi lay 1 tai khoan noi bo dang hoat dong (tranh FK sai).
   const sysUser = await prisma.user.findFirst({ where: { active: true, deletedAt: null }, orderBy: { id: 'asc' }, select: { id: true } });
@@ -46,6 +60,7 @@ export const POST = guarded(async (req) => {
   const noteBlock = [`[ĐƠN ONLINE — COD]`,
     `Người nhận: ${d.receiverName} · ${d.receiverPhone}`,
     `Địa chỉ giao: ${d.address}`,
+    voucherCode ? `Mã giảm giá: ${voucherCode} (−${discountAmt.toLocaleString('vi-VN')}đ)` : '',
     d.note ? `Ghi chú: ${d.note}` : ''].filter(Boolean).join('\n');
 
   const order = await prisma.$transaction(async (tx) => {
@@ -54,7 +69,7 @@ export const POST = guarded(async (req) => {
       code, partnerId: me.partnerId, partnerName: me.partnerName,
       orderStatus: 'NEW', paymentStatus: 'UNPAID',
       vatEnabled: false, vatPercent: 0,
-      subtotal, discountAmt: 0, taxAmt: 0, total: subtotal, shippingFee: 0,
+      subtotal, discountAmt, taxAmt: 0, total, shippingFee: 0,
       note: noteBlock, isPos: false,
       assignedToId: partner?.assignedToId ?? null, createdById: creatorId } });
     await tx.orderLine.createMany({ data: lines.map((l) => ({ ...l, orderId: o.id })) });
@@ -79,7 +94,11 @@ export const POST = guarded(async (req) => {
     }
     return o;
   });
+  // Danh dau gio hang cua khach da MUA (het "bo quen") — de bang quan tri sach se.
+  await prisma.shopCartActivity.updateMany({
+    where: { partnerId: me.partnerId, converted: false },
+    data: { converted: true, convertedCode: order.code } });
   await audit({ actorId: null, actorName: `shop:${me.username}`, action: 'shop_order',
-    entity: 'order', entityId: order.code, after: { total: subtotal, items: lines.length } });
-  return Response.json({ ok: true, code: order.code, total: subtotal });
+    entity: 'order', entityId: order.code, after: { subtotal, discountAmt, total, voucher: voucherCode, items: lines.length } });
+  return Response.json({ ok: true, code: order.code, total, subtotal, discount: discountAmt, voucher: voucherCode });
 });

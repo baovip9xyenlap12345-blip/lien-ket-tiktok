@@ -23,6 +23,12 @@ export function addToCart(item: CartItem) {
   const i = c.findIndex((x) => x.variantId === item.variantId);
   if (i >= 0) c[i].qty += item.qty; else c.push(item);
   writeCart(c);
+  // Ghi nhan cho quan tri biet "khach da them gio" (chi tinh khi khach da dang nhap — server tu kiem tra).
+  const qty = i >= 0 ? c[i].qty : item.qty;
+  try {
+    fetch('/api/shop/cart-track', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variantId: item.variantId, qty }), keepalive: true }).catch(() => {});
+  } catch { /* bo qua loi mang — khong chan viec them gio */ }
 }
 export function setQty(variantId: number, qty: number) {
   const c = readCart().map((x) => x.variantId === variantId ? { ...x, qty } : x).filter((x) => x.qty > 0);
