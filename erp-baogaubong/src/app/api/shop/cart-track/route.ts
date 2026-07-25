@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { guarded, jsonError } from '@/lib/auth';
+import { guarded, jsonError, reqMeta } from '@/lib/auth';
+import { rateLimit } from '@/lib/ratelimit';
 import { getPortalUser } from '@/modules/portal/server';
 
 const Body = z.object({
@@ -11,6 +12,8 @@ const Body = z.object({
 /** Ghi nhan khach da THEM VAO GIO (chua mua). Chi ghi khi khach da dang nhap cong —
  *  de quan tri biet "khach nao them gio ma chua mua" va goi cham soc. Khach an danh -> bo qua (tra ok). */
 export const POST = guarded(async (req) => {
+  const { ip } = reqMeta();
+  if (!rateLimit(`cart:ip:${ip ?? 'x'}`, 120, 60_000).ok) return Response.json({ ok: true, tracked: false });
   const me = await getPortalUser();
   if (!me) return Response.json({ ok: true, tracked: false });   // khach chua dang nhap: khong theo doi
   const b = Body.safeParse(await req.json());

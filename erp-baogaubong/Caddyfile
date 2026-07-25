@@ -2,14 +2,30 @@
 # Caddy tu xin chung chi Let's Encrypt cho moi ten mien duoi day (ten mien phai tro ve IP may chu).
 # Log truy cap: docker compose logs caddy.
 
+# Header bao mat + gioi han kich thuoc yeu cau (chong gui goi khong lo lam nghen may chu).
+(baomat) {
+	header {
+		Strict-Transport-Security "max-age=31536000"   # ep HTTPS 1 nam, chong ha cap ve HTTP
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server                                          # an ten may chu
+	}
+	request_body {
+		max_size 35MB   # chan goi qua lon (video 30MB van gui duoc)
+	}
+}
+
 # Ten mien CHINH — khach vao /shop, nhan vien dang nhap o trang chu.
 muagaubong.com, www.muagaubong.com {
+	import baomat
 	reverse_proxy app:3000
 	encode gzip
 }
 
 # Ten mien du phong (giu tam de khong gian doan; co the bo sau khi muagaubong.com chay on).
 app.baogaubong.vn {
+	import baomat
 	reverse_proxy app:3000
 	encode gzip
 }

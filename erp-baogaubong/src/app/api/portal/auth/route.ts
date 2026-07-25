@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { guarded, jsonError, verifyPassword } from '@/lib/auth';
+import { guarded, jsonError, verifyPassword, reqMeta } from '@/lib/auth';
+import { rateLimit } from '@/lib/ratelimit';
 import { audit } from '@/lib/audit';
 import { createPortalSession, destroyPortalSession, getPortalUser } from '@/modules/portal/server';
 import { normalizePhone } from '@/modules/partners/domain';
@@ -9,6 +10,10 @@ const attempts = new Map<string, { n: number; at: number }>();
 
 /** Dang nhap cong khach/dai ly (tach biet nhan vien). */
 export const POST = guarded(async (req) => {
+  const { ip } = reqMeta();
+  if (!rateLimit(`plogin:ip:${ip ?? 'x'}`, 30, 5 * 60_000).ok) {
+    throw jsonError(429, 'Quá nhiều lần thử — vui lòng thử lại sau ít phút.');
+  }
   const b = z.object({ u: z.string().trim().min(1), p: z.string().min(1) }).safeParse(await req.json());
   if (!b.success) throw jsonError(400, 'Thiếu tài khoản/mật khẩu.');
   const key = b.data.u.toLowerCase();

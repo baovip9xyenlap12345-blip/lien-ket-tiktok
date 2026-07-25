@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { guarded, jsonError } from '@/lib/auth';
+import { guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { nextCode } from '@/lib/seq';
+import { rateLimit } from '@/lib/ratelimit';
 import { requirePortal } from '@/modules/portal/server';
 import { findActivePromo } from '@/modules/shop/data';
 import { promoDiscount } from '@/modules/shop/promo';
@@ -20,6 +21,12 @@ const Body = z.object({
 /** Khach dat hang COD (nhan hang tra tien). Tao don NEW + chua thu tien → nhan vien duyet/giao. */
 export const POST = guarded(async (req) => {
   const me = await requirePortal();
+  // Chong do don ao (giu cho ton kho): moi khach toi da 10 don/10 phut, moi IP toi da 30 don/10 phut.
+  const { ip } = reqMeta();
+  if (!rateLimit(`checkout:acc:${me.partnerId}`, 10, 10 * 60_000).ok
+    || !rateLimit(`checkout:ip:${ip ?? 'x'}`, 30, 10 * 60_000).ok) {
+    throw jsonError(429, 'Bạn thao tác quá nhanh — vui lòng thử lại sau ít phút.');
+  }
   const b = Body.safeParse(await req.json());
   if (!b.success) throw jsonError(400, b.error.errors[0]?.message ?? 'Dữ liệu không hợp lệ');
   const d = b.data;

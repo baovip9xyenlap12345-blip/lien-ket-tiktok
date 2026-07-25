@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { verifyPassword, createSession, reqMeta, guarded, jsonError } from '@/lib/auth';
+import { rateLimit } from '@/lib/ratelimit';
 import { audit } from '@/lib/audit';
 
 const Body = z.object({ username: z.string().min(1), password: z.string().min(1) });
@@ -8,6 +9,10 @@ const attempts = new Map<string, { n: number; t: number }>();
 
 export const POST = guarded(async (req) => {
   const { ip, ua } = reqMeta();
+  // Lop chan theo IP: chong do mat khau bang nhieu ten dang nhap khac nhau (credential stuffing).
+  if (!rateLimit(`login:ip:${ip ?? 'x'}`, 30, 10 * 60_000).ok) {
+    throw jsonError(429, 'Quá nhiều lần thử từ thiết bị của bạn. Vui lòng thử lại sau 10 phút.');
+  }
   const body = Body.safeParse(await req.json());
   if (!body.success) throw jsonError(400, 'Thiếu tài khoản hoặc mật khẩu.');
   // Khoa rate-limit theo TEN DANG NHAP (client khong gia mao duoc), khong theo IP
