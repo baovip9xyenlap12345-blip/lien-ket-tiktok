@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pancake Dashboard - Lien Ket TikTok</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #010101;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    .sub { color: #999; margin-bottom: 32px; font-size: 14px; }
+    select, button {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+    }
+    button { cursor: pointer; background: #FE2C55; border: none; font-weight: 600; }
+    button:hover { opacity: 0.9; }
+    .controls { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #1a1a1a; }
+    th { color: #999; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    .status { padding: 24px 0; color: #999; font-size: 14px; }
+    .error { color: #FE2C55; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Pancake Dashboard</h1>
+    <p class="sub">Kết nối trực tiếp tới Pancake POS API qua backend proxy.</p>
+
+    <div class="controls">
+      <select id="shopSelect"><option>Đang tải danh sách shop...</option></select>
+      <button id="loadOrdersBtn">Tải đơn hàng</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <table id="ordersTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Mã đơn</th>
+          <th>Khách hàng</th>
+          <th>SĐT</th>
+          <th>Trạng thái</th>
+          <th>Tổng tiền</th>
+          <th>Ngày tạo</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const shopSelect = document.getElementById('shopSelect');
+    const loadOrdersBtn = document.getElementById('loadOrdersBtn');
+    const statusEl = document.getElementById('status');
+    const ordersTable = document.getElementById('ordersTable');
+    const ordersBody = document.getElementById('ordersBody');
+
+    function setStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      statusEl.className = 'status' + (isError ? ' error' : '');
+    }
+
+    async function loadShops() {
+      setStatus('Đang tải danh sách shop...');
+      try {
+        const res = await fetch('/api/pancake/shops');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Không tải được danh sách shop');
+
+        const shops = data.shops || data.data || [];
+        if (!shops.length) {
+          shopSelect.innerHTML = '<option>Không có shop nào</option>';
+          setStatus('Kết nối Pancake thành công nhưng không tìm thấy shop nào.');
+          return;
+        }
+        shopSelect.innerHTML = shops
+          .map((s) => `<option value="${s.id}">${s.name || s.id}</option>`)
+          .join('');
+        setStatus(`Đã kết nối Pancake. Tìm thấy ${shops.length} shop.`);
+      } catch (err) {
+        setStatus('Lỗi: ' + err.message, true);
+      }
+    }
+
+    async function loadOrders() {
+      const shopId = shopSelect.value;
+      if (!shopId) return;
+      setStatus('Đang tải đơn hàng...');
+      ordersTable.style.display = 'none';
+      try {
+        const res = await fetch(`/api/pancake/shops/${shopId}/orders`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Không tải được đơn hàng');
+
+        const orders = data.orders || data.data || [];
+        ordersBody.innerHTML = orders
+          .map(
+            (o) => `<tr>
+              <td>${o.id ?? ''}</td>
+              <td>${o.customer?.name ?? ''}</td>
+              <td>${o.customer?.phone_number ?? ''}</td>
+              <td>${o.status ?? ''}</td>
+              <td>${o.total_price ?? ''}</td>
+              <td>${o.inserted_at ?? ''}</td>
+            </tr>`
+          )
+          .join('');
+        ordersTable.style.display = orders.length ? 'table' : 'none';
+        setStatus(orders.length ? `Đã tải ${orders.length} đơn hàng.` : 'Không có đơn hàng nào.');
+      } catch (err) {
+        setStatus('Lỗi: ' + err.message, true);
+      }
+    }
+
+    loadOrdersBtn.addEventListener('click', loadOrders);
+    loadShops();
+  </script>
+</body>
+</html>
