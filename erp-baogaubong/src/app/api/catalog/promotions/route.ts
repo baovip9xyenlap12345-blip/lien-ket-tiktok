@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
@@ -49,6 +50,7 @@ export const POST = guarded(async (req) => {
   const { ip, ua } = reqMeta();
   await audit({ actorId: actor.id, actorName: actor.name, action: d.id ? 'promo_update' : 'promo_create',
     entity: 'promotion', entityId: String(row.id), after: { code, name: d.name }, ip, ua });
+  revalidateTag('shop');
   return Response.json({ ok: true, id: row.id });
 });
 
@@ -59,5 +61,6 @@ export const DELETE = guarded(async (req) => {
   if (!id) throw jsonError(400, 'Thiếu id');
   await prisma.promotion.delete({ where: { id } });
   await audit({ actorId: actor.id, actorName: actor.name, action: 'promo_delete', entity: 'promotion', entityId: String(id) });
+  revalidateTag('shop');
   return Response.json({ ok: true });
 });

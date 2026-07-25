@@ -3,7 +3,7 @@ import { fmtVND } from '@/lib/format';
 import { listShopProducts, shopCategories, shopHomeSections, type ShopCard } from '@/modules/shop/data';
 import { shopImg, socialProof, fmtSold } from '@/modules/shop/util';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;   // gian hang duoc luu 30s → chiu tai tot khi dong khach
 
 function Card({ p }: { p: ShopCard }) {
   const social = socialProof(p.code);

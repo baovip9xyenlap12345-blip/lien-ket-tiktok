@@ -5,7 +5,7 @@ import { shopProductByCode, relatedProducts, listActivePromotions } from '@/modu
 import { shopImg } from '@/modules/shop/util';
 import ProductView from './ProductView';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;   // trang chi tiet duoc luu 30s → dong khach khong nghen CSDL
 
 export default async function ProductPage({ params }: { params: { code: string } }) {
   const p = await shopProductByCode(decodeURIComponent(params.code));

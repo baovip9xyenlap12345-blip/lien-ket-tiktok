@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
@@ -142,6 +143,7 @@ export const POST = guarded(async (req) => {
   const { ip, ua } = reqMeta();
   await audit({ actorId: actor.id, actorName: actor.name, action: d.id ? 'product_update' : 'product_create',
     entity: 'product', entityId: result.code, after: { name: d.name, type: d.type, variants: skus }, ip, ua });
+  revalidateTag('shop');   // cap nhat gian hang ngay (san pham/gia moi hien lap tuc)
   return Response.json({ ok: true, id: result.id });
 });
 
@@ -151,5 +153,6 @@ export const DELETE = guarded(async (req) => {
   if (!id) throw jsonError(400, 'Thiếu id');
   const p = await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
   await audit({ actorId: actor.id, actorName: actor.name, action: 'product_delete', entity: 'product', entityId: p.code });
+  revalidateTag('shop');
   return Response.json({ ok: true });
 });

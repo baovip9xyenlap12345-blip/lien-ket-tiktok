@@ -1,7 +1,14 @@
 // Du lieu cho gian hang online (cong khai). Chi lay san pham DANG BAN (ACTIVE),
 // gia = bang gia ban le (PriceRule kind=RETAIL, minQty=1).
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
 import type { PromoView } from './promo';
+
+// Bo nho dem cho cac truy van gian hang: 1000 khach vao cung luc chi hoi CSDL 1 lan moi ~30-120s
+// thay vi moi luot 1 lan → giam tai CSDL cuc lon. San pham/gia moi se hien sau toi da khoang do.
+const CACHE_LIST = 30;   // giay — danh sach/chi tiet san pham
+const CACHE_CATS = 120;  // giay — nhom hang (it doi)
+const CACHE_PROMO = 60;  // giay — khuyen mai
 
 export type PriceTier = { minQty: number; price: number };
 export type ShopVariant = { id: number; sku: string; size: string | null; color: string | null;
@@ -43,7 +50,7 @@ async function stockMap(variantIds: number[]): Promise<Map<number, number>> {
 }
 
 /** Danh sach san pham cong khai (loc theo tim kiem + nhom hang). */
-export async function listShopProducts(opts: { q?: string; categoryId?: number; page?: number; take?: number }) {
+async function listShopProductsImpl(opts: { q?: string; categoryId?: number; page?: number; take?: number }) {
   const take = opts.take ?? 24;
   const page = Math.max(1, opts.page ?? 1);
   const where = {
@@ -72,9 +79,10 @@ export async function listShopProducts(opts: { q?: string; categoryId?: number; 
   });
   return { cards, total, page, take };
 }
+export const listShopProducts = unstable_cache(listShopProductsImpl, ['shop-list-v1'], { revalidate: CACHE_LIST, tags: ['shop'] });
 
 /** Chi tiet 1 san pham cong khai theo ma. */
-export async function shopProductByCode(code: string): Promise<ShopDetail | null> {
+async function shopProductByCodeImpl(code: string): Promise<ShopDetail | null> {
   const p = await prisma.product.findFirst({
     where: { code, deletedAt: null, status: 'ACTIVE' },
     include: { category: true, unit: true,
@@ -92,6 +100,7 @@ export async function shopProductByCode(code: string): Promise<ShopDetail | null
     variantGroups: (p.variantGroups as unknown as ShopGroup[] | null) ?? null,
     qtyTiers: (p.qtyTiers as unknown as QtyTier[] | null) ?? null };
 }
+export const shopProductByCode = unstable_cache(shopProductByCodeImpl, ['shop-detail-v1'], { revalidate: CACHE_LIST, tags: ['shop'] });
 
 /** Kiem tra 1 storageKey co thuoc anh/video cua san pham ACTIVE nao khong (de phuc vu media cong khai an toan). */
 export async function keyBelongsToProduct(key: string): Promise<boolean> {
@@ -116,7 +125,7 @@ function mapPromo(p: { code: string; name: string; type: string; value: number; 
 }
 
 /** Cac khuyen mai dang hieu luc (bat + trong khoang thoi gian) — de hien o gian hang. */
-export async function listActivePromotions(): Promise<PromoView[]> {
+async function listActivePromotionsImpl(): Promise<PromoView[]> {
   const now = new Date();
   const rows = await prisma.promotion.findMany({
     where: { active: true,
@@ -125,6 +134,7 @@ export async function listActivePromotions(): Promise<PromoView[]> {
     orderBy: [{ minOrder: 'asc' }, { id: 'asc' }] });
   return rows.map(mapPromo);
 }
+export const listActivePromotions = unstable_cache(listActivePromotionsImpl, ['shop-promos-v1'], { revalidate: CACHE_PROMO, tags: ['shop'] });
 
 /** Tim 1 ma giam gia con hieu luc theo code (khach nhap o thanh toan). */
 export async function findActivePromo(code: string): Promise<PromoView | null> {
@@ -137,7 +147,7 @@ export async function findActivePromo(code: string): Promise<PromoView | null> {
 }
 
 /** Trang chu 'Tat ca' — chia san pham theo tung nhom hang (moi nhom vai san pham + 'Xem tat ca'). */
-export async function shopHomeSections(perCat = 8): Promise<{ category: { id: number; name: string }; cards: ShopCard[] }[]> {
+async function shopHomeSectionsImpl(perCat = 8): Promise<{ category: { id: number; name: string }; cards: ShopCard[] }[]> {
   const cats = await shopCategories();
   const sections = await Promise.all(cats.map(async (c) => {
     const { cards } = await listShopProducts({ categoryId: c.id, take: perCat });
@@ -145,6 +155,7 @@ export async function shopHomeSections(perCat = 8): Promise<{ category: { id: nu
   }));
   return sections.filter((s) => s.cards.length > 0);
 }
+export const shopHomeSections = unstable_cache(shopHomeSectionsImpl, ['shop-home-v1'], { revalidate: CACHE_LIST, tags: ['shop'] });
 
 /** San pham cung loai (cung nhom hang) — goi y xem them o trang chi tiet. */
 export async function relatedProducts(categoryId: number | null, excludeId: number, limit = 8): Promise<ShopCard[]> {
@@ -153,9 +164,10 @@ export async function relatedProducts(categoryId: number | null, excludeId: numb
 }
 
 /** Nhom hang co san pham dang ban (cho thanh loc). */
-export async function shopCategories() {
+async function shopCategoriesImpl() {
   const cats = await prisma.category.findMany({ where: { deletedAt: null,
     products: { some: { deletedAt: null, status: 'ACTIVE' } } }, orderBy: { name: 'asc' },
     select: { id: true, name: true } });
   return cats;
 }
+export const shopCategories = unstable_cache(shopCategoriesImpl, ['shop-cats-v1'], { revalidate: CACHE_CATS, tags: ['shop'] });

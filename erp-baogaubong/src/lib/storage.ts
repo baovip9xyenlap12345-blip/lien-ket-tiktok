@@ -2,9 +2,9 @@
 // moi luot tai deu qua API co kiem quyen + pham vi du lieu.
 // Driver local (dev): luu duoi ./uploads (da gitignore). Khi trien khai that,
 // STORAGE_DRIVER=s3 tro sang MinIO/S3 (lam o GD10 — tich hop & trien khai).
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, createReadStream, statSync, type ReadStream } from 'fs';
 import { writeFile, readFile, unlink } from 'fs/promises';
-import { join, resolve } from 'path';
+import { resolve } from 'path';
 import { randomUUID } from 'crypto';
 
 const ROOT = resolve(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
@@ -52,6 +52,16 @@ export async function storagePut(buf: Buffer, fileName: string): Promise<string>
 
 export async function storageGet(key: string): Promise<Buffer> {
   return readFile(keyPath(key));
+}
+
+/** Kich thuoc file (byte) — de phuc vu media co Content-Length + ho tro tua video (Range). */
+export function storageSize(key: string): number {
+  return statSync(keyPath(key)).size;
+}
+
+/** Doc file theo luong (stream) — KHONG nap ca file vao RAM. Ho tro doc 1 khuc (Range) cho video. */
+export function storageStream(key: string, opts?: { start?: number; end?: number }): ReadStream {
+  return createReadStream(keyPath(key), opts);
 }
 
 export async function storageDelete(key: string): Promise<void> {

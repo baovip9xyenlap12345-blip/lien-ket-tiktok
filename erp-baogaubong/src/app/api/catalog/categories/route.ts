@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { requirePerm, guarded, jsonError, reqMeta } from '@/lib/auth';
 import { audit } from '@/lib/audit';
@@ -24,6 +25,7 @@ export const POST = guarded(async (req) => {
   const { ip, ua } = reqMeta();
   await audit({ actorId: actor.id, actorName: actor.name, action: b.data.id ? 'category_rename' : 'category_create',
     entity: 'category', entityId: String(row.id), after: { name: b.data.name }, ip, ua });
+  revalidateTag('shop');
   return Response.json({ ok: true, id: row.id, name: row.name });
 });
 
@@ -36,5 +38,6 @@ export const DELETE = guarded(async (req) => {
   if (used > 0) throw jsonError(400, `Còn ${used} sản phẩm thuộc nhóm này — hãy chuyển nhóm cho chúng trước khi xóa.`);
   await prisma.category.update({ where: { id }, data: { deletedAt: new Date() } });
   await audit({ actorId: actor.id, actorName: actor.name, action: 'category_delete', entity: 'category', entityId: String(id) });
+  revalidateTag('shop');
   return Response.json({ ok: true });
 });
