@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chuyển Video / Ghi Âm Thành Văn Bản</title>
+<meta name="description" content="Tải video hoặc ghi âm lên, tự động chuyển giọng nói thành văn bản. Tách âm thanh từ video. Miễn phí, chạy ngay trên trình duyệt.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1220;
+    --card: #1a1f35;
+    --card2: #232a4a;
+    --accent: #6c5ce7;
+    --accent2: #00cec9;
+    --text: #eef0ff;
+    --muted: #9aa3c7;
+    --ok: #2ecc71;
+    --warn: #f1c40f;
+    --err: #e74c3c;
+  }
+  body {
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(160deg, #0f1220 0%, #171b31 60%, #101a2e 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .container { max-width: 860px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 {
+    font-size: 1.9rem;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  header p { color: var(--muted); font-size: 0.98rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid #2b3357;
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  }
+  .card h2 { font-size: 1.05rem; margin-bottom: 14px; color: var(--text); }
+  .card h2 .step {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 0.85rem; margin-right: 8px;
+  }
+
+  #dropzone {
+    border: 2px dashed #3d4780;
+    border-radius: 14px;
+    padding: 36px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--card2);
+  }
+  #dropzone:hover, #dropzone.dragover {
+    border-color: var(--accent2);
+    background: #26305a;
+  }
+  #dropzone .icon { font-size: 2.4rem; margin-bottom: 10px; }
+  #dropzone p { color: var(--muted); font-size: 0.92rem; margin-top: 6px; }
+  #dropzone strong { color: var(--text); font-size: 1.02rem; }
+  #fileInput { display: none; }
+
+  .file-info {
+    display: none;
+    margin-top: 14px;
+    background: var(--card2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+  .file-info.show { display: block; }
+  .file-info b { color: var(--text); }
+
+  .rec-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .rec-timer { color: var(--accent2); font-variant-numeric: tabular-nums; font-size: 1.05rem; display: none; }
+  .rec-dot {
+    display: none; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--err); animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  .options { display: flex; gap: 14px; flex-wrap: wrap; }
+  .options label { font-size: 0.88rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  .options select {
+    background: var(--card2); color: var(--text);
+    border: 1px solid #3d4780; border-radius: 8px;
+    padding: 9px 12px; font-size: 0.95rem; min-width: 200px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: none; border-radius: 10px;
+    padding: 12px 20px; font-size: 0.98rem; font-weight: 600;
+    cursor: pointer; transition: transform .12s, opacity .2s;
+    color: #fff;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: linear-gradient(90deg, var(--accent), #8e7bff); }
+  .btn-teal { background: linear-gradient(90deg, #00b8b3, var(--accent2)); color: #04302e; }
+  .btn-ghost { background: var(--card2); border: 1px solid #3d4780; color: var(--text); }
+  .btn-danger { background: var(--err); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+  .progress-wrap { display: none; margin-top: 16px; }
+  .progress-wrap.show { display: block; }
+  .progress-label { font-size: 0.88rem; color: var(--muted); margin-bottom: 6px; }
+  .progress-bar { height: 10px; background: var(--card2); border-radius: 6px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 6px; transition: width .25s;
+  }
+
+  #result {
+    width: 100%; min-height: 180px;
+    background: var(--card2); color: var(--text);
+    border: 1px solid #3d4780; border-radius: 12px;
+    padding: 14px; font-size: 1rem; line-height: 1.6;
+    resize: vertical; font-family: inherit;
+  }
+  #result:focus { outline: 2px solid var(--accent); }
+
+  .status { margin-top: 10px; font-size: 0.9rem; color: var(--muted); min-height: 1.2em; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+
+  .note {
+    background: #1f2947; border-left: 4px solid var(--warn);
+    border-radius: 8px; padding: 12px 14px;
+    font-size: 0.87rem; color: var(--muted); margin-top: 14px;
+  }
+  audio { width: 100%; margin-top: 12px; display: none; }
+  audio.show { display: block; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 30px; }
+  footer a { color: var(--accent2); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🎬 Chuyển Video / Ghi Âm Thành Văn Bản</h1>
+    <p>Tải video hoặc file ghi âm lên — AI sẽ nghe và chuyển giọng nói thành chữ. Có thể tách riêng âm thanh từ video để tải về.<br>Mọi xử lý diễn ra <b>ngay trên trình duyệt</b>, file của bạn <b>không bị gửi đi đâu cả</b>.</p>
+  </header>
+
+  <!-- BƯỚC 1: chọn file -->
+  <div class="card">
+    <h2><span class="step">1</span>Tải video hoặc ghi âm lên</h2>
+    <div id="dropzone">
+      <div class="icon">📤</div>
+      <strong>Bấm vào đây hoặc kéo-thả file vào</strong>
+      <p>Hỗ trợ video (MP4, WebM, MOV...) và âm thanh (MP3, WAV, M4A, OGG...)</p>
+    </div>
+    <input type="file" id="fileInput" accept="video/*,audio/*">
+    <div class="file-info" id="fileInfo"></div>
+
+    <div class="rec-row" style="margin-top:16px">
+      <button class="btn btn-ghost" id="recBtn">🎙️ Hoặc ghi âm trực tiếp</button>
+      <span class="rec-dot" id="recDot"></span>
+      <span class="rec-timer" id="recTimer">00:00</span>
+    </div>
+    <audio id="preview" controls></audio>
+  </div>
+
+  <!-- BƯỚC 2: tuỳ chọn + hành động -->
+  <div class="card">
+    <h2><span class="step">2</span>Chọn thao tác</h2>
+    <div class="options">
+      <div>
+        <label for="langSel">Ngôn ngữ trong video / ghi âm</label>
+        <select id="langSel">
+          <option value="vi" selected>Tiếng Việt</option>
+          <option value="en">Tiếng Anh (English)</option>
+          <option value="zh">Tiếng Trung (中文)</option>
+          <option value="ja">Tiếng Nhật (日本語)</option>
+          <option value="ko">Tiếng Hàn (한국어)</option>
+          <option value="th">Tiếng Thái (ไทย)</option>
+          <option value="fr">Tiếng Pháp (Français)</option>
+          <option value="es">Tiếng Tây Ban Nha (Español)</option>
+        </select>
+      </div>
+      <div>
+        <label for="modelSel">Độ chính xác (model AI)</label>
+        <select id="modelSel">
+          <option value="Xenova/whisper-tiny">Nhanh (tải ~40MB, kém chính xác hơn)</option>
+          <option value="Xenova/whisper-base" selected>Cân bằng (tải ~75MB) — khuyên dùng</option>
+          <option value="Xenova/whisper-small">Chính xác cao (tải ~250MB, chậm hơn)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="transcribeBtn" disabled>📝 Chuyển thành văn bản</button>
+      <button class="btn btn-teal" id="extractBtn" disabled>🎵 Tách âm thanh &amp; tải về (.wav)</button>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label" id="progressLabel">Đang xử lý...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="note">💡 Lần đầu sử dụng, trình duyệt sẽ tải model AI về (chỉ tải 1 lần rồi lưu lại). Video càng dài thì xử lý càng lâu — vui lòng giữ nguyên trang trong lúc chạy.</div>
+  </div>
+
+  <!-- BƯỚC 3: kết quả -->
+  <div class="card">
+    <h2><span class="step">3</span>Kết quả văn bản</h2>
+    <textarea id="result" placeholder="Văn bản sau khi chuyển sẽ hiện ở đây... Bạn có thể sửa trực tiếp."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="copyBtn">📋 Sao chép</button>
+      <button class="btn btn-ghost" id="downloadTxtBtn">⬇️ Tải file .txt</button>
+      <button class="btn btn-danger" id="clearBtn">🗑️ Xoá</button>
+    </div>
+  </div>
+
+  <footer>
+    Xử lý 100% trên máy của bạn bằng AI Whisper (OpenAI) · <a href="index.html">← Về trang chủ</a>
+  </footer>
+</div>
+
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+env.allowLocalModels = false;
+
+// ====== Trạng thái chung ======
+let currentFile = null;      // File hoặc Blob đang chọn
+let audioData = null;        // Float32Array 16kHz mono đã giải mã
+let transcriber = null;
+let loadedModel = null;
+let busy = false;
+
+const $ = id => document.getElementById(id);
+const dropzone = $('dropzone'), fileInput = $('fileInput'), fileInfo = $('fileInfo');
+const transcribeBtn = $('transcribeBtn'), extractBtn = $('extractBtn');
+const progressWrap = $('progressWrap'), progressFill = $('progressFill'), progressLabel = $('progressLabel');
+const statusEl = $('status'), result = $('result'), preview = $('preview');
+const recBtn = $('recBtn'), recDot = $('recDot'), recTimer = $('recTimer');
+
+function setStatus(msg, cls = '') {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + cls;
+}
+function showProgress(label, pct) {
+  progressWrap.classList.add('show');
+  progressLabel.textContent = label;
+  progressFill.style.width = (pct ?? 0) + '%';
+}
+function hideProgress() { progressWrap.classList.remove('show'); }
+function fmtSize(b) {
+  if (b > 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1024).toFixed(0) + ' KB';
+}
+function fmtTime(s) {
+  const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+  return String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}
+
+// ====== Chọn file ======
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+async function handleFile(file, label) {
+  if (busy) return;
+  currentFile = file;
+  audioData = null;
+  fileInfo.classList.add('show');
+  fileInfo.innerHTML = `📄 <b>${label || file.name}</b> — ${fmtSize(file.size)}`;
+  preview.src = URL.createObjectURL(file);
+  preview.classList.add('show');
+  transcribeBtn.disabled = extractBtn.disabled = true;
+  setStatus('Đang đọc và giải mã âm thanh từ file...');
+  try {
+    audioData = await decodeToMono16k(file);
+    const dur = audioData.length / 16000;
+    fileInfo.innerHTML += ` — thời lượng ~${fmtTime(dur)}`;
+    transcribeBtn.disabled = extractBtn.disabled = false;
+    setStatus('✅ File hợp lệ, sẵn sàng xử lý. Chọn thao tác ở Bước 2.', 'ok');
+  } catch (err) {
+    console.error(err);
+    setStatus('❌ Không đọc được âm thanh từ file này. Hãy thử định dạng khác (MP4, MP3, WAV...).', 'err');
+  }
+}
+
+// Giải mã file video/audio -> Float32Array mono 16kHz (Whisper yêu cầu 16kHz)
+async function decodeToMono16k(file) {
+  const buf = await file.arrayBuffer();
+  const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await tmpCtx.decodeAudioData(buf);
+  tmpCtx.close();
+  const offline = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start();
+  const rendered = await offline.startRendering();
+  return rendered.getChannelData(0);
+}
+
+// ====== Ghi âm trực tiếp ======
+let mediaRecorder = null, recChunks = [], recInterval = null, recStart = 0;
+recBtn.addEventListener('click', async () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => recChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(recInterval);
+      recDot.style.display = 'none';
+      recTimer.style.display = 'none';
+      recBtn.textContent = '🎙️ Hoặc ghi âm trực tiếp';
+      recBtn.classList.remove('btn-danger');
+      recBtn.classList.add('btn-ghost');
+      const blob = new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      handleFile(blob, 'Bản ghi âm (' + fmtTime((Date.now() - recStart) / 1000) + ')');
+    };
+    mediaRecorder.start();
+    recStart = Date.now();
+    recDot.style.display = 'inline-block';
+    recTimer.style.display = 'inline';
+    recBtn.textContent = '⏹️ Dừng ghi âm';
+    recBtn.classList.remove('btn-ghost');
+    recBtn.classList.add('btn-danger');
+    recInterval = setInterval(() => {
+      recTimer.textContent = fmtTime((Date.now() - recStart) / 1000);
+    }, 500);
+    setStatus('🔴 Đang ghi âm... bấm "Dừng ghi âm" khi xong.');
+  } catch {
+    setStatus('❌ Không truy cập được micro. Hãy cấp quyền micro cho trang web.', 'err');
+  }
+});
+
+// ====== Chuyển thành văn bản (Whisper) ======
+transcribeBtn.addEventListener('click', async () => {
+  if (!audioData || busy) return;
+  busy = true;
+  transcribeBtn.disabled = extractBtn.disabled = true;
+  const model = $('modelSel').value;
+  const lang = $('langSel').value;
+  try {
+    if (!transcriber || loadedModel !== model) {
+      showProgress('Đang tải model AI (chỉ lần đầu)...', 0);
+      transcriber = await pipeline('automatic-speech-recognition', model, {
+        quantized: true,
+        progress_callback: p => {
+          if (p.status === 'progress' && p.total) {
+            showProgress(`Đang tải model AI: ${p.file} (${fmtSize(p.loaded)} / ${fmtSize(p.total)})`, p.progress);
+          }
+        }
+      });
+      loadedModel = model;
+    }
+    const totalSec = audioData.length / 16000;
+    showProgress('Đang nghe và chuyển thành văn bản... (0%)', 0);
+    setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút...');
+    const out = await transcriber(audioData, {
+      language: lang,
+      task: 'transcribe',
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      return_timestamps: true,
+      callback_function: () => {},
+      chunk_callback: chunk => {
+        const done = Math.min(100, Math.round(((chunk.stride?.[0] ?? 0) && 0) + ((chunk.offset ?? 0) + 30) / totalSec * 100));
+        showProgress(`Đang nghe và chuyển thành văn bản... (${done}%)`, done);
+      }
+    });
+    result.value = (out.text || '').trim();
+    hideProgress();
+    setStatus(result.value ? '✅ Xong! Văn bản đã hiện ở Bước 3.' : '⚠️ Không nhận ra giọng nói nào trong file.', result.value ? 'ok' : '');
+  } catch (err) {
+    console.error(err);
+    hideProgress();
+    setStatus('❌ Lỗi khi xử lý: ' + (err.message || err), 'err');
+  } finally {
+    busy = false;
+    transcribeBtn.disabled = extractBtn.disabled = false;
+  }
+});
+
+// ====== Tách âm thanh -> tải WAV ======
+extractBtn.addEventListener('click', async () => {
+  if (!currentFile || busy) return;
+  busy = true;
+  setStatus('Đang tách âm thanh...');
+  try {
+    // Giải mã ở chất lượng gốc (44.1kHz) để file WAV nghe hay hơn
+    const buf = await currentFile.arrayBuffer();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded = await ctx.decodeAudioData(buf);
+    ctx.close();
+    const wav = audioBufferToWav(decoded);
+    const blob = new Blob([wav], { type: 'audio/wav' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const base = (currentFile.name || 'ghi-am').replace(/\.[^.]+$/, '');
+    a.download = base + '-audio.wav';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus('✅ Đã tách âm thanh và tải về file .wav!', 'ok');
+  } catch (err) {
+    console.error(err);
+    setStatus('❌ Không tách được âm thanh: ' + (err.message || err), 'err');
+  } finally {
+    busy = false;
+  }
+});
+
+// AudioBuffer -> WAV (16-bit PCM)
+function audioBufferToWav(buffer) {
+  const numCh = Math.min(2, buffer.numberOfChannels);
+  const rate = buffer.sampleRate;
+  const len = buffer.length * numCh * 2;
+  const ab = new ArrayBuffer(44 + len);
+  const view = new DataView(ab);
+  const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  writeStr(0, 'RIFF'); view.setUint32(4, 36 + len, true); writeStr(8, 'WAVE');
+  writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, numCh, true); view.setUint32(24, rate, true);
+  view.setUint32(28, rate * numCh * 2, true); view.setUint16(32, numCh * 2, true);
+  view.setUint16(34, 16, true); writeStr(36, 'data'); view.setUint32(40, len, true);
+  const chans = [];
+  for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
+  let off = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let c = 0; c < numCh; c++) {
+      let s = Math.max(-1, Math.min(1, chans[c][i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return ab;
+}
+
+// ====== Kết quả: copy / tải / xoá ======
+$('copyBtn').addEventListener('click', async () => {
+  if (!result.value) return;
+  await navigator.clipboard.writeText(result.value);
+  setStatus('✅ Đã sao chép văn bản!', 'ok');
+});
+$('downloadTxtBtn').addEventListener('click', () => {
+  if (!result.value) return;
+  const blob = new Blob([result.value], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'van-ban.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('clearBtn').addEventListener('click', () => { result.value = ''; setStatus(''); });
+</script>
+</body>
+</html>
