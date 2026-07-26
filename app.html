@@ -192,6 +192,13 @@
         </select>
       </div>
       <div>
+        <label for="outputSel">Loại kết quả muốn nhận</label>
+        <select id="outputSel">
+          <option value="text" selected>📝 Văn bản thuần (.txt)</option>
+          <option value="srt">🎬 Phụ đề có mốc thời gian (.srt)</option>
+        </select>
+      </div>
+      <div>
         <label for="modelSel">Độ chính xác (model AI)</label>
         <select id="modelSel">
           <option value="Xenova/whisper-tiny">Nhanh (tải ~40MB, kém chính xác hơn)</option>
@@ -219,6 +226,7 @@
     <div class="btn-row">
       <button class="btn btn-ghost" id="copyBtn">📋 Sao chép</button>
       <button class="btn btn-ghost" id="downloadTxtBtn">⬇️ Tải file .txt</button>
+      <button class="btn btn-ghost" id="downloadSrtBtn">⬇️ Tải phụ đề .srt</button>
       <button class="btn btn-danger" id="clearBtn">🗑️ Xoá</button>
     </div>
   </div>
@@ -238,6 +246,8 @@ let audioData = null;        // Float32Array 16kHz mono đã giải mã
 let transcriber = null;
 let loadedModel = null;
 let busy = false;
+let lastChunks = null;       // các đoạn kèm mốc thời gian từ lần chuyển gần nhất
+let lastText = '';
 
 const $ = id => document.getElementById(id);
 const dropzone = $('dropzone'), fileInput = $('fileInput'), fileInfo = $('fileInfo');
@@ -389,9 +399,11 @@ transcribeBtn.addEventListener('click', async () => {
         showProgress(`Đang nghe và chuyển thành văn bản... (${done}%)`, done);
       }
     });
-    result.value = (out.text || '').trim();
+    lastText = (out.text || '').trim();
+    lastChunks = out.chunks || null;
+    renderResult();
     hideProgress();
-    setStatus(result.value ? '✅ Xong! Văn bản đã hiện ở Bước 3.' : '⚠️ Không nhận ra giọng nói nào trong file.', result.value ? 'ok' : '');
+    setStatus(lastText ? '✅ Xong! Kết quả đã hiện ở Bước 3.' : '⚠️ Không nhận ra giọng nói nào trong file.', lastText ? 'ok' : '');
   } catch (err) {
     console.error(err);
     hideProgress();
@@ -456,6 +468,36 @@ function audioBufferToWav(buffer) {
   return ab;
 }
 
+// ====== Tạo phụ đề SRT từ các đoạn có mốc thời gian ======
+function srtTime(sec) {
+  sec = Math.max(0, sec || 0);
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60), ms = Math.round((sec % 1) * 1000);
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' +
+         String(s).padStart(2, '0') + ',' + String(ms).padStart(3, '0');
+}
+function buildSrt() {
+  if (!lastChunks || !lastChunks.length) return '';
+  return lastChunks.map((c, i) => {
+    const start = c.timestamp?.[0] ?? 0;
+    // đoạn cuối đôi khi thiếu mốc kết thúc -> ước lượng +3 giây
+    const end = c.timestamp?.[1] ?? (start + 3);
+    return (i + 1) + '\n' + srtTime(start) + ' --> ' + srtTime(end) + '\n' + c.text.trim() + '\n';
+  }).join('\n');
+}
+// Hiển thị kết quả theo loại khách chọn (văn bản thuần hoặc phụ đề SRT)
+function renderResult() {
+  const mode = $('outputSel').value;
+  if (mode === 'srt') {
+    const srt = buildSrt();
+    result.value = srt || lastText;
+    if (!srt && lastText) setStatus('⚠️ Không có mốc thời gian, hiển thị văn bản thuần.', '');
+  } else {
+    result.value = lastText;
+  }
+}
+$('outputSel').addEventListener('change', () => { if (lastText) renderResult(); });
+
 // ====== Kết quả: copy / tải / xoá ======
 $('copyBtn').addEventListener('click', async () => {
   if (!result.value) return;
@@ -463,15 +505,26 @@ $('copyBtn').addEventListener('click', async () => {
   setStatus('✅ Đã sao chép văn bản!', 'ok');
 });
 $('downloadTxtBtn').addEventListener('click', () => {
-  if (!result.value) return;
-  const blob = new Blob([result.value], { type: 'text/plain;charset=utf-8' });
+  const txt = lastText || result.value;
+  if (!txt) return;
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'van-ban.txt';
   a.click();
   URL.revokeObjectURL(a.href);
 });
-$('clearBtn').addEventListener('click', () => { result.value = ''; setStatus(''); });
+$('downloadSrtBtn').addEventListener('click', () => {
+  const srt = buildSrt();
+  if (!srt) { setStatus('⚠️ Chưa có phụ đề. Hãy chuyển video thành văn bản trước đã.', ''); return; }
+  const blob = new Blob([srt], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'phu-de.srt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('clearBtn').addEventListener('click', () => { result.value = ''; lastText = ''; lastChunks = null; setStatus(''); });
 </script>
 </body>
 </html>
