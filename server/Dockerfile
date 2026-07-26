@@ -1,6 +1,7 @@
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+# ffmpeg: xu ly video + day RTMP; fonts-noto-core: chu tieng Viet du dau cho overlay drawtext
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

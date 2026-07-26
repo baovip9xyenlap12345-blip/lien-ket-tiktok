@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Livestream AI — Phát tự động 24/7 lên Shopee + TikTok</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#0f1220; --card:#1a1f35; --card2:#232a4a; --accent:#6c5ce7; --accent2:#00cec9;
+          --text:#eef0ff; --muted:#9aa3c7; --ok:#2ecc71; --err:#e74c3c; --warn:#f1c40f; }
+  body { font-family:"Segoe UI",Roboto,Arial,sans-serif; background:linear-gradient(160deg,#0f1220,#171b31 60%,#101a2e);
+         color:var(--text); min-height:100vh; padding:24px 16px 60px; }
+  .container { max-width:920px; margin:0 auto; }
+  header { text-align:center; margin-bottom:20px; }
+  header h1 { font-size:1.7rem; background:linear-gradient(90deg,var(--accent),var(--accent2));
+              -webkit-background-clip:text; background-clip:text; color:transparent; }
+  header p { color:var(--muted); margin-top:6px; }
+  .card { background:var(--card); border:1px solid #2b3357; border-radius:16px; padding:22px; margin-bottom:18px;
+          box-shadow:0 8px 30px rgba(0,0,0,.35); }
+  .card h2 { font-size:1.05rem; margin-bottom:14px; }
+  input, select, textarea { width:100%; background:var(--card2); color:var(--text); border:1px solid #3d4780;
+                  border-radius:8px; padding:10px 12px; font-size:.93rem; margin-bottom:10px; font-family:inherit; }
+  textarea { min-height:70px; resize:vertical; }
+  label { display:block; font-size:.82rem; color:var(--muted); margin-bottom:4px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; border:none; border-radius:10px; padding:11px 18px;
+         font-size:.95rem; font-weight:600; cursor:pointer; color:#fff; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-primary { background:linear-gradient(90deg,var(--accent),#8e7bff); }
+  .btn-teal { background:linear-gradient(90deg,#00b8b3,var(--accent2)); color:#04302e; }
+  .btn-red { background:linear-gradient(90deg,#c0392b,var(--err)); }
+  .btn-ghost { background:var(--card2); border:1px solid #3d4780; color:var(--text); }
+  .btn-sm { padding:6px 10px; font-size:.8rem; border-radius:8px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > * { flex:1; min-width:140px; }
+  .status { margin-top:10px; font-size:.9rem; color:var(--muted); min-height:1.2em; }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); }
+  .quota { background:var(--card2); border-radius:10px; padding:12px 14px; font-size:.95rem; color:var(--muted); margin-bottom:12px; }
+  .quota b { color:var(--accent2); font-size:1.05rem; }
+  .note { background:#1f2947; border-left:4px solid var(--warn); border-radius:8px; padding:12px 14px;
+          font-size:.87rem; color:var(--muted); margin-top:14px; }
+  .hidden { display:none !important; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:.9rem; color:var(--muted); }
+  a { color:var(--accent2); }
+  table { width:100%; border-collapse:collapse; font-size:.83rem; }
+  th, td { padding:8px 6px; border-bottom:1px solid #2b3357; text-align:left; vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; white-space:nowrap; }
+  .tblwrap { overflow-x:auto; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.75rem; background:var(--card2); border:1px solid #3d4780; }
+  .tag.live { border-color:var(--ok); color:var(--ok); }
+  .tag.err { border-color:var(--err); color:var(--err); }
+  .tag.warn { border-color:var(--warn); color:var(--warn); }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .tab { padding:9px 16px; border-radius:10px; background:var(--card2); border:1px solid #3d4780;
+         color:var(--muted); cursor:pointer; font-size:.9rem; font-weight:600; }
+  .tab.active { background:linear-gradient(90deg,var(--accent),#8e7bff); color:#fff; border-color:transparent; }
+  .checkgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px; margin-bottom:10px; }
+  .checkgrid label { display:flex; gap:8px; align-items:center; background:var(--card2); border:1px solid #3d4780;
+                     border-radius:8px; padding:8px 10px; font-size:.85rem; color:var(--text); cursor:pointer; margin:0; }
+  .checkgrid input { width:auto; margin:0; }
+  .console { background:#0b0e1a; border:1px solid #2b3357; border-radius:10px; padding:12px;
+             font-family:Consolas,monospace; font-size:.8rem; max-height:280px; overflow-y:auto; line-height:1.5; }
+  .console .k-script { color:#8e7bff; } .console .k-comment_answer { color:var(--accent2); }
+  .console .k-filler { color:var(--muted); } .console .k-system { color:var(--warn); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔴 Livestream AI</h1>
+    <p>Phát livestream bán hàng tự động 24/7 lên Shopee + TikTok — không cần MC</p>
+  </header>
+
+  <!-- Đăng nhập -->
+  <div class="card" id="authCard">
+    <h2>Đăng nhập / Đăng ký</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)">
+    <div class="row">
+      <button class="btn btn-primary" id="loginBtn">Đăng nhập</button>
+      <button class="btn btn-ghost" id="registerBtn">Đăng ký mới</button>
+    </div>
+    <div class="status" id="authStatus"></div>
+  </div>
+
+  <div id="appArea" class="hidden">
+    <div class="topbar">
+      <span id="userInfo"></span>
+      <span><a href="/">← App chuyển giọng nói</a> &nbsp;|&nbsp; <a href="#" id="logoutBtn">Đăng xuất</a></span>
+    </div>
+    <div class="quota" id="quotaBox"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="sessions">📺 Phiên live</div>
+      <div class="tab" data-tab="products">🧸 Sản phẩm</div>
+      <div class="tab" data-tab="assets">🎬 Video clip</div>
+      <div class="tab" data-tab="targets">📡 Kênh phát</div>
+    </div>
+
+    <!-- ======= Sản phẩm ======= -->
+    <div class="card hidden" id="tab-products">
+      <h2>Thêm sản phẩm</h2>
+      <input id="pName" placeholder="Tên sản phẩm (vd: Gấu bông teddy 1m2)">
+      <div class="row">
+        <div><label>Giá gốc (đ)</label><input id="pPrice" type="number" placeholder="299000"></div>
+        <div><label>Giá khuyến mãi (đ, bỏ trống nếu không)</label><input id="pPromo" type="number" placeholder="199000"></div>
+      </div>
+      <textarea id="pDesc" placeholder="Mô tả ngắn về sản phẩm"></textarea>
+      <textarea id="pPoints" placeholder="Điểm bán hàng — mỗi dòng 1 ý (vd: Bông gòn 3D êm mịn / Có giặt được / Freeship đơn từ 99k)"></textarea>
+      <button class="btn btn-primary" id="pAddBtn">＋ Thêm sản phẩm</button>
+      <div class="status" id="pStatus"></div>
+      <div class="tblwrap" style="margin-top:14px">
+        <table><thead><tr><th>Tên</th><th>Giá</th><th>KM</th><th></th></tr></thead><tbody id="pTbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ======= Video clip ======= -->
+    <div class="card hidden" id="tab-assets">
+      <h2>Video clip cảnh quay <span style="color:var(--muted);font-weight:400;font-size:.82rem">(quay dọc 9:16, sẽ tự chuẩn hóa 720×1280 và phát lặp xen kẽ)</span></h2>
+      <input type="file" id="aFile" accept="video/*">
+      <button class="btn btn-primary" id="aUpBtn">⬆️ Tải lên & chuẩn hóa</button>
+      <div class="status" id="aStatus"></div>
+      <div class="tblwrap" style="margin-top:14px">
+        <table><thead><tr><th>Tên file</th><th>Thời lượng</th><th>Dung lượng</th><th></th></tr></thead><tbody id="aTbody"></tbody></table>
+      </div>
+      <div class="note" id="aStorage"></div>
+    </div>
+
+    <!-- ======= Kênh phát ======= -->
+    <div class="card hidden" id="tab-targets">
+      <h2>Thêm kênh phát (RTMP)</h2>
+      <div class="row">
+        <div>
+          <label>Nền tảng</label>
+          <select id="tPlatform">
+            <option value="shopee">Shopee Live</option>
+            <option value="tiktok">TikTok LIVE</option>
+            <option value="custom">Khác (RTMP tùy chỉnh)</option>
+          </select>
+        </div>
+        <div><label>Username TikTok (để đọc bình luận, chỉ cần khi chọn TikTok)</label><input id="tUsername" placeholder="@tenshopcuaban"></div>
+      </div>
+      <label>URL máy chủ RTMP (lấy trong Shopee Live PC / TikTok LIVE Studio)</label>
+      <input id="tUrl" placeholder="rtmp://...">
+      <label>Stream key (được mã hóa khi lưu — không hiển thị lại)</label>
+      <input id="tKey" type="password" placeholder="Stream key">
+      <button class="btn btn-primary" id="tAddBtn">＋ Lưu kênh phát</button>
+      <div class="status" id="tStatus"></div>
+      <div class="tblwrap" style="margin-top:14px">
+        <table><thead><tr><th>Nền tảng</th><th>URL</th><th>Key</th><th>Trạng thái</th><th></th></tr></thead><tbody id="tTbody"></tbody></table>
+      </div>
+      <div class="note">💡 <b>Shopee:</b> Kênh Người Bán → Shopee Live → tạo phiên → «Phát trực tiếp từ PC» để lấy URL + Key.
+        <b>TikTok:</b> cần tài khoản đủ điều kiện LIVE — lấy key trong TikTok LIVE Studio. Key TikTok thường đổi mỗi phiên, hãy cập nhật trước khi phát.</div>
+    </div>
+
+    <!-- ======= Phiên live ======= -->
+    <div class="card" id="tab-sessions">
+      <h2>Tạo phiên live mới</h2>
+      <input id="sTitle" placeholder="Tên phiên (vd: Live đêm gấu bông sale 50%)">
+      <label>Chọn sản phẩm giới thiệu</label>
+      <div class="checkgrid" id="sProducts"></div>
+      <label>Chọn video clip phát nền</label>
+      <div class="checkgrid" id="sAssets"></div>
+      <label>Chọn kênh phát</label>
+      <div class="checkgrid" id="sTargets"></div>
+      <div class="row">
+        <div><label>Tự bắt đầu lúc (bỏ trống = bấm phát thủ công)</label><input id="sStart" type="datetime-local"></div>
+        <div><label>Tự kết thúc lúc (bỏ trống = phát đến khi dừng)</label><input id="sEnd" type="datetime-local"></div>
+      </div>
+      <label class="checkgrid" style="grid-template-columns:1fr"><span><input type="checkbox" id="sComments"> 🤖 Tự động trả lời bình luận TikTok bằng AI</span></label>
+      <button class="btn btn-primary" id="sAddBtn">＋ Tạo phiên</button>
+      <div class="status" id="sStatus"></div>
+
+      <h2 style="margin-top:22px">Danh sách phiên</h2>
+      <div class="tblwrap">
+        <table><thead><tr><th>Tên</th><th>Trạng thái</th><th>Đã phát</th><th>Lịch</th><th></th></tr></thead><tbody id="sTbody"></tbody></table>
+      </div>
+
+      <div id="sDetail" class="hidden" style="margin-top:16px">
+        <h2>Nhật ký phiên: <span id="sdTitle"></span></h2>
+        <div class="console" id="sdConsole"></div>
+      </div>
+    </div>
+
+    <!-- ======= Quản trị ======= -->
+    <div class="card hidden" id="adminCard">
+      <h2>👑 Quản trị — mọi phiên live</h2>
+      <button class="btn btn-teal btn-sm" id="admReload">🔄 Tải lại</button>
+      <div class="tblwrap" style="margin-top:10px">
+        <table><thead><tr><th>Email</th><th>Tên phiên</th><th>Trạng thái</th><th>Đã phát</th><th>Restart</th><th>Lỗi cuối</th><th></th></tr></thead>
+        <tbody id="admTbody"></tbody></table>
+      </div>
+      <div class="status" id="admStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const $ = id => document.getElementById(id);
+let token = localStorage.getItem('token') || '';
+let isAdmin = false;
+let watchSessionId = null;
+
+const setS = (el, msg, cls='') => { el.textContent = msg; el.className = 'status ' + cls; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtMoney = v => v == null ? '—' : (+v).toLocaleString('vi-VN') + 'đ';
+const fmtDur = s => { s = Math.round(s||0); const h = Math.floor(s/3600), m = Math.floor(s%3600/60); return h ? `${h}g${m}p` : `${m} phút`; };
+const fmtDT = ms => ms ? new Date(ms).toLocaleString('vi-VN', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
+const STATE_VI = { scheduled:'⏰ Hẹn giờ', starting:'🟡 Đang khởi động', live:'🔴 ĐANG LIVE', stopping:'🟡 Đang dừng', stopped:'⚪ Đã dừng', error:'❌ Lỗi' };
+const stateTag = st => `<span class="tag ${st==='live'?'live':st==='error'?'err':(st==='starting'||st==='stopping'||st==='scheduled')?'warn':''}">${STATE_VI[st]||esc(st)}</span>`;
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers, token ? { Authorization: 'Bearer ' + token } : {});
+  const r = await fetch(API + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || 'Lỗi máy chủ'); e.upgrade = data.upgrade; throw e; }
+  return data;
+}
+const postJSON = (path, body) => api(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+
+// ====== Đăng nhập ======
+$('loginBtn').onclick = () => doAuth('/api/login');
+$('registerBtn').onclick = () => doAuth('/api/register');
+async function doAuth(path) {
+  try {
+    const d = await postJSON(path, { email:$('email').value, password:$('password').value });
+    token = d.token; localStorage.setItem('token', token);
+    boot();
+  } catch (e) { setS($('authStatus'), '❌ ' + e.message, 'err'); }
+}
+$('logoutBtn').onclick = e => { e.preventDefault(); token=''; localStorage.removeItem('token'); location.reload(); };
+
+// ====== Tab ======
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+  ['sessions','products','assets','targets'].forEach(k => $('tab-' + k).classList.toggle('hidden', k !== t.dataset.tab));
+});
+
+// ====== Sản phẩm ======
+let products = [];
+async function loadProducts() {
+  products = (await api('/api/live/products')).products;
+  $('pTbody').innerHTML = products.map(p => `
+    <tr><td>${esc(p.name)}</td><td>${fmtMoney(p.price)}</td><td>${fmtMoney(p.promo_price)}</td>
+    <td><button class="btn btn-ghost btn-sm" data-del-product="${p.id}">🗑</button></td></tr>`).join('')
+    || '<tr><td colspan="4">Chưa có sản phẩm — thêm ít nhất 1 sản phẩm để live</td></tr>';
+  renderChecks();
+}
+$('pAddBtn').onclick = async () => {
+  try {
+    await postJSON('/api/live/products', { name:$('pName').value, price:$('pPrice').value, promo_price:$('pPromo').value,
+      description:$('pDesc').value, selling_points:$('pPoints').value });
+    ['pName','pPrice','pPromo','pDesc','pPoints'].forEach(id => $(id).value = '');
+    setS($('pStatus'), '✅ Đã thêm sản phẩm', 'ok'); loadProducts();
+  } catch (e) { setS($('pStatus'), '❌ ' + e.message, 'err'); }
+};
+$('pTbody').onclick = async e => {
+  const b = e.target.closest('[data-del-product]'); if (!b) return;
+  if (!confirm('Xóa sản phẩm này?')) return;
+  try { await api('/api/live/products/' + b.dataset.delProduct, { method:'DELETE' }); loadProducts(); }
+  catch (err) { setS($('pStatus'), '❌ ' + err.message, 'err'); }
+};
+
+// ====== Video clip ======
+let assets = [];
+async function loadAssets() {
+  const d = await api('/api/live/assets');
+  assets = d.assets;
+  $('aTbody').innerHTML = assets.map(a => `
+    <tr><td>${esc(a.orig_name)}</td><td>${a.duration_s}s</td><td>${(a.size_bytes/1048576).toFixed(1)} MB</td>
+    <td><button class="btn btn-ghost btn-sm" data-del-asset="${a.id}">🗑</button></td></tr>`).join('')
+    || '<tr><td colspan="4">Chưa có clip — tải lên ít nhất 1 video quay sản phẩm</td></tr>';
+  $('aStorage').textContent = `📦 Đã dùng ${(d.storageUsed/1048576).toFixed(0)} MB / ${(d.storageMax/1073741824).toFixed(0)} GB lưu trữ`;
+  renderChecks();
+}
+$('aUpBtn').onclick = async () => {
+  const f = $('aFile').files[0];
+  if (!f) return setS($('aStatus'), 'Hãy chọn file video', 'err');
+  $('aUpBtn').disabled = true;
+  setS($('aStatus'), '⏳ Đang tải lên và chuẩn hóa video... (có thể mất vài phút)');
+  try {
+    const fd = new FormData(); fd.append('file', f);
+    const d = await api('/api/live/assets', { method:'POST', body: fd });
+    setS($('aStatus'), `✅ Xong! Clip dài ${d.duration_s}s`, 'ok');
+    $('aFile').value = ''; loadAssets();
+  } catch (e) { setS($('aStatus'), '❌ ' + e.message, 'err'); }
+  $('aUpBtn').disabled = false;
+};
+$('aTbody').onclick = async e => {
+  const b = e.target.closest('[data-del-asset]'); if (!b) return;
+  if (!confirm('Xóa clip này?')) return;
+  try { await api('/api/live/assets/' + b.dataset.delAsset, { method:'DELETE' }); loadAssets(); }
+  catch (err) { setS($('aStatus'), '❌ ' + err.message, 'err'); }
+};
+
+// ====== Kênh phát ======
+let targets = [];
+const PLATFORM_VI = { shopee:'🛒 Shopee', tiktok:'🎵 TikTok', custom:'⚙️ Khác' };
+async function loadTargets() {
+  targets = (await api('/api/live/targets')).targets;
+  $('tTbody').innerHTML = targets.map(t => `
+    <tr><td>${PLATFORM_VI[t.platform]||esc(t.platform)}</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${esc(t.rtmp_url)}</td>
+    <td>${esc(t.stream_key_masked)}</td>
+    <td>${t.status==='auth_failed' ? '<span class="tag err">Key sai/hết hạn</span>' : '<span class="tag">OK</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" data-del-target="${t.id}">🗑</button></td></tr>`).join('')
+    || '<tr><td colspan="5">Chưa có kênh phát — thêm ít nhất 1 kênh (Shopee hoặc TikTok)</td></tr>';
+  renderChecks();
+}
+$('tAddBtn').onclick = async () => {
+  try {
+    await postJSON('/api/live/targets', { platform:$('tPlatform').value, rtmp_url:$('tUrl').value,
+      stream_key:$('tKey').value, tiktok_username:$('tUsername').value });
+    ['tUrl','tKey','tUsername'].forEach(id => $(id).value = '');
+    setS($('tStatus'), '✅ Đã lưu kênh phát (key đã được mã hóa)', 'ok'); loadTargets();
+  } catch (e) { setS($('tStatus'), '❌ ' + e.message, 'err'); }
+};
+$('tTbody').onclick = async e => {
+  const b = e.target.closest('[data-del-target]'); if (!b) return;
+  if (!confirm('Xóa kênh phát này?')) return;
+  try { await api('/api/live/targets/' + b.dataset.delTarget, { method:'DELETE' }); loadTargets(); }
+  catch (err) { setS($('tStatus'), '❌ ' + err.message, 'err'); }
+};
+
+// ====== Phiên live ======
+function renderChecks() {
+  $('sProducts').innerHTML = products.map(p => `<label><input type="checkbox" name="ck-p" value="${p.id}"> ${esc(p.name)}</label>`).join('') || '<span style="color:var(--muted);font-size:.85rem">Thêm sản phẩm ở tab 🧸 trước</span>';
+  $('sAssets').innerHTML = assets.map(a => `<label><input type="checkbox" name="ck-a" value="${a.id}"> ${esc(a.orig_name)} (${a.duration_s}s)</label>`).join('') || '<span style="color:var(--muted);font-size:.85rem">Tải clip ở tab 🎬 trước</span>';
+  $('sTargets').innerHTML = targets.map(t => `<label><input type="checkbox" name="ck-t" value="${t.id}"> ${PLATFORM_VI[t.platform]} ${esc(t.tiktok_username ? '@'+t.tiktok_username : '')}</label>`).join('') || '<span style="color:var(--muted);font-size:.85rem">Thêm kênh phát ở tab 📡 trước</span>';
+}
+const checked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
+const toEpoch = v => v ? new Date(v).getTime() : null;
+
+$('sAddBtn').onclick = async () => {
+  try {
+    await postJSON('/api/live/sessions', {
+      title: $('sTitle').value, product_ids: checked('ck-p'), asset_ids: checked('ck-a'), target_ids: checked('ck-t'),
+      comments_ai: $('sComments').checked, schedule_start: toEpoch($('sStart').value), schedule_end: toEpoch($('sEnd').value),
+    });
+    setS($('sStatus'), '✅ Đã tạo phiên', 'ok');
+    $('sTitle').value = ''; loadSessions();
+  } catch (e) { setS($('sStatus'), '❌ ' + e.message, 'err'); }
+};
+
+let sessions = [];
+async function loadSessions() {
+  const d = await api('/api/live/sessions');
+  sessions = d.sessions;
+  $('sTbody').innerHTML = sessions.map(s => {
+    const running = ['starting','live','stopping'].includes(s.state);
+    return `<tr>
+      <td>${esc(s.title)}</td><td>${stateTag(s.state)}</td><td>${fmtDur(s.streamed_seconds)}</td>
+      <td>${s.schedule_start ? fmtDT(s.schedule_start) + ' → ' + fmtDT(s.schedule_end) : 'Thủ công'}</td>
+      <td style="white-space:nowrap">
+        ${running
+          ? `<button class="btn btn-red btn-sm" data-stop="${s.id}">⏹ Dừng</button>`
+          : `<button class="btn btn-teal btn-sm" data-start="${s.id}">▶ Phát</button>
+             <button class="btn btn-ghost btn-sm" data-del-session="${s.id}">🗑</button>`}
+        <button class="btn btn-ghost btn-sm" data-watch="${s.id}">📜</button>
+      </td></tr>`;
+  }).join('') || '<tr><td colspan="5">Chưa có phiên live nào</td></tr>';
+}
+$('sTbody').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  try {
+    if (b.dataset.start) {
+      b.disabled = true; setS($('sStatus'), '⏳ Đang khởi động phiên live...');
+      await api('/api/live/sessions/' + b.dataset.start + '/start', { method:'POST' });
+      setS($('sStatus'), '✅ Đã gửi lệnh phát — theo dõi trạng thái ở bảng trên', 'ok');
+      watchSessionId = b.dataset.start;
+    } else if (b.dataset.stop) {
+      if (!confirm('Dừng phiên live này?')) return;
+      await api('/api/live/sessions/' + b.dataset.stop + '/stop', { method:'POST' });
+    } else if (b.dataset.delSession) {
+      if (!confirm('Xóa phiên này?')) return;
+      await api('/api/live/sessions/' + b.dataset.delSession, { method:'DELETE' });
+    } else if (b.dataset.watch) {
+      watchSessionId = b.dataset.watch; pollDetail();
+    }
+    loadSessions();
+  } catch (err) { setS($('sStatus'), '❌ ' + err.message, 'err'); }
+};
+
+async function pollDetail() {
+  if (!watchSessionId) return;
+  try {
+    const d = await api('/api/live/sessions/' + watchSessionId);
+    $('sDetail').classList.remove('hidden');
+    $('sdTitle').textContent = d.session.title + ' — ' + (STATE_VI[d.session.state] || d.session.state);
+    const lines = [
+      ...d.scripts.map(x => ({ t:x.created_at, k:x.kind, txt:x.text })),
+      ...d.comments.map(x => ({ t:x.created_at, k:'comment', txt:`💬 ${x.username}: ${x.comment}` + (x.answer ? ` → 🤖 ${x.answer}` : '') })),
+    ].sort((a,b) => b.t - a.t).slice(0, 40);
+    $('sdConsole').innerHTML = lines.map(l =>
+      `<div class="k-${l.k}">[${new Date(l.t).toLocaleTimeString('vi-VN')}] ${esc(l.txt)}</div>`).join('') || 'Chưa có nhật ký';
+  } catch {}
+}
+
+// ====== Quota + boot ======
+async function refreshMe() {
+  const me = await api('/api/me');
+  isAdmin = me.isAdmin;
+  $('userInfo').textContent = me.email + ' — ' + me.planName;
+  const rem = me.remainingStreamSeconds || 0;
+  $('quotaBox').innerHTML = me.quotaStreamHours > 0
+    ? `⏱ Còn <b>${fmtDur(rem)}</b> / ${me.quotaStreamHours} giờ live trong kỳ` + (me.planExpires ? ` — gói hết hạn <b>${new Date(me.planExpires).toLocaleDateString('vi-VN')}</b>` : '')
+    : `⚠️ Tài khoản chưa có gói Livestream AI. Xem bảng giá ở <a href="/">trang chính</a> — chuyển khoản là được kích hoạt (gói Live cơ bản 600.000đ/tháng = 120 giờ).`;
+  if (isAdmin) { $('adminCard').classList.remove('hidden'); loadAdmin(); }
+}
+
+// ====== Quản trị ======
+async function loadAdmin() {
+  try {
+    const { sessions } = await api('/api/admin/live/sessions');
+    $('admTbody').innerHTML = sessions.map(s => `
+      <tr><td>${esc(s.email)}</td><td>${esc(s.title)}</td><td>${stateTag(s.state)}</td>
+      <td>${fmtDur(s.streamed_seconds)}</td><td>${s.restart_count}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(s.last_error || '')}</td>
+      <td>${['starting','live'].includes(s.state) ? `<button class="btn btn-red btn-sm" data-adm-stop="${s.id}">⏹</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="7">Chưa có phiên nào</td></tr>';
+  } catch (e) { setS($('admStatus'), '❌ ' + e.message, 'err'); }
+}
+$('admTbody').onclick = async e => {
+  const b = e.target.closest('[data-adm-stop]'); if (!b) return;
+  if (!confirm('Dừng phiên live của khách này?')) return;
+  try { await api('/api/admin/live/sessions/' + b.dataset.admStop + '/stop', { method:'POST' }); loadAdmin(); }
+  catch (err) { setS($('admStatus'), '❌ ' + err.message, 'err'); }
+};
+$('admReload').onclick = loadAdmin;
+
+async function boot() {
+  try {
+    await refreshMe();
+    $('authCard').classList.add('hidden');
+    $('appArea').classList.remove('hidden');
+    await Promise.all([loadProducts(), loadAssets(), loadTargets(), loadSessions()]);
+  } catch {
+    token = ''; localStorage.removeItem('token');
+    $('authCard').classList.remove('hidden');
+    $('appArea').classList.add('hidden');
+  }
+}
+setInterval(() => { if (token && !$('appArea').classList.contains('hidden')) { loadSessions(); pollDetail(); } }, 5000);
+if (token) boot();
+</script>
+</body>
+</html>

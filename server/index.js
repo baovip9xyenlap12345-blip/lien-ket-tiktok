@@ -11,6 +11,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { initLiveSchema } from './live/schema.js';
+import { mountLiveRoutes } from './live/routes.js';
 
 const run = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,12 +35,16 @@ if (JWT_SECRET === 'doi-chuoi-nay-khi-trien-khai') {
   console.warn('CANH BAO: JWT_SECRET dang dung gia tri mac dinh — hay dat chuoi bi mat rieng khi trien khai that!');
 }
 
-// Cac goi: videos = so luot chuyen doi trong ky; days = so ngay hieu luc
+// Cac goi: videos = so luot chuyen doi trong ky; hours = so gio livestream AI; days = so ngay hieu luc
 const PLANS = {
   trial: { name: 'Dung thu',       videos: 1,    price: 0,      days: null },
   week:  { name: 'Goi tuan',       videos: 10,   price: 59000,  days: 7 },
   month: { name: 'Goi thang',      videos: 30,   price: 199000, days: 30 },
   pro:   { name: 'Chuyen nghiep',  videos: 1000, price: 499000, days: 30 },
+  // Goi Livestream AI (tinh theo gio phat trong ky)
+  live_trial: { name: 'Live dung thu', hours: 2,   price: 0,       days: 7 },
+  live_basic: { name: 'Live co ban',   hours: 120, price: 600000,  days: 30 },
+  live_pro:   { name: 'Live 24/7',     hours: 500, price: 1500000, days: 30 },
 };
 
 // ====== CSDL ======
@@ -68,15 +74,20 @@ function getUser(id) {
   if (!u) return null;
   // goi tra phi het han -> ve trang thai dung thu (da dung het neu trial_used)
   if (u.plan !== 'trial' && u.plan_expires && Date.now() > u.plan_expires) {
-    db.prepare("UPDATE users SET plan='trial', plan_expires=NULL, used_videos=0 WHERE id=?").run(u.id);
-    u.plan = 'trial'; u.plan_expires = null; u.used_videos = 0;
+    db.prepare("UPDATE users SET plan='trial', plan_expires=NULL, used_videos=0, used_stream_seconds=0 WHERE id=?").run(u.id);
+    u.plan = 'trial'; u.plan_expires = null; u.used_videos = 0; u.used_stream_seconds = 0;
   }
   return u;
 }
-// So video con lai trong ky cua nguoi dung
+// So video con lai trong ky cua nguoi dung (goi live khong co videos -> 0)
 function remainingVideos(u) {
   if (u.plan === 'trial') return u.trial_used ? 0 : PLANS.trial.videos;
-  return Math.max(0, (PLANS[u.plan] || PLANS.trial).videos - u.used_videos);
+  return Math.max(0, ((PLANS[u.plan] || PLANS.trial).videos || 0) - u.used_videos);
+}
+// So giay livestream con lai trong ky (goi chuyen doi van ban khong co hours -> 0)
+function remainingStreamSeconds(u) {
+  const hours = (PLANS[u.plan] || {}).hours || 0;
+  return Math.max(0, hours * 3600 - (u.used_stream_seconds || 0));
 }
 
 // ====== App ======
@@ -162,6 +173,8 @@ app.get('/api/me', auth, (req, res) => {
     planExpires: u.plan_expires,
     remainingVideos: remainingVideos(u),
     quotaVideos: p.videos,
+    remainingStreamSeconds: remainingStreamSeconds(u),
+    quotaStreamHours: p.hours || 0,
     trialUsed: !!u.trial_used,
     maxVideoMinutes: MAX_VIDEO_MINUTES,
     freeAppUrl: FREE_APP_URL,
@@ -206,8 +219,8 @@ app.post('/api/admin/set-plan', auth, adminOnly, (req, res) => {
   const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
   if (!u) return res.status(404).json({ error: 'Khong tim thay nguoi dung' });
   const expires = PLANS[plan].days ? Date.now() + PLANS[plan].days * 24 * 3600 * 1000 : null;
-  // kich hoat goi moi: dat lai so video da dung trong ky
-  db.prepare('UPDATE users SET plan=?, plan_expires=?, used_videos=0 WHERE id=?').run(plan, expires, u.id);
+  // kich hoat goi moi: dat lai muc da dung trong ky (video + gio live)
+  db.prepare('UPDATE users SET plan=?, plan_expires=?, used_videos=0, used_stream_seconds=0 WHERE id=?').run(plan, expires, u.id);
   res.json({ ok: true, email, plan, expires });
 });
 
@@ -297,6 +310,18 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
   } finally {
     for (const f of tmpFiles) fs.promises.unlink(f).catch(() => {});
   }
+});
+
+// ---- Livestream AI ----
+initLiveSchema(db);
+const liveDataDir = path.join(__dirname, 'data');
+let liveManager = null; // duoc gan o buoc khoi tao manager (xem ben duoi)
+mountLiveRoutes(app, {
+  db, auth, adminOnly, rateLimit,
+  dataDir: liveDataDir,
+  get manager() { return liveManager; },
+  plans: PLANS,
+  remainingStreamSeconds,
 });
 
 // Bat loi upload (vd file qua lon) tra ve JSON de hieu thay vi loi ky thuat

@@ -62,6 +62,7 @@
   <header>
     <h1>🧸 App Của Bảo Gấu Bông — Bản Pro</h1>
     <p>Chuyển video / ghi âm thành văn bản và phụ đề — nhanh, chuẩn tiếng Việt, xử lý trên máy chủ</p>
+    <p style="margin-top:8px">🔴 <a href="/live.html"><b>MỚI: Livestream AI</b> — phát live bán hàng tự động 24/7 lên Shopee + TikTok, không cần MC →</a></p>
   </header>
 
   <!-- Đăng nhập / đăng ký -->
@@ -188,12 +189,13 @@ async function refreshMe() {
 async function loadPlans() {
   try {
     const { plans, bank, contact, maxVideoMinutes } = await (await fetch(API + '/api/plans')).json();
-    const per = { trial: 'video đầu tiên', week: '10 video / 7 ngày', month: '30 video / 30 ngày', pro: '1.000 video / 30 ngày' };
+    const per = { trial: 'video đầu tiên', week: '10 video / 7 ngày', month: '30 video / 30 ngày', pro: '1.000 video / 30 ngày',
+      live_trial: '2 giờ live / 7 ngày', live_basic: '120 giờ live / 30 ngày', live_pro: '500 giờ live / 30 ngày' };
     $('plansBox').innerHTML = Object.entries(plans).map(([k, p]) =>
       `<div class="plan" id="plan-${k}"><h3>${esc(p.name)}</h3>
        <div class="price">${p.price ? p.price.toLocaleString('vi-VN') + 'đ' : 'Miễn phí'}</div>
-       <p>${per[k] || p.videos + ' video'}</p>
-       <p>video ≤ ${maxVideoMinutes} phút</p></div>`).join('');
+       <p>${per[k] || (p.hours ? p.hours + ' giờ live' : p.videos + ' video')}</p>
+       <p>${p.hours ? '<a href="/live.html">🔴 Livestream AI</a>' : 'video ≤ ' + maxVideoMinutes + ' phút'}</p></div>`).join('');
     $('bankBox').innerHTML = '💳 <b>Cách mua gói:</b> chuyển khoản theo thông tin dưới đây (nội dung ghi tên gói + email đăng ký), gói sẽ được kích hoạt trong vòng vài giờ.<br>' + esc(bank) +
       (contact ? '<br>📞 <b>Hỗ trợ:</b> ' + esc(contact) : '');
   } catch {}
@@ -270,6 +272,9 @@ async function loadAdmin() {
           <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="week">Tuần</button>
           <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="month">Tháng</button>
           <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="pro">Pro</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="live_trial">Live thử</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="live_basic">Live CB</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="live_pro">Live 24/7</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="8">Chưa có khách hàng nào</td></tr>';
     adminUsers = users;
