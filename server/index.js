@@ -13,6 +13,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initLiveSchema } from './live/schema.js';
 import { mountLiveRoutes } from './live/routes.js';
+import { createLiveManager } from './live/manager.js';
+import { hasSecretKey } from './live/crypto.js';
 
 const run = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -323,6 +325,15 @@ mountLiveRoutes(app, {
   plans: PLANS,
   remainingStreamSeconds,
 });
+if (hasSecretKey()) {
+  liveManager = createLiveManager({
+    db, dataDir: liveDataDir, plans: PLANS,
+    maxConcurrent: parseInt(process.env.MAX_CONCURRENT_SESSIONS || '3', 10),
+  });
+  liveManager.reconcile();
+} else {
+  console.warn('CANH BAO: chua dat SECRET_KEY_BASE — tinh nang Livestream AI bi tat');
+}
 
 // Bat loi upload (vd file qua lon) tra ve JSON de hieu thay vi loi ky thuat
 app.use((err, req, res, next) => {
