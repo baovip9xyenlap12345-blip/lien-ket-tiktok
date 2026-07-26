@@ -240,17 +240,54 @@
 <script type="module">
 // ====== AI chạy trong Web Worker (luồng riêng) để giao diện luôn mượt ======
 const WORKER_SRC = `
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
-env.allowLocalModels = false;
-let transcriber = null, loadedModel = null;
+let transcriber = null, loadedModel = null, lib = null, usingGPU = false;
+const onDl = p => self.postMessage({ type: 'download',
+  p: { status: p.status, file: p.file, loaded: p.loaded, total: p.total, progress: p.progress } });
+
+// Ưu tiên chạy bằng GPU (nhanh gấp nhiều lần); máy không hỗ trợ thì dùng WASM/CPU
+async function getLib() {
+  if (lib) return lib;
+  if (self.navigator && self.navigator.gpu) {
+    try {
+      const m = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2');
+      m.env.allowLocalModels = false;
+      lib = m; usingGPU = true;
+      return lib;
+    } catch (e) {}
+  }
+  const m = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+  m.env.allowLocalModels = false;
+  lib = m; usingGPU = false;
+  return lib;
+}
+async function loadWasmFallback(model) {
+  const m = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+  m.env.allowLocalModels = false;
+  lib = m; usingGPU = false;
+  transcriber = await m.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: onDl });
+  loadedModel = model;
+  self.postMessage({ type: 'device', gpu: false });
+  return transcriber;
+}
 async function loadModel(model) {
+  const m = await getLib();
   if (!transcriber || loadedModel !== model) {
-    transcriber = await pipeline('automatic-speech-recognition', model, {
-      quantized: true,
-      progress_callback: p => self.postMessage({ type: 'download',
-        p: { status: p.status, file: p.file, loaded: p.loaded, total: p.total, progress: p.progress } })
-    });
-    loadedModel = model;
+    try {
+      if (usingGPU) {
+        transcriber = await m.pipeline('automatic-speech-recognition', model, {
+          device: 'webgpu',
+          dtype: { encoder_model: 'fp32', decoder_model_merged: 'q8' },
+          progress_callback: onDl
+        });
+      } else {
+        transcriber = await m.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: onDl });
+      }
+      loadedModel = model;
+      self.postMessage({ type: 'device', gpu: usingGPU });
+    } catch (e) {
+      if (usingGPU) return await loadWasmFallback(model); // GPU lỗi -> quay về CPU
+      throw e;
+    }
   }
   return transcriber;
 }
@@ -258,10 +295,10 @@ self.onmessage = async (e) => {
   const d = e.data;
   try {
     if (d.warmup) { await loadModel(d.model); self.postMessage({ type: 'ready' }); return; }
-    const t = await loadModel(d.model);
+    let t = await loadModel(d.model);
     const totalSec = d.audio.length / 16000;
     let doneSec = 0;
-    const out = await t(d.audio, {
+    const opts = {
       language: d.lang, task: 'transcribe',
       chunk_length_s: 30, stride_length_s: 5,
       return_timestamps: true,
@@ -270,7 +307,17 @@ self.onmessage = async (e) => {
         doneSec += 25; // mỗi khối 30s có 5s gối đầu -> ~25s âm thanh mới
         self.postMessage({ type: 'progress', pct: Math.min(99, Math.round(doneSec / totalSec * 100)) });
       }
-    });
+    };
+    let out;
+    try {
+      out = await t(d.audio, opts);
+    } catch (e) {
+      if (!usingGPU) throw e;
+      // GPU lỗi giữa chừng -> thử lại bằng CPU
+      transcriber = null; doneSec = 0;
+      t = await loadWasmFallback(d.model);
+      out = await t(d.audio, opts);
+    }
     self.postMessage({ type: 'result', text: out.text || '', chunks: out.chunks || null });
   } catch (err) {
     self.postMessage({ type: 'error', message: err && err.message ? err.message : String(err) });
@@ -289,7 +336,7 @@ const supportsModuleWorker = (() => {
   return ok;
 })();
 
-let aiWorker = null, pendingJob = null;
+let aiWorker = null, pendingJob = null, aiOnGPU = false;
 function getWorker() {
   if (aiWorker) return aiWorker;
   const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
@@ -300,8 +347,13 @@ function getWorker() {
       showProgress(`Đang tải model AI: ${m.p.file} (${fmtSize(m.p.loaded)} / ${fmtSize(m.p.total)})`, m.p.progress);
     } else if (m.type === 'progress') {
       showProgress(`Đang nghe và chuyển thành văn bản... (${m.pct}%)`, m.pct);
+    } else if (m.type === 'device') {
+      aiOnGPU = m.gpu;
     } else if (m.type === 'ready') {
-      if (!pendingJob) { hideProgress(); setStatus('✅ Model AI đã sẵn sàng, xử lý sẽ rất nhanh.', 'ok'); }
+      if (!pendingJob) {
+        hideProgress();
+        setStatus(aiOnGPU ? '✅ Model AI đã sẵn sàng — ⚡ có GPU tăng tốc, xử lý sẽ rất nhanh.' : '✅ Model AI đã sẵn sàng.', 'ok');
+      }
     } else if (m.type === 'result') {
       if (pendingJob) { const j = pendingJob; pendingJob = null; j.resolve(m); }
     } else if (m.type === 'error') {
@@ -587,12 +639,19 @@ transcribeBtn.addEventListener('click', async () => {
   try {
     keepAwake(true);
     await ensureAudioData();
+    // Cắt bỏ khoảng lặng dài -> AI phải "nghe" ít hơn, chạy nhanh hơn
+    showProgress('Đang phân tích âm thanh, bỏ khoảng lặng...', 0);
+    const trimmed = trimSilence(audioData);
+    const feedAudio = trimmed.segs ? trimmed.audio : audioData;
+    if (trimmed.segs) {
+      setStatus(`⚡ Đã bỏ ${Math.round(trimmed.removedSec)} giây khoảng lặng — xử lý sẽ nhanh hơn.`);
+    }
     let out;
     if (supportsModuleWorker) {
       // AI chạy ở luồng riêng -> giao diện không bị đơ
       showProgress('Đang chuẩn bị AI...', 0);
-      setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút... Bạn vẫn có thể thao tác trên trang.');
-      out = await transcribeInWorker(audioData, model, lang);
+      setStatus('⏳ AI đang xử lý... Bạn vẫn có thể thao tác trên trang.');
+      out = await transcribeInWorker(feedAudio, model, lang);
     } else {
       // Trình duyệt cũ: chạy trên luồng chính
       if (!transcriber || loadedModel !== model) {
@@ -607,11 +666,11 @@ transcribeBtn.addEventListener('click', async () => {
         });
         loadedModel = model;
       }
-      const totalSec = audioData.length / 16000;
+      const totalSec = feedAudio.length / 16000;
       let doneSec = 0;
       showProgress('Đang nghe và chuyển thành văn bản... (0%)', 0);
       setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút...');
-      out = await transcriber(audioData, {
+      out = await transcriber(feedAudio, {
         language: lang,
         task: 'transcribe',
         chunk_length_s: 30,
@@ -629,7 +688,12 @@ transcribeBtn.addEventListener('click', async () => {
     lastChunks = (out.chunks || null);
     if (lastChunks) {
       lastChunks = lastChunks
-        .map(c => ({ ...c, text: polishText(cleanRepeats(c.text || '')) }))
+        .map(c => ({
+          ...c,
+          // quy đổi mốc thời gian về video gốc (do đã cắt khoảng lặng)
+          timestamp: c.timestamp ? [mapTime(c.timestamp[0], trimmed.segs), mapTime(c.timestamp[1], trimmed.segs)] : c.timestamp,
+          text: polishText(cleanRepeats(c.text || ''))
+        }))
         .filter(c => c.text.trim());
     }
     renderResult();
@@ -753,6 +817,80 @@ function cleanRepeats(text) {
     t = t.replace(re, '$1');
   }
   return t.replace(/\s{2,}/g, ' ').trim();
+}
+
+// ====== Cắt bỏ khoảng lặng dài để AI xử lý nhanh hơn (giữ đúng mốc thời gian) ======
+// Trả về {audio, segs, removedSec}; segs = [{out, src, len}] để quy đổi mốc thời gian về video gốc
+function trimSilence(data, rate = 16000) {
+  const hop = Math.round(rate * 0.03); // khung 30ms
+  const n = Math.floor(data.length / hop);
+  if (n < 10) return { audio: data, segs: null, removedSec: 0 };
+  const rms = new Float32Array(n);
+  let maxR = 0;
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    const st = i * hop, en = Math.min(st + hop, data.length);
+    for (let j = st; j < en; j++) s += data[j] * data[j];
+    rms[i] = Math.sqrt(s / (en - st));
+    if (rms[i] > maxR) maxR = rms[i];
+  }
+  const thresh = Math.max(0.004, maxR * 0.02);
+  // đánh dấu khung có tiếng, nới rộng 0.25s hai bên để không cắt cụt chữ
+  const pad = Math.ceil(0.25 * rate / hop);
+  const speech = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (rms[i] > thresh) {
+      for (let k = Math.max(0, i - pad); k <= Math.min(n - 1, i + pad); k++) speech[k] = 1;
+    }
+  }
+  // chỉ bỏ những khoảng lặng dài hơn 0.8s
+  const minGap = Math.ceil(0.8 * rate / hop);
+  const keep = [];
+  let i = 0;
+  while (i < n) {
+    if (speech[i]) {
+      let j = i;
+      while (j < n && speech[j]) j++;
+      keep.push([i, j]);
+      i = j;
+    } else {
+      let j = i;
+      while (j < n && !speech[j]) j++;
+      if (j - i < minGap) { // khoảng lặng ngắn -> giữ lại
+        if (keep.length) keep[keep.length - 1][1] = j;
+        else keep.push([i, j]);
+      }
+      i = j;
+    }
+  }
+  if (!keep.length) return { audio: data, segs: null, removedSec: 0 };
+  // gộp các đoạn liền kề
+  const merged = [keep[0]];
+  for (let k = 1; k < keep.length; k++) {
+    if (keep[k][0] <= merged[merged.length - 1][1]) merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], keep[k][1]);
+    else merged.push(keep[k]);
+  }
+  let total = 0;
+  for (const [a, b] of merged) total += (b - a) * hop;
+  const removedSec = (data.length - total) / rate;
+  if (removedSec < 3) return { audio: data, segs: null, removedSec: 0 }; // bỏ được quá ít -> không đáng
+  const audio = new Float32Array(total);
+  const segs = [];
+  let off = 0;
+  for (const [a, b] of merged) {
+    const st = a * hop, en = Math.min(b * hop, data.length);
+    audio.set(data.subarray(st, en), off);
+    segs.push({ out: off / rate, src: st / rate, len: (en - st) / rate });
+    off += en - st;
+  }
+  return { audio, segs, removedSec };
+}
+// Quy đổi mốc thời gian trên audio đã cắt về thời gian trong video gốc
+function mapTime(t, segs) {
+  if (!segs || t == null) return t;
+  let seg = segs[0];
+  for (const s of segs) { if (s.out <= t) seg = s; else break; }
+  return seg.src + Math.min(Math.max(0, t - seg.out), seg.len);
 }
 
 // ====== Chỉnh văn bản gọn đẹp: dấu câu, khoảng trắng, viết hoa đầu câu ======
