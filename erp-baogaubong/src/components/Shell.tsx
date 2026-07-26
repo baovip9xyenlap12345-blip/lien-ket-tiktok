@@ -19,15 +19,15 @@ const MENU: { href: string; label: string; perm?: string; wip?: boolean }[] = [
   { href: '/settings', label: '⚙️ Cài đặt', perm: 'setting.manage' },
 ];
 
-export default function Shell({ user, children }:
-  { user: { name: string; roleName: string; perms: string[] }; children: React.ReactNode }) {
+export default function Shell({ user, children, brandName = 'Xưởng Gấu Bảo' }:
+  { user: { name: string; roleName: string; perms: string[] }; children: React.ReactNode; brandName?: string }) {
   const path = usePathname(); const r = useRouter();
   const items = MENU.filter((m) => !m.perm || user.perms.includes(m.perm));
   async function logout() { await fetch('/api/auth/logout', { method: 'POST' }); r.push('/login'); }
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-56 flex-col border-r border-slate-200 bg-white p-3 md:flex">
-        <div className="px-2 py-3 text-lg font-extrabold text-brand">🧸 Xưởng Gấu Bảo</div>
+        <div className="px-2 py-3 text-lg font-extrabold text-brand">🧸 {brandName}</div>
         <nav className="flex-1 space-y-0.5">
           {items.map((m) => (
             <Link key={m.href} href={m.href}
@@ -44,7 +44,7 @@ export default function Shell({ user, children }:
       </aside>
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 md:hidden">
-          <span className="font-extrabold text-brand">🧸 Xưởng Gấu Bảo</span>
+          <span className="font-extrabold text-brand">🧸 {brandName}</span>
           <button onClick={logout} className="text-sm font-semibold text-red-600">Đăng xuất</button>
         </header>
         <main className="p-4 pb-20 md:p-6">{children}</main>

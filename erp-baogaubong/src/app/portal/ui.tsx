@@ -8,7 +8,8 @@ const PS_VI: Record<string, string> = { UNPAID: 'Chưa thu', PARTIAL: 'Thu 1 ph�
 const SHIP_VI: Record<string, string> = { NONE: '—', PREPARING: 'Đang soạn', SHIPPING: 'Đang giao', DELIVERED: 'Đã giao', RETURNED: 'Bị trả' };
 const DV_VI: Record<string, string> = { PENDING: '⏳ Chờ bạn duyệt', APPROVED: '✓ Bạn đã duyệt', REJECTED: '✕ Bạn yêu cầu sửa' };
 
-export default function PortalClient() {
+export default function PortalClient({ brandName = 'Xưởng Gấu Bảo', domain = 'muagaubong.com' }:
+  { brandName?: string; domain?: string } = {}) {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [tab, setTab] = useState<'home' | 'catalog' | 'orders' | 'designs' | 'debt'>('home');
   const refresh = useCallback(async () => {
@@ -17,12 +18,12 @@ export default function PortalClient() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   if (me === undefined) return <p className="p-8 text-center text-slate-400">Đang tải…</p>;
-  if (me === null) return <Login onOk={refresh} />;
+  if (me === null) return <Login brandName={brandName} domain={domain} onOk={refresh} />;
   return (
     <div className="mx-auto min-h-screen max-w-3xl bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 border-b bg-white px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-extrabold text-pink-700">🧸 Xưởng Gấu Bảo</span>
+          <span className="text-lg font-extrabold text-pink-700">🧸 {brandName}</span>
           <span className="truncate text-sm font-bold">· {me.partnerName}</span>
           <button className="ml-auto text-sm text-red-600"
             onClick={async () => { await fetch('/api/portal/auth', { method: 'DELETE' }); refresh(); }}>Thoát</button>
@@ -47,7 +48,7 @@ export default function PortalClient() {
   );
 }
 
-function Login({ onOk }: { onOk: () => void }) {
+function Login({ onOk, brandName, domain }: { onOk: () => void; brandName: string; domain: string }) {
   const [u, setU] = useState(''); const [p, setP] = useState('');
   const [err, setErr] = useState('');
   async function submit() {
@@ -63,7 +64,7 @@ function Login({ onOk }: { onOk: () => void }) {
         <div className="mb-4 text-center">
           <div className="text-3xl">🧸</div>
           <h1 className="text-lg font-extrabold text-pink-700">Cổng khách hàng & đại lý</h1>
-          <p className="text-xs text-slate-500">Xưởng Gấu Bảo — baogaubong.vn</p>
+          <p className="text-xs text-slate-500">{brandName} — {domain}</p>
         </div>
         <label className="lbl">Tài khoản</label>
         <input className="inp mb-2" value={u} onChange={(e) => setU(e.target.value)} />

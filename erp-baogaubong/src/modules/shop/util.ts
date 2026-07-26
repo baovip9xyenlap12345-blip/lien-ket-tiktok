@@ -12,6 +12,13 @@ export function priceForQty(tiers: { minQty: number; price: number }[], qty: num
   return hit ? hit.price : base;
 }
 
+/** So dien thoai dang de doc: 0376533857 → 0376.533.857 (giu nguyen neu la dang la). */
+export function fmtPhone(p: string): string {
+  const d = p.replace(/\D/g, '');
+  if (d.length === 10) return `${d.slice(0, 4)}.${d.slice(4, 7)}.${d.slice(7)}`;
+  return p;
+}
+
 /** Bam chuoi -> so nguyen on dinh (cung 1 ma san pham luon ra cung 1 so). */
 function hashCode(s: string): number {
   let h = 0;

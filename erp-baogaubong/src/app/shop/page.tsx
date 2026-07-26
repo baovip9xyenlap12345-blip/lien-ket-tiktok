@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { fmtVND } from '@/lib/format';
 import { listShopProducts, shopCategories, shopHomeSections, type ShopCard } from '@/modules/shop/data';
 import { shopImg, socialProof, fmtSold } from '@/modules/shop/util';
+import { getBranding, fmtPhone } from '@/modules/shop/branding';
 
 export const revalidate = 30;   // gian hang duoc luu 30s → chiu tai tot khi dong khach
 
@@ -41,7 +42,7 @@ export default async function ShopHome({ searchParams }: { searchParams: { q?: s
   const categoryId = searchParams.cat ? Number(searchParams.cat) : undefined;
   const page = searchParams.page ? Number(searchParams.page) : 1;
   const filtered = !!(q || categoryId);
-  const cats = await shopCategories();
+  const [cats, brand] = await Promise.all([shopCategories(), getBranding()]);
   const activeCat = cats.find((c) => c.id === categoryId);
   const qsPage = (n: number) => `/shop?${new URLSearchParams({ ...(q ? { q } : {}), ...(categoryId ? { cat: String(categoryId) } : {}), page: String(n) })}`;
 
@@ -50,13 +51,13 @@ export default async function ShopHome({ searchParams }: { searchParams: { q?: s
       {/* Banner (chi o trang chu) */}
       {!filtered && (
         <section className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-pink-600 to-rose-500 p-5 text-white shadow-sm sm:p-8">
-          <h1 className="text-2xl font-extrabold sm:text-3xl">🧸 Xưởng Gấu Bảo</h1>
-          <p className="mt-1 max-w-xl text-pink-100">Gấu bông chính xưởng · Nhận in thêu logo theo yêu cầu · Giao tận nơi toàn quốc, thanh toán khi nhận hàng.</p>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">🧸 {brand.shopName}</h1>
+          <p className="mt-1 max-w-xl text-pink-100">{brand.slogan}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">✅ Chính xưởng, giá gốc</span>
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">🚚 Giao toàn quốc</span>
             <span className="rounded-full bg-white/20 px-3 py-1 backdrop-blur">💵 Nhận hàng trả tiền (COD)</span>
-            <a href="tel:0376533857" className="rounded-full bg-white px-3 py-1 font-bold text-pink-700">📞 0376.533.857</a>
+            <a href={`tel:${brand.phone}`} className="rounded-full bg-white px-3 py-1 font-bold text-pink-700">📞 {fmtPhone(brand.phone)}</a>
           </div>
         </section>
       )}

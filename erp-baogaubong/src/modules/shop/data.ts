@@ -115,7 +115,10 @@ export async function keyBelongsToProduct(key: string): Promise<boolean> {
   // Anh/video cua chuong trinh khuyen mai dang bat.
   const promo = await prisma.promotion.findFirst({
     where: { active: true, OR: [{ imageUrl: key }, { videoUrl: key }] }, select: { id: true } });
-  return !!promo;
+  if (promo) return true;
+  // Logo thuong hieu (cai dat gian hang).
+  const branding = await prisma.setting.findUnique({ where: { key: 'branding' } }).catch(() => null);
+  return (branding?.value as { logoUrl?: string } | null)?.logoUrl === key;
 }
 
 function mapPromo(p: { code: string; name: string; type: string; value: number; minOrder: number;

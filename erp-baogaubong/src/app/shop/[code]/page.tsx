@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
 import { shopProductByCode, relatedProducts, listActivePromotions } from '@/modules/shop/data';
 import { shopImg } from '@/modules/shop/util';
+import { getBranding } from '@/modules/shop/branding';
 import ProductView from './ProductView';
 
 export const revalidate = 30;   // trang chi tiet duoc luu 30s → dong khach khong nghen CSDL
@@ -10,11 +11,12 @@ export const revalidate = 30;   // trang chi tiet duoc luu 30s → dong khach kh
 export default async function ProductPage({ params }: { params: { code: string } }) {
   const p = await shopProductByCode(decodeURIComponent(params.code));
   if (!p) notFound();
-  const [related, promos] = await Promise.all([relatedProducts(p.categoryId, p.id), listActivePromotions()]);
+  const [related, promos, brand] = await Promise.all([
+    relatedProducts(p.categoryId, p.id), listActivePromotions(), getBranding()]);
   return (
     <div>
       <Link href="/shop" className="mb-3 inline-block text-sm text-pink-700">← Về gian hàng</Link>
-      <ProductView p={p} promos={promos} />
+      <ProductView p={p} promos={promos} hotline={brand.phone} />
 
       {related.length > 0 && (
         <section className="mt-8">

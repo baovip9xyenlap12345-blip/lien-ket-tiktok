@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fmtVND } from '@/lib/format';
-import { shopImg, videoEmbed, priceForQty, socialProof, fmtSold } from '@/modules/shop/util';
+import { shopImg, videoEmbed, priceForQty, socialProof, fmtSold, fmtPhone } from '@/modules/shop/util';
 import type { ShopDetail } from '@/modules/shop/data';
 import { type PromoView, promoLabel } from '@/modules/shop/promo';
 import { addToCart } from '../cart';
 
-export default function ProductView({ p, promos = [] }: { p: ShopDetail; promos?: PromoView[] }) {
+export default function ProductView({ p, promos = [], hotline = '0376533857' }:
+  { p: ShopDetail; promos?: PromoView[]; hotline?: string }) {
   const router = useRouter();
   const gallery = p.images.length ? p.images : [];
   const g1 = p.variantGroups?.[0] ?? null;   // nhom phan loai 1 (co the co anh tung lua chon)
@@ -87,7 +88,7 @@ export default function ProductView({ p, promos = [] }: { p: ShopDetail; promos?
 
         <div className="mt-2 flex items-baseline gap-2 rounded-lg bg-pink-50 px-3 py-2">
           <span className="text-2xl font-extrabold text-pink-700">
-            {price != null ? `${fmtVND(price)}đ` : <span className="text-base text-slate-400">Liên hệ 0376.533.857</span>}
+            {price != null ? `${fmtVND(price)}đ` : <span className="text-base text-slate-400">Liên hệ {fmtPhone(hotline)}</span>}
           </span>
           {price != null && basePrice != null && price < basePrice && (
             <span className="text-sm text-slate-400 line-through">{fmtVND(basePrice)}đ</span>
@@ -189,7 +190,7 @@ export default function ProductView({ p, promos = [] }: { p: ShopDetail; promos?
           <div>✅ <b>Chính xưởng</b> — không qua trung gian, giá tốt nhất</div>
           <div>🚚 Giao tận nơi toàn quốc · Nhận hàng trả tiền (COD)</div>
           <div>🎨 Nhận <b>in / thêu logo</b> theo yêu cầu, số lượng lớn</div>
-          <div>📞 Tư vấn nhanh: <a href="tel:0376533857" className="font-bold text-pink-700">0376.533.857</a> · Zalo/Messenger góc phải ↘️</div>
+          <div>📞 Tư vấn nhanh: <a href={`tel:${hotline}`} className="font-bold text-pink-700">{fmtPhone(hotline)}</a> · Zalo/Messenger góc phải ↘️</div>
         </div>
 
         {p.desc && (

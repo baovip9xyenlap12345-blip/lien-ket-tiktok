@@ -1,6 +1,7 @@
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import Forbidden from '@/components/Forbidden';
+import { BRANDING_DEFAULTS, type Branding } from '@/modules/shop/branding';
 import SettingsClient from './ui';
 
 export default async function SettingsPage() {
@@ -9,7 +10,14 @@ export default async function SettingsPage() {
   const rows = await prisma.setting.findMany();
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const company = await prisma.company.findFirst();
+  const savedBranding = (map['branding'] ?? {}) as Partial<Branding>;
+  const branding: Branding = { ...BRANDING_DEFAULTS };
+  for (const k of Object.keys(BRANDING_DEFAULTS) as (keyof Branding)[]) {
+    const v = savedBranding[k];
+    if (typeof v === 'string') branding[k] = v;
+  }
   return <SettingsClient
+    branding={branding}
     company={{ name: company?.name ?? '', taxCode: company?.taxCode ?? '', address: company?.address ?? '',
       phone: company?.phone ?? '', web: company?.web ?? '' }}
     settings={{
