@@ -237,6 +237,103 @@
 </div>
 
 <script type="module">
+// ====== AI chạy trong Web Worker (luồng riêng) để giao diện luôn mượt ======
+const WORKER_SRC = `
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+env.allowLocalModels = false;
+let transcriber = null, loadedModel = null;
+async function loadModel(model) {
+  if (!transcriber || loadedModel !== model) {
+    transcriber = await pipeline('automatic-speech-recognition', model, {
+      quantized: true,
+      progress_callback: p => self.postMessage({ type: 'download',
+        p: { status: p.status, file: p.file, loaded: p.loaded, total: p.total, progress: p.progress } })
+    });
+    loadedModel = model;
+  }
+  return transcriber;
+}
+self.onmessage = async (e) => {
+  const d = e.data;
+  try {
+    if (d.warmup) { await loadModel(d.model); self.postMessage({ type: 'ready' }); return; }
+    const t = await loadModel(d.model);
+    const totalSec = d.audio.length / 16000;
+    let doneSec = 0;
+    const out = await t(d.audio, {
+      language: d.lang, task: 'transcribe',
+      chunk_length_s: 30, stride_length_s: 5,
+      return_timestamps: true,
+      chunk_callback: () => {
+        doneSec += 25; // mỗi khối 30s có 5s gối đầu -> ~25s âm thanh mới
+        self.postMessage({ type: 'progress', pct: Math.min(99, Math.round(doneSec / totalSec * 100)) });
+      }
+    });
+    self.postMessage({ type: 'result', text: out.text || '', chunks: out.chunks || null });
+  } catch (err) {
+    self.postMessage({ type: 'error', message: err && err.message ? err.message : String(err) });
+  }
+};
+`;
+
+// Kiểm tra trình duyệt có hỗ trợ module worker không (Safari cũ thì không)
+const supportsModuleWorker = (() => {
+  let ok = false;
+  try {
+    const u = URL.createObjectURL(new Blob([''], { type: 'text/javascript' }));
+    new Worker(u, { get type() { ok = true; return 'module'; } }).terminate();
+    URL.revokeObjectURL(u);
+  } catch {}
+  return ok;
+})();
+
+let aiWorker = null, pendingJob = null;
+function getWorker() {
+  if (aiWorker) return aiWorker;
+  const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+  aiWorker = new Worker(url, { type: 'module' });
+  aiWorker.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'download' && m.p && m.p.status === 'progress' && m.p.total) {
+      showProgress(`Đang tải model AI: ${m.p.file} (${fmtSize(m.p.loaded)} / ${fmtSize(m.p.total)})`, m.p.progress);
+    } else if (m.type === 'progress') {
+      showProgress(`Đang nghe và chuyển thành văn bản... (${m.pct}%)`, m.pct);
+    } else if (m.type === 'ready') {
+      if (!pendingJob) { hideProgress(); setStatus('✅ Model AI đã sẵn sàng, xử lý sẽ rất nhanh.', 'ok'); }
+    } else if (m.type === 'result') {
+      if (pendingJob) { const j = pendingJob; pendingJob = null; j.resolve(m); }
+    } else if (m.type === 'error') {
+      if (pendingJob) { const j = pendingJob; pendingJob = null; j.reject(new Error(m.message)); }
+      else hideProgress();
+    }
+  };
+  aiWorker.onerror = err => {
+    if (pendingJob) { const j = pendingJob; pendingJob = null; j.reject(err); }
+  };
+  return aiWorker;
+}
+function transcribeInWorker(audio, model, lang) {
+  return new Promise((resolve, reject) => {
+    pendingJob = { resolve, reject };
+    getWorker().postMessage({ audio, model, lang });
+  });
+}
+// Tải model ngầm trước để lúc bấm nút không phải chờ
+function warmupModel() {
+  if (!supportsModuleWorker) return;
+  try { getWorker().postMessage({ warmup: true, model: $('modelSel').value }); } catch {}
+}
+
+// ====== Giữ màn hình không tắt trong lúc xử lý ======
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+
+// ====== Dự phòng cho trình duyệt cũ: AI chạy trên luồng chính ======
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 env.allowLocalModels = false;
 
@@ -308,6 +405,7 @@ async function handleFile(file, label) {
     fileInfo.innerHTML += ` — thời lượng ~${fmtTime(dur)}`;
     transcribeBtn.disabled = extractBtn.disabled = false;
     setStatus('✅ File hợp lệ, sẵn sàng xử lý. Chọn thao tác ở Bước 2.', 'ok');
+    warmupModel(); // tải model AI ngầm ngay, lúc bấm nút sẽ nhanh hơn nhiều
   } catch (err) {
     console.error(err);
     // Không giải mã trực tiếp được (thường gặp với video iPhone .MOV/HEVC)
@@ -315,6 +413,7 @@ async function handleFile(file, label) {
     fallbackNeeded = true;
     transcribeBtn.disabled = extractBtn.disabled = false;
     setStatus('⚠️ File này cần xử lý theo cách đặc biệt: khi bạn bấm nút ở Bước 2, hệ thống sẽ phát video ngầm (không nghe thấy tiếng) để thu âm thanh — thời gian chờ bằng độ dài video.', '');
+    warmupModel();
   }
 }
 
@@ -480,34 +579,45 @@ transcribeBtn.addEventListener('click', async () => {
   const model = $('modelSel').value;
   const lang = $('langSel').value;
   try {
+    keepAwake(true);
     await ensureAudioData();
-    if (!transcriber || loadedModel !== model) {
-      showProgress('Đang tải model AI (chỉ lần đầu)...', 0);
-      transcriber = await pipeline('automatic-speech-recognition', model, {
-        quantized: true,
-        progress_callback: p => {
-          if (p.status === 'progress' && p.total) {
-            showProgress(`Đang tải model AI: ${p.file} (${fmtSize(p.loaded)} / ${fmtSize(p.total)})`, p.progress);
+    let out;
+    if (supportsModuleWorker) {
+      // AI chạy ở luồng riêng -> giao diện không bị đơ
+      showProgress('Đang chuẩn bị AI...', 0);
+      setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút... Bạn vẫn có thể thao tác trên trang.');
+      out = await transcribeInWorker(audioData, model, lang);
+    } else {
+      // Trình duyệt cũ: chạy trên luồng chính
+      if (!transcriber || loadedModel !== model) {
+        showProgress('Đang tải model AI (chỉ lần đầu)...', 0);
+        transcriber = await pipeline('automatic-speech-recognition', model, {
+          quantized: true,
+          progress_callback: p => {
+            if (p.status === 'progress' && p.total) {
+              showProgress(`Đang tải model AI: ${p.file} (${fmtSize(p.loaded)} / ${fmtSize(p.total)})`, p.progress);
+            }
           }
+        });
+        loadedModel = model;
+      }
+      const totalSec = audioData.length / 16000;
+      let doneSec = 0;
+      showProgress('Đang nghe và chuyển thành văn bản... (0%)', 0);
+      setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút...');
+      out = await transcriber(audioData, {
+        language: lang,
+        task: 'transcribe',
+        chunk_length_s: 30,
+        stride_length_s: 5,
+        return_timestamps: true,
+        chunk_callback: () => {
+          doneSec += 25;
+          const pct = Math.min(99, Math.round(doneSec / totalSec * 100));
+          showProgress(`Đang nghe và chuyển thành văn bản... (${pct}%)`, pct);
         }
       });
-      loadedModel = model;
     }
-    const totalSec = audioData.length / 16000;
-    showProgress('Đang nghe và chuyển thành văn bản... (0%)', 0);
-    setStatus('⏳ AI đang xử lý, video/ghi âm dài sẽ mất vài phút...');
-    const out = await transcriber(audioData, {
-      language: lang,
-      task: 'transcribe',
-      chunk_length_s: 30,
-      stride_length_s: 5,
-      return_timestamps: true,
-      callback_function: () => {},
-      chunk_callback: chunk => {
-        const done = Math.min(100, Math.round(((chunk.stride?.[0] ?? 0) && 0) + ((chunk.offset ?? 0) + 30) / totalSec * 100));
-        showProgress(`Đang nghe và chuyển thành văn bản... (${done}%)`, done);
-      }
-    });
     lastText = (out.text || '').trim();
     lastChunks = out.chunks || null;
     renderResult();
@@ -518,10 +628,13 @@ transcribeBtn.addEventListener('click', async () => {
     hideProgress();
     setStatus('❌ Lỗi khi xử lý: ' + (err.message || err), 'err');
   } finally {
+    keepAwake(false);
     busy = false;
     transcribeBtn.disabled = extractBtn.disabled = false;
   }
 });
+// Đổi model -> tải ngầm model mới luôn nếu đã có file
+$('modelSel').addEventListener('change', () => { if (currentFile) warmupModel(); });
 
 // ====== Tách âm thanh -> tải WAV ======
 extractBtn.addEventListener('click', async () => {
@@ -529,6 +642,7 @@ extractBtn.addEventListener('click', async () => {
   busy = true;
   setStatus('Đang tách âm thanh...');
   try {
+    keepAwake(true);
     let wav;
     if (!fallbackNeeded) {
       // Giải mã ở chất lượng gốc (44.1kHz) để file WAV nghe hay hơn
@@ -563,6 +677,7 @@ extractBtn.addEventListener('click', async () => {
     hideProgress();
     setStatus('❌ Không tách được âm thanh: ' + (err.message || err), 'err');
   } finally {
+    keepAwake(false);
     busy = false;
   }
 });
