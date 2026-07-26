@@ -216,7 +216,7 @@
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
     <div class="status" id="status"></div>
-    <div class="note">💡 Lần đầu sử dụng, trình duyệt sẽ tải model AI về (chỉ tải 1 lần rồi lưu lại). Video càng dài thì xử lý càng lâu — vui lòng giữ nguyên trang trong lúc chạy.</div>
+    <div class="note">💡 Lần đầu sử dụng, trình duyệt sẽ tải model AI về (chỉ tải 1 lần rồi lưu lại). Video càng dài thì xử lý càng lâu — vui lòng giữ nguyên trang trong lúc chạy. Nếu kết quả sai nhiều hoặc thiếu nội dung, hãy chọn mức <b>"Chính xác cao"</b> rồi chuyển lại.</div>
   </div>
 
   <!-- BƯỚC 3: kết quả -->
@@ -264,6 +264,7 @@ self.onmessage = async (e) => {
       language: d.lang, task: 'transcribe',
       chunk_length_s: 30, stride_length_s: 5,
       return_timestamps: true,
+      no_repeat_ngram_size: 3, // chặn AI bị kẹt lặp cùng một từ/cụm từ
       chunk_callback: () => {
         doneSec += 25; // mỗi khối 30s có 5s gối đầu -> ~25s âm thanh mới
         self.postMessage({ type: 'progress', pct: Math.min(99, Math.round(doneSec / totalSec * 100)) });
@@ -611,6 +612,7 @@ transcribeBtn.addEventListener('click', async () => {
         chunk_length_s: 30,
         stride_length_s: 5,
         return_timestamps: true,
+        no_repeat_ngram_size: 3,
         chunk_callback: () => {
           doneSec += 25;
           const pct = Math.min(99, Math.round(doneSec / totalSec * 100));
@@ -618,8 +620,13 @@ transcribeBtn.addEventListener('click', async () => {
         }
       });
     }
-    lastText = (out.text || '').trim();
-    lastChunks = out.chunks || null;
+    lastText = cleanRepeats((out.text || '').trim());
+    lastChunks = (out.chunks || null);
+    if (lastChunks) {
+      lastChunks = lastChunks
+        .map(c => ({ ...c, text: cleanRepeats(c.text || '') }))
+        .filter(c => c.text.trim());
+    }
     renderResult();
     hideProgress();
     setStatus(lastText ? '✅ Xong! Kết quả đã hiện ở Bước 3.' : '⚠️ Không nhận ra giọng nói nào trong file.', lastText ? 'ok' : '');
@@ -728,6 +735,20 @@ function audioBufferToWav(buffer) {
   return ab;
 }
 
+// ====== Làm sạch từ/cụm từ bị AI lặp bất thường (hallucination) ======
+function cleanRepeats(text) {
+  if (!text) return text;
+  let t = text;
+  // Một từ lặp liên tiếp >=4 lần (vd "con, con, con, con...") -> giữ 1 lần
+  t = t.replace(/(\p{L}[\p{L}\p{M}''-]{0,20})(?:\s*[,，.]?\s+\1(?=[\s,，.!?]|$)){3,}/giu, '$1');
+  // Cụm 2-6 từ lặp liên tiếp >=3 lần -> giữ 1 lần
+  for (let n = 6; n >= 2; n--) {
+    const re = new RegExp("((?:[\\p{L}\\p{M}\\d''-]+\\s+){" + (n - 1) + "}[\\p{L}\\p{M}\\d''-]+)(?:\\s*[,，.]?\\s+\\1(?=[\\s,，.!?]|$)){2,}", 'giu');
+    t = t.replace(re, '$1');
+  }
+  return t.replace(/\s{2,}/g, ' ').trim();
+}
+
 // ====== Tạo phụ đề SRT từ các đoạn có mốc thời gian ======
 function srtTime(sec) {
   sec = Math.max(0, sec || 0);
@@ -757,6 +778,11 @@ function renderResult() {
   }
 }
 $('outputSel').addEventListener('change', () => { if (lastText) renderResult(); });
+
+// Máy tính (không phải điện thoại) đủ mạnh -> mặc định dùng model chính xác cao
+if (!/Mobi|iPhone|iPad|Android/i.test(navigator.userAgent)) {
+  $('modelSel').value = 'Xenova/whisper-small';
+}
 
 // ====== Kết quả: copy / tải / xoá ======
 $('copyBtn').addEventListener('click', async () => {
