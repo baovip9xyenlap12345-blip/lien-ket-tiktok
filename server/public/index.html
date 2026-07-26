@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Của Bảo Gấu Bông — Bản Pro</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#0f1220; --card:#1a1f35; --card2:#232a4a; --accent:#6c5ce7; --accent2:#00cec9;
+          --text:#eef0ff; --muted:#9aa3c7; --ok:#2ecc71; --err:#e74c3c; --warn:#f1c40f; }
+  body { font-family:"Segoe UI",Roboto,Arial,sans-serif; background:linear-gradient(160deg,#0f1220,#171b31 60%,#101a2e);
+         color:var(--text); min-height:100vh; padding:24px 16px 60px; }
+  .container { max-width:760px; margin:0 auto; }
+  header { text-align:center; margin-bottom:24px; }
+  header h1 { font-size:1.8rem; background:linear-gradient(90deg,var(--accent),var(--accent2));
+              -webkit-background-clip:text; background-clip:text; color:transparent; }
+  header p { color:var(--muted); margin-top:6px; }
+  .card { background:var(--card); border:1px solid #2b3357; border-radius:16px; padding:22px; margin-bottom:18px;
+          box-shadow:0 8px 30px rgba(0,0,0,.35); }
+  .card h2 { font-size:1.05rem; margin-bottom:14px; }
+  input, select { width:100%; background:var(--card2); color:var(--text); border:1px solid #3d4780;
+                  border-radius:8px; padding:11px 12px; font-size:.95rem; margin-bottom:10px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; border:none; border-radius:10px; padding:12px 20px;
+         font-size:.98rem; font-weight:600; cursor:pointer; color:#fff; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-primary { background:linear-gradient(90deg,var(--accent),#8e7bff); }
+  .btn-teal { background:linear-gradient(90deg,#00b8b3,var(--accent2)); color:#04302e; }
+  .btn-ghost { background:var(--card2); border:1px solid #3d4780; color:var(--text); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > * { flex:1; min-width:140px; }
+  .status { margin-top:10px; font-size:.9rem; color:var(--muted); min-height:1.2em; }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); }
+  #result { width:100%; min-height:180px; background:var(--card2); color:var(--text); border:1px solid #3d4780;
+            border-radius:12px; padding:14px; font-size:1rem; line-height:1.6; resize:vertical; font-family:inherit; }
+  .quota { background:var(--card2); border-radius:10px; padding:12px 14px; font-size:.92rem; color:var(--muted); margin-bottom:12px; }
+  .quota b { color:var(--text); }
+  .bar { height:8px; background:#141936; border-radius:5px; overflow:hidden; margin-top:8px; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+  .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+  .plan { background:var(--card2); border:1px solid #3d4780; border-radius:12px; padding:16px; text-align:center; }
+  .plan h3 { margin-bottom:6px; }
+  .plan .price { font-size:1.2rem; color:var(--accent2); font-weight:700; margin:6px 0; }
+  .plan p { color:var(--muted); font-size:.88rem; }
+  .note { background:#1f2947; border-left:4px solid var(--warn); border-radius:8px; padding:12px 14px;
+          font-size:.87rem; color:var(--muted); margin-top:14px; }
+  .hidden { display:none !important; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:.9rem; color:var(--muted); }
+  a { color:var(--accent2); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🧸 App Của Bảo Gấu Bông — Bản Pro</h1>
+    <p>Chuyển video / ghi âm thành văn bản và phụ đề — nhanh, chuẩn tiếng Việt, xử lý trên máy chủ</p>
+  </header>
+
+  <!-- Đăng nhập / đăng ký -->
+  <div class="card" id="authCard">
+    <h2 id="authTitle">Đăng nhập</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)">
+    <div class="row">
+      <button class="btn btn-primary" id="loginBtn">Đăng nhập</button>
+      <button class="btn btn-ghost" id="registerBtn">Đăng ký mới</button>
+    </div>
+    <div class="status" id="authStatus"></div>
+  </div>
+
+  <!-- Khu vực chính sau khi đăng nhập -->
+  <div id="appArea" class="hidden">
+    <div class="topbar">
+      <span id="userInfo"></span>
+      <a href="#" id="logoutBtn">Đăng xuất</a>
+    </div>
+
+    <div class="card">
+      <div class="quota" id="quotaBox"></div>
+      <h2>Tải video hoặc ghi âm lên</h2>
+      <input type="file" id="fileInput" accept="video/*,audio/*">
+      <div class="row">
+        <div>
+          <select id="langSel">
+            <option value="vi" selected>Tiếng Việt</option>
+            <option value="en">Tiếng Anh</option>
+            <option value="zh">Tiếng Trung</option>
+            <option value="ja">Tiếng Nhật</option>
+            <option value="ko">Tiếng Hàn</option>
+          </select>
+        </div>
+        <div>
+          <select id="formatSel">
+            <option value="txt" selected>📝 Văn bản thuần (.txt)</option>
+            <option value="srt">🎬 Phụ đề (.srt)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="goBtn">🚀 Chuyển ngay</button>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Kết quả</h2>
+      <textarea id="result" placeholder="Kết quả sẽ hiện ở đây..."></textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="btn btn-ghost" id="copyBtn">📋 Sao chép</button>
+        <button class="btn btn-ghost" id="dlBtn">⬇️ Tải về</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Bảng giá gói tháng</h2>
+      <div class="plans" id="plansBox"></div>
+      <div class="note" id="bankBox"></div>
+    </div>
+
+    <!-- Admin -->
+    <div class="card hidden" id="adminCard">
+      <h2>👑 Quản trị: kích hoạt gói cho khách</h2>
+      <input type="email" id="adminEmail" placeholder="Email khách hàng">
+      <select id="adminPlan">
+        <option value="basic">Gói Cơ bản</option>
+        <option value="pro">Gói Chuyên nghiệp</option>
+        <option value="free">Về gói Miễn phí</option>
+      </select>
+      <button class="btn btn-teal" id="adminBtn">Kích hoạt</button>
+      <div class="status" id="adminStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = ''; // cùng máy chủ; nếu tách riêng thì điền ví dụ 'https://api.tenmiencuaban.com'
+const $ = id => document.getElementById(id);
+let token = localStorage.getItem('token') || '';
+let lastFormat = 'txt';
+
+const setS = (el, msg, cls='') => { el.textContent = msg; el.className = 'status ' + cls; };
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers, token ? { Authorization: 'Bearer ' + token } : {});
+  const r = await fetch(API + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Lỗi máy chủ');
+  return data;
+}
+
+async function refreshMe() {
+  try {
+    const me = await api('/api/me');
+    $('authCard').classList.add('hidden');
+    $('appArea').classList.remove('hidden');
+    $('userInfo').textContent = me.email + ' — gói ' + me.planName;
+    const pct = Math.min(100, Math.round(me.usedMinutes / me.quotaMinutes * 100));
+    $('quotaBox').innerHTML = `Đã dùng <b>${me.usedMinutes}</b> / <b>${me.quotaMinutes}</b> phút trong tháng` +
+      (me.planExpires ? ` — gói hết hạn ${new Date(me.planExpires).toLocaleDateString('vi-VN')}` : '') +
+      `<div class="bar"><i style="width:${pct}%"></i></div>`;
+    if (me.isAdmin) $('adminCard').classList.remove('hidden');
+  } catch {
+    token = ''; localStorage.removeItem('token');
+    $('authCard').classList.remove('hidden');
+    $('appArea').classList.add('hidden');
+  }
+}
+
+async function loadPlans() {
+  try {
+    const { plans, bank } = await (await fetch(API + '/api/plans')).json();
+    $('plansBox').innerHTML = Object.entries(plans).map(([k, p]) =>
+      `<div class="plan"><h3>${p.name}</h3><div class="price">${p.price ? p.price.toLocaleString('vi-VN') + 'đ/tháng' : 'Miễn phí'}</div><p>${p.minutes} phút/tháng</p></div>`).join('');
+    $('bankBox').innerHTML = '💳 <b>Cách nâng gói:</b> chuyển khoản theo thông tin dưới đây, gói sẽ được kích hoạt trong vòng vài giờ.<br>' + bank;
+  } catch {}
+}
+
+$('loginBtn').onclick = async () => {
+  try {
+    const d = await api('/api/login', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:$('email').value, password:$('password').value }) });
+    token = d.token; localStorage.setItem('token', token);
+    refreshMe();
+  } catch (e) { setS($('authStatus'), '❌ ' + e.message, 'err'); }
+};
+$('registerBtn').onclick = async () => {
+  try {
+    const d = await api('/api/register', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:$('email').value, password:$('password').value }) });
+    token = d.token; localStorage.setItem('token', token);
+    refreshMe();
+  } catch (e) { setS($('authStatus'), '❌ ' + e.message, 'err'); }
+};
+$('logoutBtn').onclick = e => { e.preventDefault(); token=''; localStorage.removeItem('token'); location.reload(); };
+
+$('goBtn').onclick = async () => {
+  const f = $('fileInput').files[0];
+  if (!f) return setS($('status'), 'Hãy chọn file trước đã', 'err');
+  $('goBtn').disabled = true;
+  setS($('status'), '⏳ Đang tải lên và xử lý... (video dài có thể mất 1-2 phút)');
+  try {
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('language', $('langSel').value);
+    fd.append('format', $('formatSel').value);
+    const d = await api('/api/transcribe', { method:'POST', body: fd });
+    lastFormat = d.format;
+    $('result').value = d.result || '';
+    setS($('status'), `✅ Xong! Đã xử lý ${Math.ceil(d.durationSeconds/60)} phút âm thanh.`, 'ok');
+    refreshMe();
+  } catch (e) { setS($('status'), '❌ ' + e.message, 'err'); }
+  $('goBtn').disabled = false;
+};
+
+$('copyBtn').onclick = async () => { if ($('result').value) { await navigator.clipboard.writeText($('result').value); setS($('status'),'✅ Đã sao chép!','ok'); } };
+$('dlBtn').onclick = () => {
+  const v = $('result').value; if (!v) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([v], { type:'text/plain;charset=utf-8' }));
+  a.download = lastFormat === 'srt' ? 'phu-de.srt' : 'van-ban.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+
+$('adminBtn').onclick = async () => {
+  try {
+    const d = await api('/api/admin/set-plan', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:$('adminEmail').value, plan:$('adminPlan').value }) });
+    setS($('adminStatus'), `✅ Đã kích hoạt gói ${d.plan} cho ${d.email}`, 'ok');
+  } catch (e) { setS($('adminStatus'), '❌ ' + e.message, 'err'); }
+};
+
+loadPlans();
+if (token) refreshMe();
+</script>
+</body>
+</html>
