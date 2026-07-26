@@ -7,12 +7,17 @@ Nhanh và chuẩn tiếng Việt hơn hẳn bản chạy trên trình duyệt.
 ## Tính năng
 
 - Đăng ký / đăng nhập bằng email + mật khẩu
-- 3 gói tháng (sửa được trong `index.js`, mục `PLANS`):
-  - **Miễn phí**: 10 phút/tháng
-  - **Cơ bản**: 199.000đ — 300 phút/tháng
-  - **Chuyên nghiệp**: 499.000đ — 1.000 phút/tháng
-- Theo dõi hạn mức từng tháng, tự đặt lại đầu tháng, gói hết hạn tự về miễn phí
+- Tính phí theo **số video** (mỗi video tối đa 5 phút — đổi bằng biến `MAX_VIDEO_MINUTES`):
+  - **Dùng thử**: miễn phí — 1 video đầu tiên cho mỗi tài khoản mới
+  - **Gói tuần**: 59.000đ — 10 video / 7 ngày
+  - **Gói tháng**: 199.000đ — 30 video / 30 ngày
+  - **Chuyên nghiệp**: 499.000đ — 1.000 video / 30 ngày
+  (sửa giá/số lượng trong `index.js`, mục `PLANS`)
+- Gói hết hạn tự khoá; khách hết lượt được gợi ý dùng bản miễn phí trên GitHub Pages hoặc mua gói
 - Thanh toán: khách chuyển khoản → bạn (admin) bấm kích hoạt gói ngay trên web
+- **Trang quản trị** (đăng nhập bằng `ADMIN_EMAIL`): xem toàn bộ khách hàng — email, gói,
+  đã dùng/còn lại bao nhiêu video, ngày hết hạn, tổng lượt dùng, ngày đăng ký; tìm theo email;
+  kích hoạt gói Tuần/Tháng/Pro chỉ với 1 nút bấm
 - Văn bản thuần dùng `gpt-4o-mini-transcribe` (rẻ ~$0.003/phút), phụ đề dùng `whisper-1` (~$0.006/phút)
 
 ## Chi phí vận hành (ước tính 2.000 video ~5 phút/video)
