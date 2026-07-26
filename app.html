@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chuyển Video / Ghi Âm Thành Văn Bản</title>
+<title>App Của Bảo Gấu Bông — Chuyển Video / Ghi Âm Thành Văn Bản</title>
 <meta name="description" content="Tải video hoặc ghi âm lên, tự động chuyển giọng nói thành văn bản. Tách âm thanh từ video. Miễn phí, chạy ngay trên trình duyệt.">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -151,7 +151,8 @@
 <body>
 <div class="container">
   <header>
-    <h1>🎬 Chuyển Video / Ghi Âm Thành Văn Bản</h1>
+    <h1>🧸 App Của Bảo Gấu Bông</h1>
+    <p style="font-size:1.15rem;color:var(--text);margin-bottom:10px;">🎬 Chuyển Video / Ghi Âm Thành Văn Bản</p>
     <p>Tải video hoặc file ghi âm lên — AI sẽ nghe và chuyển giọng nói thành chữ. Có thể tách riêng âm thanh từ video để tải về.<br>Mọi xử lý diễn ra <b>ngay trên trình duyệt</b>, file của bạn <b>không bị gửi đi đâu cả</b>.</p>
   </header>
 
@@ -201,9 +202,9 @@
       <div>
         <label for="modelSel">Độ chính xác (model AI)</label>
         <select id="modelSel">
-          <option value="Xenova/whisper-tiny">Nhanh (tải ~40MB, kém chính xác hơn)</option>
-          <option value="Xenova/whisper-base" selected>Cân bằng (tải ~75MB) — khuyên dùng</option>
-          <option value="Xenova/whisper-small">Chính xác cao (tải ~250MB, chậm hơn)</option>
+          <option value="tiny">Nhanh (tải ~40MB, kém chính xác hơn)</option>
+          <option value="base" selected>Cân bằng (tải ~75MB) — khuyên dùng</option>
+          <option value="small">Chính xác cao (tải ~250MB, chậm hơn)</option>
         </select>
       </div>
     </div>
@@ -216,7 +217,7 @@
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
     <div class="status" id="status"></div>
-    <div class="note">💡 Lần đầu sử dụng, trình duyệt sẽ tải model AI về (chỉ tải 1 lần rồi lưu lại). Video càng dài thì xử lý càng lâu — vui lòng giữ nguyên trang trong lúc chạy. Nếu kết quả sai nhiều hoặc thiếu nội dung, hãy chọn mức <b>"Chính xác cao"</b> rồi chuyển lại.</div>
+    <div class="note">💡 Với tiếng Việt, app dùng <b>PhoWhisper</b> — AI do VinAI (Việt Nam) huấn luyện riêng cho giọng Việt mọi vùng miền. Lần đầu sử dụng, trình duyệt sẽ tải model AI về (chỉ tải 1 lần rồi lưu lại). Nếu kết quả sai nhiều hoặc thiếu nội dung, hãy chọn mức <b>"Chính xác cao"</b> rồi chuyển lại.</div>
   </div>
 
   <!-- BƯỚC 3: kết quả -->
@@ -319,10 +320,14 @@ function transcribeInWorker(audio, model, lang) {
     getWorker().postMessage({ audio, model, lang });
   });
 }
+// Tiếng Việt -> dùng PhoWhisper (VinAI) luyện riêng cho giọng Việt, chuẩn hơn Whisper gốc
+function resolveModel(tier, lang) {
+  return lang === 'vi' ? 'huuquyet/PhoWhisper-' + tier : 'Xenova/whisper-' + tier;
+}
 // Tải model ngầm trước để lúc bấm nút không phải chờ
 function warmupModel() {
   if (!supportsModuleWorker) return;
-  try { getWorker().postMessage({ warmup: true, model: $('modelSel').value }); } catch {}
+  try { getWorker().postMessage({ warmup: true, model: resolveModel($('modelSel').value, $('langSel').value) }); } catch {}
 }
 
 // ====== Giữ màn hình không tắt trong lúc xử lý ======
@@ -577,8 +582,8 @@ transcribeBtn.addEventListener('click', async () => {
   if ((!audioData && !fallbackNeeded) || busy) return;
   busy = true;
   transcribeBtn.disabled = extractBtn.disabled = true;
-  const model = $('modelSel').value;
   const lang = $('langSel').value;
+  const model = resolveModel($('modelSel').value, lang);
   try {
     keepAwake(true);
     await ensureAudioData();
@@ -620,11 +625,11 @@ transcribeBtn.addEventListener('click', async () => {
         }
       });
     }
-    lastText = cleanRepeats((out.text || '').trim());
+    lastText = polishText(cleanRepeats((out.text || '').trim()));
     lastChunks = (out.chunks || null);
     if (lastChunks) {
       lastChunks = lastChunks
-        .map(c => ({ ...c, text: cleanRepeats(c.text || '') }))
+        .map(c => ({ ...c, text: polishText(cleanRepeats(c.text || '')) }))
         .filter(c => c.text.trim());
     }
     renderResult();
@@ -640,8 +645,9 @@ transcribeBtn.addEventListener('click', async () => {
     transcribeBtn.disabled = extractBtn.disabled = false;
   }
 });
-// Đổi model -> tải ngầm model mới luôn nếu đã có file
+// Đổi model hoặc ngôn ngữ -> tải ngầm model mới luôn nếu đã có file
 $('modelSel').addEventListener('change', () => { if (currentFile) warmupModel(); });
+$('langSel').addEventListener('change', () => { if (currentFile) warmupModel(); });
 
 // ====== Tách âm thanh -> tải WAV ======
 extractBtn.addEventListener('click', async () => {
@@ -749,6 +755,19 @@ function cleanRepeats(text) {
   return t.replace(/\s{2,}/g, ' ').trim();
 }
 
+// ====== Chỉnh văn bản gọn đẹp: dấu câu, khoảng trắng, viết hoa đầu câu ======
+function polishText(t) {
+  if (!t) return t;
+  let s = t
+    .replace(/\s+([,.!?:;])/g, '$1')          // bỏ khoảng trắng thừa trước dấu câu
+    .replace(/([,.!?;])(?=[^\s0-9])/g, '$1 ') // thêm khoảng trắng sau dấu câu (trừ số như 1.000)
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  // viết hoa chữ cái đầu câu
+  s = s.replace(/(^|[.!?]\s+)(\p{Ll})/gu, (m, p, c) => p + c.toUpperCase());
+  return s;
+}
+
 // ====== Tạo phụ đề SRT từ các đoạn có mốc thời gian ======
 function srtTime(sec) {
   sec = Math.max(0, sec || 0);
@@ -781,7 +800,7 @@ $('outputSel').addEventListener('change', () => { if (lastText) renderResult(); 
 
 // Máy tính (không phải điện thoại) đủ mạnh -> mặc định dùng model chính xác cao
 if (!/Mobi|iPhone|iPad|Android/i.test(navigator.userAgent)) {
-  $('modelSel').value = 'Xenova/whisper-small';
+  $('modelSel').value = 'small';
 }
 
 // ====== Kết quả: copy / tải / xoá ======
