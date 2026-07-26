@@ -69,3 +69,67 @@ docker run -d --name bao-stt --env-file .env -p 80:3000 -v $(pwd)/data:/app/data
 - File khách tải lên bị **xoá ngay** sau khi xử lý xong, không lưu trên máy chủ
 - Giới hạn file 300MB; muốn đổi sửa trong `index.js`
 - CORS đã mở nên có thể gọi API từ trang GitHub Pages nếu muốn nhúng vào trang cũ
+
+---
+
+# 🔴 Livestream AI — phát live bán hàng tự động 24/7 (Shopee + TikTok)
+
+Tính năng mới: hệ thống tự phát livestream lên Shopee Live / TikTok LIVE **không cần MC** —
+giọng đọc AI tiếng Việt sinh theo thời gian thực (không phải video phát lại), tự giới thiệu
+sản phẩm theo kịch bản AI, tự trả lời bình luận TikTok, khung giá/CTA đè lên video.
+
+## Cách hoạt động
+
+1. Shop tải lên các **video clip quay sản phẩm** (quay dọc 9:16) — hệ thống chuẩn hóa 720×1280@30fps và phát lặp xen kẽ.
+2. AI viết kịch bản MC từ dữ liệu sản phẩm (tên, giá, điểm bán hàng) → chuyển thành **giọng nói tiếng Việt** từng phút một → không phiên nào giống phiên nào.
+3. Một tiến trình FFmpeg bền vững ghép video + giọng nói + khung tên/giá/CTA rồi **đẩy đồng thời** lên Shopee và TikTok qua RTMP.
+4. Bình luận TikTok được đọc qua thư viện không chính thức, AI chọn câu đáng trả lời và **đọc to câu trả lời ngay trong live**.
+
+## Biến môi trường bổ sung (xem `.env.example`)
+
+| Biến | Ý nghĩa |
+|---|---|
+| `SECRET_KEY_BASE` | **Bắt buộc** — mã hóa stream key của khách (AES-256-GCM). Không đặt = tính năng live bị tắt |
+| `TTS_PROVIDER` | `edge` (miễn phí, mặc định) / `openai` (~$0.015/phút, ổn định hơn) / `mock` (test) |
+| `TTS_VOICE` | Giọng Edge: `vi-VN-HoaiMyNeural` (nữ) / `vi-VN-NamMinhNeural` (nam) |
+| `SCRIPT_MODEL` | Model viết kịch bản (mặc định `gpt-4o-mini`) — không có key vẫn chạy bằng kịch bản mẫu |
+| `MAX_CONCURRENT_SESSIONS` | Số phiên phát đồng thời tối đa trên máy chủ này (mặc định 3) |
+
+## Yêu cầu máy chủ (QUAN TRỌNG — khác hẳn app chuyển giọng nói)
+
+Mỗi phiên live 720p tốn **~1 nhân CPU + ~300MB RAM + ~5Mbps mạng lên** (đẩy 2 sàn cùng lúc).
+
+| Máy chủ | Giá tham khảo | Số phiên đồng thời |
+|---|---|---|
+| VPS 4 vCPU / 8GB | ~500–600k/tháng | 3 |
+| VPS 8 vCPU / 16GB | ~1–1,5tr/tháng | 6–7 |
+| Dedicated 32 core (Hetzner...) | ~3–4tr/tháng | 25–30 |
+
+Muốn quy mô 50–70 phiên như các dịch vụ lớn: chạy 2–3 máy, chia khách theo máy
+(mỗi máy một bản cài + CSDL riêng), đặt `MAX_CONCURRENT_SESSIONS` đúng theo số nhân CPU.
+
+## Quy trình bán gói Livestream AI
+
+Giống app chuyển giọng nói: khách đăng ký → chuyển khoản → admin bấm kích hoạt gói
+(**Live thử** 2h/7 ngày · **Live CB** 600k = 120h/30 ngày · **Live 24/7** 1,5tr = 500h/30 ngày).
+Hệ thống tự đếm giờ phát, cảnh báo bằng giọng nói trước khi hết 10 phút và tự dừng khi hết giờ.
+
+## Hướng dẫn khách lấy stream key
+
+- **Shopee**: Kênh Người Bán → Shopee Live → tạo phiên → chọn *Phát trực tiếp từ PC* → copy **URL** + **Stream key** dán vào tab «📡 Kênh phát».
+- **TikTok**: tài khoản cần đủ điều kiện LIVE (thường ≥1.000 follower); lấy Server URL + key trong **TikTok LIVE Studio**. Lưu ý key TikTok thường đổi theo phiên — cập nhật trước mỗi lần phát.
+
+## Rủi ro cần nói rõ với khách
+
+Nội dung phát tự động có thể vi phạm chính sách sàn tùy thời điểm; tài khoản của khách
+có thể bị hạn chế/khóa live. Điều khoản đã ghi rõ khách tự chịu trách nhiệm (xem `tos.html`).
+Hệ thống giảm rủi ro bằng: giọng sinh thời gian thực (không lặp), kịch bản đổi liên tục,
+overlay thay đổi, trả lời bình luận thật.
+
+## Kiểm thử không cần tài khoản sàn (xem chi tiết `server/test/rtmp-local.md`)
+
+```bash
+# máy thu RTMP giả lập
+ffmpeg -y -listen 1 -i rtmp://0.0.0.0:19351/live/a -c copy /tmp/thu.flv
+# thêm kênh phát custom trỏ về rtmp://127.0.0.1:19351/live với key "a" rồi bấm Phát
+```

@@ -270,5 +270,12 @@ export function mountLiveRoutes(app, ctx) {
     ctx.manager.stopSession(s.id, 'admin');
     res.json({ ok: true });
   });
+  // Kiem thu: bom 1 binh luan gia vao phien dang chay (di qua dung duong xu ly that)
+  ra.post('/sessions/:id/test-comment', (req, res) => {
+    if (!ctx.manager) return res.status(503).json({ error: 'Tinh nang live chua bat' });
+    const err = ctx.manager.injectComment(req.params.id, String(req.body.username || 'khach_test'), String(req.body.comment || ''));
+    if (err) return res.status(400).json({ error: err });
+    res.json({ ok: true });
+  });
   app.use('/api/admin/live', ra);
 }

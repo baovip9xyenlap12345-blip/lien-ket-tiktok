@@ -19,6 +19,7 @@ export function createLiveManager({ db, dataDir, plans, maxConcurrent = 3 }) {
   const q = {
     session: db.prepare('SELECT * FROM stream_sessions WHERE id=?'),
     setState: db.prepare('UPDATE stream_sessions SET state=?, last_error=COALESCE(?, last_error) WHERE id=?'),
+    setError: db.prepare('UPDATE stream_sessions SET last_error=? WHERE id=?'),
     setLive: db.prepare('UPDATE stream_sessions SET state=?, started_at=?, worker_pid=?, last_error=NULL WHERE id=?'),
     setStopped: db.prepare('UPDATE stream_sessions SET state=?, ended_at=?, worker_pid=NULL WHERE id=?'),
     beat: db.prepare('UPDATE stream_sessions SET last_heartbeat=?, streamed_seconds=streamed_seconds+? WHERE id=?'),
@@ -142,7 +143,7 @@ export function createLiveManager({ db, dataDir, plans, maxConcurrent = 3 }) {
         }
         break;
       }
-      case 'fatal': q.setState.run(null, String(msg.message || '').slice(0, 500), sessionId); break;
+      case 'fatal': q.setError.run(String(msg.message || '').slice(0, 500), sessionId); break;
     }
   }
 

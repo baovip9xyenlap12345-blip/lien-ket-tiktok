@@ -82,20 +82,25 @@ function mockSynthesize(text) {
 export function createTts(cfg) {
   const provider = cfg.provider || 'edge';
   const voice = cfg.voice || 'vi-VN-HoaiMyNeural';
+  const viaOpenai = text => openaiSynthesize(text, {
+    apiKey: cfg.openaiKey, baseUrl: cfg.openaiBaseUrl || 'https://api.openai.com/v1',
+    voice: cfg.openaiVoice || 'alloy', model: cfg.openaiModel || 'gpt-4o-mini-tts',
+  });
+
   return {
     provider,
-    // -> Buffer PCM s16le 24k mono
+    // -> Buffer PCM s16le 24k mono. Edge loi thi tu chuyen sang OpenAI (neu co key)
     async synthesize(text) {
       const clean = String(text || '').trim();
       if (!clean) return Buffer.alloc(0);
       if (provider === 'mock') return mockSynthesize(clean);
-      if (provider === 'openai') {
-        return openaiSynthesize(clean, {
-          apiKey: cfg.openaiKey, baseUrl: cfg.openaiBaseUrl || 'https://api.openai.com/v1',
-          voice: cfg.openaiVoice || 'alloy', model: cfg.openaiModel || 'gpt-4o-mini-tts',
-        });
+      if (provider === 'openai') return viaOpenai(clean);
+      try {
+        return await edgeSynthesize(clean, voice);
+      } catch (e) {
+        if (cfg.openaiKey) return viaOpenai(clean);
+        throw e;
       }
-      return edgeSynthesize(clean, voice);
     },
   };
 }
