@@ -1,5 +1,5 @@
 // May chu "App Cua Bao Gau Bong" - chuyen video/ghi am thanh van ban bang OpenAI API
-// Chay: OPENAI_API_KEY=sk-... JWT_SECRET=chuoi-bi-mat node index.js
+// Tinh phi theo GOI (so video), moi video toi da MAX_VIDEO_MINUTES phut
 import express from 'express';
 import multer from 'multer';
 import Database from 'better-sqlite3';
@@ -20,14 +20,18 @@ const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'doi-chuoi-nay-khi-trien-khai';
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase();
-// Thong tin chuyen khoan hien cho khach (sua qua bien moi truong)
-const BANK_INFO = process.env.BANK_INFO || 'Ngan hang: (dien ten) | So TK: (dien so) | Chu TK: (dien ten) | Noi dung: GOI + email cua ban';
+const BANK_INFO = process.env.BANK_INFO || 'Ngan hang: (dien ten) | So TK: (dien so) | Chu TK: (dien ten) | Noi dung: TEN GOI + email cua ban';
+// Moi video toi da bao nhieu phut (ap dung moi goi)
+const MAX_VIDEO_MINUTES = parseInt(process.env.MAX_VIDEO_MINUTES || '5', 10);
+// Link ban mien phi chay tren trinh duyet (GitHub Pages)
+const FREE_APP_URL = process.env.FREE_APP_URL || 'https://baovip9xyenlap12345-blip.github.io/lien-ket-tiktok/app.html';
 
-// Cac goi thang: phut la han muc moi thang
+// Cac goi: videos = so luot chuyen doi trong ky; days = so ngay hieu luc
 const PLANS = {
-  free:  { name: 'Mien phi',  minutes: 10,   price: 0 },
-  basic: { name: 'Co ban',    minutes: 300,  price: 199000 },
-  pro:   { name: 'Chuyen nghiep', minutes: 1000, price: 499000 },
+  trial: { name: 'Dung thu',       videos: 1,    price: 0,      days: null },
+  week:  { name: 'Goi tuan',       videos: 10,   price: 59000,  days: 7 },
+  month: { name: 'Goi thang',      videos: 30,   price: 199000, days: 30 },
+  pro:   { name: 'Chuyen nghiep',  videos: 1000, price: 499000, days: 30 },
 };
 
 // ====== CSDL ======
@@ -38,10 +42,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   pass_hash TEXT NOT NULL,
-  plan TEXT NOT NULL DEFAULT 'free',
-  plan_expires INTEGER,          -- epoch ms; null = khong het han (free)
-  used_seconds INTEGER NOT NULL DEFAULT 0,
-  month_key TEXT NOT NULL DEFAULT '',
+  plan TEXT NOT NULL DEFAULT 'trial',
+  plan_expires INTEGER,           -- epoch ms; null = khong het han
+  used_videos INTEGER NOT NULL DEFAULT 0,
+  trial_used INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS logs (
@@ -52,24 +56,21 @@ CREATE TABLE IF NOT EXISTS logs (
   created_at INTEGER NOT NULL
 );`);
 
-const monthKey = () => new Date().toISOString().slice(0, 7); // "2026-07"
-
 function getUser(id) {
   const u = db.prepare('SELECT * FROM users WHERE id=?').get(id);
   if (!u) return null;
-  // sang thang moi -> dat lai han muc
-  if (u.month_key !== monthKey()) {
-    db.prepare('UPDATE users SET used_seconds=0, month_key=? WHERE id=?').run(monthKey(), u.id);
-    u.used_seconds = 0; u.month_key = monthKey();
-  }
-  // goi tra phi het han -> ve free
-  if (u.plan !== 'free' && u.plan_expires && Date.now() > u.plan_expires) {
-    db.prepare("UPDATE users SET plan='free', plan_expires=NULL WHERE id=?").run(u.id);
-    u.plan = 'free'; u.plan_expires = null;
+  // goi tra phi het han -> ve trang thai dung thu (da dung het neu trial_used)
+  if (u.plan !== 'trial' && u.plan_expires && Date.now() > u.plan_expires) {
+    db.prepare("UPDATE users SET plan='trial', plan_expires=NULL, used_videos=0 WHERE id=?").run(u.id);
+    u.plan = 'trial'; u.plan_expires = null; u.used_videos = 0;
   }
   return u;
 }
-const quotaSeconds = u => (PLANS[u.plan] || PLANS.free).minutes * 60;
+// So video con lai trong ky cua nguoi dung
+function remainingVideos(u) {
+  if (u.plan === 'trial') return u.trial_used ? 0 : PLANS.trial.videos;
+  return Math.max(0, (PLANS[u.plan] || PLANS.trial).videos - u.used_videos);
+}
 
 // ====== App ======
 const app = express();
@@ -100,6 +101,10 @@ function auth(req, res, next) {
     return res.status(401).json({ error: 'Phien dang nhap het han, hay dang nhap lai' });
   }
 }
+function adminOnly(req, res, next) {
+  if (!ADMIN_EMAIL || req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Khong co quyen quan tri' });
+  next();
+}
 
 // ---- Tai khoan ----
 app.post('/api/register', (req, res) => {
@@ -109,8 +114,8 @@ app.post('/api/register', (req, res) => {
   if (password.length < 6) return res.status(400).json({ error: 'Mat khau toi thieu 6 ky tu' });
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) return res.status(400).json({ error: 'Email da dang ky' });
   const id = randomUUID();
-  db.prepare('INSERT INTO users (id,email,pass_hash,month_key,created_at) VALUES (?,?,?,?,?)')
-    .run(id, email, bcrypt.hashSync(password, 10), monthKey(), Date.now());
+  db.prepare('INSERT INTO users (id,email,pass_hash,created_at) VALUES (?,?,?,?)')
+    .run(id, email, bcrypt.hashSync(password, 10), Date.now());
   res.json({ token: jwt.sign({ uid: id }, JWT_SECRET, { expiresIn: '30d' }) });
 });
 
@@ -125,29 +130,60 @@ app.post('/api/login', (req, res) => {
 
 app.get('/api/me', auth, (req, res) => {
   const u = req.user;
+  const p = PLANS[u.plan] || PLANS.trial;
   res.json({
     email: u.email,
     plan: u.plan,
-    planName: (PLANS[u.plan] || PLANS.free).name,
+    planName: p.name,
     planExpires: u.plan_expires,
-    usedMinutes: Math.round(u.used_seconds / 60 * 10) / 10,
-    quotaMinutes: (PLANS[u.plan] || PLANS.free).minutes,
-    isAdmin: ADMIN_EMAIL && u.email === ADMIN_EMAIL,
+    remainingVideos: remainingVideos(u),
+    quotaVideos: p.videos,
+    trialUsed: !!u.trial_used,
+    maxVideoMinutes: MAX_VIDEO_MINUTES,
+    freeAppUrl: FREE_APP_URL,
+    isAdmin: !!(ADMIN_EMAIL && u.email === ADMIN_EMAIL),
   });
 });
 
-app.get('/api/plans', (req, res) => res.json({ plans: PLANS, bank: BANK_INFO }));
+app.get('/api/plans', (req, res) => res.json({ plans: PLANS, bank: BANK_INFO, maxVideoMinutes: MAX_VIDEO_MINUTES, freeAppUrl: FREE_APP_URL }));
 
-// ---- Admin kich hoat goi sau khi khach chuyen khoan ----
-app.post('/api/admin/set-plan', auth, (req, res) => {
-  if (!ADMIN_EMAIL || req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Khong co quyen' });
+// ---- Quan tri vien ----
+// Danh sach khach hang: email, goi, da dung, con lai, ngay dang ky, lan dung gan nhat
+app.get('/api/admin/users', auth, adminOnly, (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  let rows = db.prepare(`
+    SELECT u.*, COUNT(l.id) AS total_jobs, COALESCE(SUM(l.seconds),0) AS total_seconds, MAX(l.created_at) AS last_used
+    FROM users u LEFT JOIN logs l ON l.user_id = u.id
+    ${q ? 'WHERE u.email LIKE ?' : ''}
+    GROUP BY u.id ORDER BY u.created_at DESC LIMIT 500
+  `).all(...(q ? ['%' + q + '%'] : []));
+  res.json({
+    users: rows.map(u => ({
+      email: u.email,
+      plan: u.plan,
+      planName: (PLANS[u.plan] || PLANS.trial).name,
+      planExpires: u.plan_expires,
+      usedVideos: u.plan === 'trial' ? (u.trial_used ? 1 : 0) : u.used_videos,
+      remainingVideos: remainingVideos(u),
+      trialUsed: !!u.trial_used,
+      totalJobs: u.total_jobs,
+      totalMinutes: Math.round(u.total_seconds / 60),
+      lastUsed: u.last_used,
+      createdAt: u.created_at,
+    })),
+  });
+});
+
+// Kich hoat / doi goi cho khach (sau khi nhan chuyen khoan)
+app.post('/api/admin/set-plan', auth, adminOnly, (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const plan = String(req.body.plan || '');
   if (!PLANS[plan]) return res.status(400).json({ error: 'Goi khong ton tai' });
   const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
   if (!u) return res.status(404).json({ error: 'Khong tim thay nguoi dung' });
-  const expires = plan === 'free' ? null : Date.now() + 31 * 24 * 3600 * 1000;
-  db.prepare('UPDATE users SET plan=?, plan_expires=? WHERE id=?').run(plan, expires, u.id);
+  const expires = PLANS[plan].days ? Date.now() + PLANS[plan].days * 24 * 3600 * 1000 : null;
+  // kich hoat goi moi: dat lai so video da dung trong ky
+  db.prepare('UPDATE users SET plan=?, plan_expires=?, used_videos=0 WHERE id=?').run(plan, expires, u.id);
   res.json({ ok: true, email, plan, expires });
 });
 
@@ -166,24 +202,31 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
 
     const format = req.body.format === 'srt' ? 'srt' : 'txt';
     const language = /^[a-z]{2}$/.test(req.body.language || '') ? req.body.language : 'vi';
-
-    // do dai file de tru han muc
-    const duration = await ffprobeDuration(req.file.path);
-    if (!duration) return res.status(400).json({ error: 'Khong doc duoc am thanh tu file nay' });
     const u = req.user;
-    const remain = quotaSeconds(u) - u.used_seconds;
-    if (duration > remain) {
+
+    // con luot khong?
+    if (remainingVideos(u) < 1) {
       return res.status(402).json({
-        error: `Het han muc: file dai ${Math.ceil(duration / 60)} phut, ban con ${Math.max(0, Math.floor(remain / 60))} phut trong thang. Hay nang goi.`,
+        error: u.plan === 'trial'
+          ? `Ban da dung het luot mien phi. Co the dung ban mien phi tren web (cham hon) tai ${FREE_APP_URL} hoac mua goi de xu ly nhanh va chuan hon.`
+          : 'Ban da dung het so video cua goi. Hay gia han hoac nang goi de tiep tuc.',
+        upgrade: true,
       });
     }
 
-    // tach am thanh: mp3 mono 16kHz de gui len OpenAI (nhe va nhanh)
+    // do dai video
+    const duration = await ffprobeDuration(req.file.path);
+    if (!duration) return res.status(400).json({ error: 'Khong doc duoc am thanh tu file nay' });
+    if (duration > MAX_VIDEO_MINUTES * 60) {
+      return res.status(400).json({ error: `Video dai ${Math.ceil(duration / 60)} phut — toi da ${MAX_VIDEO_MINUTES} phut/video. Hay cat ngan video roi thu lai.` });
+    }
+
+    // tach am thanh: mp3 mono 16kHz de gui len OpenAI
     const audioPath = req.file.path + '.mp3';
     tmpFiles.push(audioPath);
     await run('ffmpeg', ['-y', '-i', req.file.path, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', audioPath]);
 
-    // goi OpenAI: srt can moc thoi gian -> whisper-1; van ban thuan -> gpt-4o-mini-transcribe re + chuan
+    // srt can moc thoi gian -> whisper-1; van ban thuan -> gpt-4o-mini-transcribe
     const model = format === 'srt' ? 'whisper-1' : 'gpt-4o-mini-transcribe';
     const form = new FormData();
     form.append('file', new Blob([fs.readFileSync(audioPath)], { type: 'audio/mpeg' }), 'audio.mp3');
@@ -203,12 +246,14 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
     }
     const result = format === 'srt' ? await resp.text() : (await resp.json()).text;
 
-    // tru han muc + ghi log
-    db.prepare('UPDATE users SET used_seconds = used_seconds + ? WHERE id=?').run(duration, u.id);
+    // tru luot + ghi log
+    if (u.plan === 'trial') db.prepare('UPDATE users SET trial_used=1 WHERE id=?').run(u.id);
+    else db.prepare('UPDATE users SET used_videos = used_videos + 1 WHERE id=?').run(u.id);
     db.prepare('INSERT INTO logs (id,user_id,seconds,kind,created_at) VALUES (?,?,?,?,?)')
       .run(randomUUID(), u.id, duration, format, Date.now());
 
-    res.json({ format, durationSeconds: duration, result });
+    const after = getUser(u.id);
+    res.json({ format, durationSeconds: duration, result, remainingVideos: remainingVideos(after) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Loi xu ly, vui long thu lai' });
