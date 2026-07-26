@@ -154,6 +154,8 @@ let freeAppUrl = '';
 
 const setS = (el, msg, cls='') => { el.textContent = msg; el.className = 'status ' + cls; };
 const fmtDate = ms => ms ? new Date(ms).toLocaleDateString('vi-VN') : '—';
+// Chống chèn mã độc khi hiển thị dữ liệu người dùng nhập
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function api(path, opts = {}) {
   opts.headers = Object.assign({}, opts.headers, token ? { Authorization: 'Bearer ' + token } : {});
@@ -185,14 +187,15 @@ async function refreshMe() {
 
 async function loadPlans() {
   try {
-    const { plans, bank, maxVideoMinutes } = await (await fetch(API + '/api/plans')).json();
+    const { plans, bank, contact, maxVideoMinutes } = await (await fetch(API + '/api/plans')).json();
     const per = { trial: 'video đầu tiên', week: '10 video / 7 ngày', month: '30 video / 30 ngày', pro: '1.000 video / 30 ngày' };
     $('plansBox').innerHTML = Object.entries(plans).map(([k, p]) =>
-      `<div class="plan" id="plan-${k}"><h3>${p.name}</h3>
+      `<div class="plan" id="plan-${k}"><h3>${esc(p.name)}</h3>
        <div class="price">${p.price ? p.price.toLocaleString('vi-VN') + 'đ' : 'Miễn phí'}</div>
        <p>${per[k] || p.videos + ' video'}</p>
        <p>video ≤ ${maxVideoMinutes} phút</p></div>`).join('');
-    $('bankBox').innerHTML = '💳 <b>Cách mua gói:</b> chuyển khoản theo thông tin dưới đây (nội dung ghi tên gói + email đăng ký), gói sẽ được kích hoạt trong vòng vài giờ.<br>' + bank;
+    $('bankBox').innerHTML = '💳 <b>Cách mua gói:</b> chuyển khoản theo thông tin dưới đây (nội dung ghi tên gói + email đăng ký), gói sẽ được kích hoạt trong vòng vài giờ.<br>' + esc(bank) +
+      (contact ? '<br>📞 <b>Hỗ trợ:</b> ' + esc(contact) : '');
   } catch {}
 }
 
@@ -254,32 +257,38 @@ async function loadAdmin() {
   try {
     const q = encodeURIComponent($('adminSearch').value || '');
     const { users } = await api('/api/admin/users' + (q ? '?q=' + q : ''));
-    $('adminTbody').innerHTML = users.map(u => `
+    $('adminTbody').innerHTML = users.map((u, i) => `
       <tr>
-        <td>${u.email}</td>
-        <td><span class="tag ${u.plan === 'pro' ? 'pro' : ''}">${u.planName}</span></td>
+        <td>${esc(u.email)}</td>
+        <td><span class="tag ${u.plan === 'pro' ? 'pro' : ''}">${esc(u.planName)}</span></td>
         <td>${u.usedVideos}</td>
         <td>${u.remainingVideos}</td>
         <td>${fmtDate(u.planExpires)}</td>
         <td>${u.totalJobs} lượt / ${u.totalMinutes}′</td>
         <td>${fmtDate(u.createdAt)}</td>
         <td>
-          <button class="btn btn-ghost btn-sm" onclick="setPlan('${u.email}','week')">Tuần</button>
-          <button class="btn btn-ghost btn-sm" onclick="setPlan('${u.email}','month')">Tháng</button>
-          <button class="btn btn-ghost btn-sm" onclick="setPlan('${u.email}','pro')">Pro</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="week">Tuần</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="month">Tháng</button>
+          <button class="btn btn-ghost btn-sm" data-i="${i}" data-plan="pro">Pro</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="8">Chưa có khách hàng nào</td></tr>';
+    adminUsers = users;
   } catch (e) { setS($('adminStatus'), '❌ ' + e.message, 'err'); }
 }
-window.setPlan = async (email, plan) => {
-  if (!confirm(`Kích hoạt gói "${plan}" cho ${email}?`)) return;
+let adminUsers = [];
+$('adminTbody').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-plan]');
+  if (!btn) return;
+  const u = adminUsers[+btn.dataset.i];
+  const plan = btn.dataset.plan;
+  if (!u || !confirm(`Kích hoạt gói "${plan}" cho ${u.email}?`)) return;
   try {
     await api('/api/admin/set-plan', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email, plan }) });
-    setS($('adminStatus'), `✅ Đã kích hoạt gói ${plan} cho ${email}`, 'ok');
+      body: JSON.stringify({ email: u.email, plan }) });
+    setS($('adminStatus'), `✅ Đã kích hoạt gói ${plan} cho ${u.email}`, 'ok');
     loadAdmin();
-  } catch (e) { setS($('adminStatus'), '❌ ' + e.message, 'err'); }
-};
+  } catch (err) { setS($('adminStatus'), '❌ ' + err.message, 'err'); }
+});
 $('adminReload').onclick = loadAdmin;
 $('adminSearch').addEventListener('keydown', e => { if (e.key === 'Enter') loadAdmin(); });
 

@@ -18,13 +18,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ====== Cau hinh ======
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 const JWT_SECRET = process.env.JWT_SECRET || 'doi-chuoi-nay-khi-trien-khai';
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase();
 const BANK_INFO = process.env.BANK_INFO || 'Ngan hang: (dien ten) | So TK: (dien so) | Chu TK: (dien ten) | Noi dung: TEN GOI + email cua ban';
+// Lien he ho tro hien cho khach (vd: Zalo 09xxx)
+const CONTACT_INFO = process.env.CONTACT_INFO || '';
 // Moi video toi da bao nhieu phut (ap dung moi goi)
 const MAX_VIDEO_MINUTES = parseInt(process.env.MAX_VIDEO_MINUTES || '5', 10);
 // Link ban mien phi chay tren trinh duyet (GitHub Pages)
 const FREE_APP_URL = process.env.FREE_APP_URL || 'https://baovip9xyenlap12345-blip.github.io/lien-ket-tiktok/app.html';
+
+if (JWT_SECRET === 'doi-chuoi-nay-khi-trien-khai') {
+  console.warn('CANH BAO: JWT_SECRET dang dung gia tri mac dinh — hay dat chuoi bi mat rieng khi trien khai that!');
+}
 
 // Cac goi: videos = so luot chuyen doi trong ky; days = so ngay hieu luc
 const PLANS = {
@@ -106,12 +113,29 @@ function adminOnly(req, res, next) {
   next();
 }
 
+// Chan do mat khau: gioi han so lan goi dang nhap/dang ky theo IP (trong bo nho)
+const rlBuckets = new Map();
+function rateLimit(maxHits, windowMs) {
+  return (req, res, next) => {
+    const key = req.path + '|' + (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '');
+    const now = Date.now();
+    let b = rlBuckets.get(key);
+    if (!b || now > b.reset) { b = { count: 0, reset: now + windowMs }; rlBuckets.set(key, b); }
+    b.count++;
+    if (rlBuckets.size > 10000) rlBuckets.clear(); // tranh phinh bo nho
+    if (b.count > maxHits) return res.status(429).json({ error: 'Thao tac qua nhieu lan, vui long thu lai sau it phut' });
+    next();
+  };
+}
+
 // ---- Tai khoan ----
-app.post('/api/register', (req, res) => {
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+app.post('/api/register', rateLimit(20, 10 * 60 * 1000), (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
-  if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'Email khong hop le' });
-  if (password.length < 6) return res.status(400).json({ error: 'Mat khau toi thieu 6 ky tu' });
+  if (email.length > 200 || !/^[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+$/.test(email)) return res.status(400).json({ error: 'Email khong hop le' });
+  if (password.length < 6 || password.length > 100) return res.status(400).json({ error: 'Mat khau toi thieu 6 ky tu (toi da 100)' });
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) return res.status(400).json({ error: 'Email da dang ky' });
   const id = randomUUID();
   db.prepare('INSERT INTO users (id,email,pass_hash,created_at) VALUES (?,?,?,?)')
@@ -119,7 +143,7 @@ app.post('/api/register', (req, res) => {
   res.json({ token: jwt.sign({ uid: id }, JWT_SECRET, { expiresIn: '30d' }) });
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', rateLimit(30, 10 * 60 * 1000), (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
   if (!u || !bcrypt.compareSync(String(req.body.password || ''), u.pass_hash)) {
@@ -145,7 +169,7 @@ app.get('/api/me', auth, (req, res) => {
   });
 });
 
-app.get('/api/plans', (req, res) => res.json({ plans: PLANS, bank: BANK_INFO, maxVideoMinutes: MAX_VIDEO_MINUTES, freeAppUrl: FREE_APP_URL }));
+app.get('/api/plans', (req, res) => res.json({ plans: PLANS, bank: BANK_INFO, contact: CONTACT_INFO, maxVideoMinutes: MAX_VIDEO_MINUTES, freeAppUrl: FREE_APP_URL }));
 
 // ---- Quan tri vien ----
 // Danh sach khach hang: email, goi, da dung, con lai, ngay dang ky, lan dung gan nhat
@@ -224,7 +248,11 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
     // tach am thanh: mp3 mono 16kHz de gui len OpenAI
     const audioPath = req.file.path + '.mp3';
     tmpFiles.push(audioPath);
-    await run('ffmpeg', ['-y', '-i', req.file.path, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', audioPath]);
+    try {
+      await run('ffmpeg', ['-y', '-i', req.file.path, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', audioPath]);
+    } catch {
+      return res.status(400).json({ error: 'File nay khong co am thanh hoac dinh dang khong ho tro. Hay thu MP4, MOV, MP3, WAV...' });
+    }
 
     // srt can moc thoi gian -> whisper-1; van ban thuan -> gpt-4o-mini-transcribe
     const model = format === 'srt' ? 'whisper-1' : 'gpt-4o-mini-transcribe';
@@ -234,11 +262,20 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
     form.append('language', language);
     if (format === 'srt') form.append('response_format', 'srt');
 
-    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: form,
-    });
+    // timeout 5 phut de khong treo yeu cau
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5 * 60 * 1000);
+    let resp;
+    try {
+      resp = await fetch(`${OPENAI_BASE_URL}/audio/transcriptions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+        body: form,
+        signal: ac.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!resp.ok) {
       const errText = await resp.text();
       console.error('OpenAI loi:', resp.status, errText.slice(0, 500));
@@ -260,6 +297,13 @@ app.post('/api/transcribe', auth, upload.single('file'), async (req, res) => {
   } finally {
     for (const f of tmpFiles) fs.promises.unlink(f).catch(() => {});
   }
+});
+
+// Bat loi upload (vd file qua lon) tra ve JSON de hieu thay vi loi ky thuat
+app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'File qua lon (toi da 300MB). Hay nen hoac cat ngan video.' });
+  console.error(err);
+  res.status(500).json({ error: 'Loi may chu, vui long thu lai' });
 });
 
 app.listen(PORT, () => console.log(`May chu chay tai cong ${PORT}`));

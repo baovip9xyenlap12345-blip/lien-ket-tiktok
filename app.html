@@ -154,6 +154,7 @@
     <h1>🧸 App Của Bảo Gấu Bông</h1>
     <p style="font-size:1.15rem;color:var(--text);margin-bottom:10px;">🎬 Chuyển Video / Ghi Âm Thành Văn Bản</p>
     <p>Tải video hoặc file ghi âm lên — AI sẽ nghe và chuyển giọng nói thành chữ. Có thể tách riêng âm thanh từ video để tải về.<br>Mọi xử lý diễn ra <b>ngay trên trình duyệt</b>, file của bạn <b>không bị gửi đi đâu cả</b>.</p>
+    <a id="proBanner" href="#" style="display:none;margin-top:14px;padding:12px 22px;background:linear-gradient(90deg,#f1c40f,#e67e22);color:#3b2500;font-weight:700;border-radius:10px;text-decoration:none;">⚡ Bản Pro: nhanh gấp 10 lần, chuẩn tiếng Việt hơn — dùng thử miễn phí →</a>
   </header>
 
   <!-- BƯỚC 1: chọn file -->
@@ -452,7 +453,8 @@ async function handleFile(file, label) {
   fallbackNeeded = false;
   fallbackRaw = null;
   fileInfo.classList.add('show');
-  fileInfo.innerHTML = `📄 <b>${label || file.name}</b> — ${fmtSize(file.size)}`;
+  const safeName = String(label || file.name || 'file').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  fileInfo.innerHTML = `📄 <b>${safeName}</b> — ${fmtSize(file.size)}`;
   preview.src = URL.createObjectURL(file);
   preview.classList.add('show');
   transcribeBtn.disabled = extractBtn.disabled = true;
@@ -908,9 +910,9 @@ function polishText(t) {
 
 // ====== Tạo phụ đề SRT từ các đoạn có mốc thời gian ======
 function srtTime(sec) {
-  sec = Math.max(0, sec || 0);
-  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60), ms = Math.round((sec % 1) * 1000);
+  const totalMs = Math.round(Math.max(0, sec || 0) * 1000);
+  const h = Math.floor(totalMs / 3600000), m = Math.floor(totalMs % 3600000 / 60000);
+  const s = Math.floor(totalMs % 60000 / 1000), ms = totalMs % 1000;
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' +
          String(s).padStart(2, '0') + ',' + String(ms).padStart(3, '0');
 }
@@ -939,6 +941,14 @@ $('outputSel').addEventListener('change', () => { if (lastText) renderResult(); 
 // Máy tính (không phải điện thoại) đủ mạnh -> mặc định dùng model chính xác cao
 if (!/Mobi|iPhone|iPad|Android/i.test(navigator.userAgent)) {
   $('modelSel').value = 'small';
+}
+
+// Link bản Pro (máy chủ trả phí) — điền link Railway/tên miền vào đây khi đã triển khai
+const PRO_URL = '';
+if (PRO_URL) {
+  const b = $('proBanner');
+  b.href = PRO_URL;
+  b.style.display = 'inline-block';
 }
 
 // ====== Kết quả: copy / tải / xoá ======
