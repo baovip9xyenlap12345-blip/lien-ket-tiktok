@@ -103,6 +103,9 @@
   <div class="error" id="err"></div>
   <button class="btn" id="spinBtn">🎯 QUAY NGAY!</button>
   <p class="muted" style="margin-top:12px; font-size:.85rem;" id="limitNote"></p>
+  <!-- Chế độ tự do: mua hàng nhập mã đơn để được quay thêm -->
+  <a id="bonusToggle" style="display:none; cursor:pointer; margin-top:10px; font-weight:700; text-decoration:underline;"
+     onclick="toggleBonus()">🛒 Đã mua hàng? Nhập mã đơn để QUAY THÊM!</a>
 </div>
 
 <!-- ===== Modal kết quả: 3 bước (kết quả → nhập thông tin → nhận mã) ===== -->
@@ -345,6 +348,8 @@ async function loadShop() {
   } else {
     document.getElementById('limitNote').textContent =
       'Bạn có ' + data.spin_limit_per_day + ' lượt quay miễn phí mỗi ngày.';
+    // Quán có nhập mã đơn hàng → cho khách mua hàng quay thêm bằng mã đơn
+    if (data.order_bonus) document.getElementById('bonusToggle').style.display = 'inline-block';
   }
   segments = data.segments;
   drawWheel(0);
@@ -380,15 +385,24 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
   spinning = true;
   try {
     const opts = { method: 'POST' };
-    if (spinMode === 'order') {
+    // Gửi mã đơn khi: chế độ theo đơn hàng, hoặc khách đang nhập mã để quay thêm ở chế độ tự do
+    const codeVal = document.getElementById('orderCode').value.trim();
+    if (spinMode === 'order' || codeVal) {
       opts.headers = { 'Content-Type': 'application/json' };
-      opts.body = JSON.stringify({ code: document.getElementById('orderCode').value });
+      opts.body = JSON.stringify({ code: codeVal });
     }
     const res = await fetch('/api/public/spin/' + encodeURIComponent(slug), opts);
     const data = await res.json();
-    if (!res.ok) { err.textContent = data.error || 'Có lỗi xảy ra.'; spinning = false; btn.disabled = false; return; }
+    if (!res.ok) {
+      err.textContent = data.error || 'Có lỗi xảy ra.';
+      // Hết lượt miễn phí mà quán có mã đơn → tự mở ô nhập mã quay thêm
+      if (data.orderBonus) { showBonusInput(); }
+      spinning = false;
+      btn.disabled = false;
+      return;
+    }
     claimToken = data.claimToken || '';
-    if (spinMode === 'order') document.getElementById('orderCode').value = '';
+    document.getElementById('orderCode').value = '';
     spinTo(data.segmentIndex, () => {
       spinning = false;
       btn.disabled = false;
@@ -529,6 +543,19 @@ async function shareCoupon() {
   // Máy tính không có menu chia sẻ → tải ảnh về để gửi Zalo thủ công
   downloadCoupon();
   alert('Ảnh mã đã được tải về máy. Hãy mở Zalo và gửi ảnh này để lưu lại nhé!');
+}
+
+// Ô nhập mã đơn hàng để quay thêm (chế độ tự do)
+function showBonusInput() {
+  const f = document.getElementById('orderCodeField');
+  f.style.display = 'block';
+  document.getElementById('orderCode').placeholder = 'Nhập mã đơn hàng / mã vận đơn';
+  document.getElementById('orderCode').focus();
+}
+function toggleBonus() {
+  const f = document.getElementById('orderCodeField');
+  if (f.style.display === 'block' && spinMode !== 'order') f.style.display = 'none';
+  else showBonusInput();
 }
 
 function showStep(id) {
