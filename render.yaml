@@ -1,0 +1,17 @@
+# Cấu hình triển khai 1-chạm lên Render.com
+# Cách dùng: đăng ký render.com -> New + -> Blueprint -> chọn repo này (nhánh claude/lucky-wheel-discount-app-j3lxpb)
+services:
+  - type: web
+    name: vong-quay-may-man
+    runtime: node
+    rootDir: lucky-wheel
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_EMAIL
+        sync: false # Render sẽ hỏi bạn nhập email admin khi triển khai
+      - key: ADMIN_PASSWORD
+        sync: false # Render sẽ hỏi bạn nhập mật khẩu admin khi triển khai
+      - key: SESSION_SECRET
+        generateValue: true
