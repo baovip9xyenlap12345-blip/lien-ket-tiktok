@@ -116,6 +116,7 @@
       <div class="prize-name" id="modalPrize"></div>
       <p class="muted" id="modalNote"></p>
       <button class="btn full" id="claimBtn" style="display:none;">🎁 Nhận mã giảm giá</button>
+      <a class="btn full" id="zaloBtnLose" style="display:none; background:#0068ff; color:#fff;" target="_blank" rel="noopener">💬 Vào nhóm Zalo nhận thêm quà tặng</a>
       <button class="btn full ghost" onclick="closeModal()" id="closeBtn1">Đóng</button>
     </div>
 
@@ -144,9 +145,10 @@
         <div class="c-name" id="ccName"></div>
       </div>
       <p class="success" id="emailNote" style="display:none;">📧 Mã cũng đã được gửi vào email của bạn!</p>
+      <a class="btn full" id="zaloBtnWin" style="display:none; background:#0068ff; color:#fff; margin-bottom:4px; animation:btnPulse 1.6s infinite;" target="_blank" rel="noopener">💬 Vào nhóm Zalo nhận thêm quà tặng!</a>
       <div class="receive-btns">
         <button class="btn" onclick="downloadCoupon()">⬇️ Tải ảnh mã giảm giá</button>
-        <button class="btn" style="background:#0068ff; color:#fff;" onclick="shareCoupon()">💬 Gửi qua Zalo / Chia sẻ</button>
+        <button class="btn ghost" onclick="shareCoupon()">📤 Gửi ảnh mã cho bạn bè</button>
         <button class="btn ghost" onclick="closeModal()">Đóng (đã chụp màn hình 📸)</button>
       </div>
       <p class="muted" style="font-size:.82rem; margin-top:10px;">Đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.<br><b>Lưu ý: mã chỉ sử dụng được 1 lần.</b></p>
@@ -167,6 +169,7 @@ let spinning = false;
 let claimToken = '';
 let shopName = '';
 let spinMode = 'free';
+let zaloLink = '';
 let coupon = null; // {shopName, prize, code, customerName}
 let THEME = { accent: '#f59e0b', accent2: '#fbbf24' };
 
@@ -330,6 +333,7 @@ async function loadShop() {
   }
   shopName = data.name;
   spinMode = data.spin_mode || 'free';
+  zaloLink = /^https:\/\/\S+$/i.test(data.zalo_link || '') ? data.zalo_link : '';
   applyTheme(data.theme_color);
   document.getElementById('shopName').textContent = data.name;
   document.getElementById('shopDesc').textContent = data.description || '';
@@ -404,6 +408,10 @@ function showResult(data) {
   document.getElementById('modalTitle').textContent = data.win ? 'Chúc mừng bạn!' : 'Tiếc quá!';
   document.getElementById('modalPrize').textContent = data.prize;
   document.getElementById('claimBtn').style.display = data.win ? 'block' : 'none';
+  // Trượt mà quán có nhóm Zalo → mời vào nhóm nhận thêm quà (tận dụng mọi lượt quay)
+  const zLose = document.getElementById('zaloBtnLose');
+  if (!data.win && zaloLink) { zLose.href = zaloLink; zLose.style.display = 'block'; }
+  else zLose.style.display = 'none';
   const closeBtn = document.getElementById('closeBtn1');
   closeBtn.style.display = data.win ? 'none' : 'block';
   closeBtn.textContent = (!data.win && data.spinsLeftToday > 0) ? '🎯 Quay tiếp ngay!' : 'Đóng';
@@ -451,6 +459,11 @@ function showCoupon(data) {
   document.getElementById('ccCode').textContent = data.coupon_code || '(Nhận quà trực tiếp tại quán)';
   document.getElementById('ccName').textContent = 'Khách hàng: ' + data.customerName + ' • ' + new Date().toLocaleDateString('vi-VN');
   document.getElementById('emailNote').style.display = data.emailed ? 'block' : 'none';
+  // Nút vào nhóm Zalo của quán (nếu quán có cài link)
+  const zl = /^https:\/\/\S+$/i.test(data.zalo_link || '') ? data.zalo_link : zaloLink;
+  const zWin = document.getElementById('zaloBtnWin');
+  if (zl) { zWin.href = zl; zWin.style.display = 'block'; }
+  else zWin.style.display = 'none';
 }
 
 // Vẽ mã giảm giá thành ảnh PNG để tải về / chia sẻ

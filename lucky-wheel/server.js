@@ -145,6 +145,9 @@ try { db.exec(`ALTER TABLE shops ADD COLUMN spin_mode TEXT NOT NULL DEFAULT 'fre
 // Màu chủ đạo trang vòng quay — mỗi quán tự chọn cho hợp thương hiệu
 try { db.exec(`ALTER TABLE shops ADD COLUMN theme_color TEXT NOT NULL DEFAULT '#f59e0b'`); } catch (e) { /* cột đã tồn tại */ }
 
+// Link nhóm Zalo riêng của từng quán — hiện sau khi khách quay để kéo thành viên vào nhóm
+try { db.exec(`ALTER TABLE shops ADD COLUMN zalo_link TEXT NOT NULL DEFAULT ''`); } catch (e) { /* cột đã tồn tại */ }
+
 // Mã đơn hàng của shop: mỗi mã đơn tương ứng đúng 1 mã quay thưởng (app tự sinh)
 db.exec(`
   CREATE TABLE IF NOT EXISTS order_codes (
@@ -202,7 +205,10 @@ if (process.env.SMTP_JSON === '1') {
 }
 const MAIL_FROM = process.env.SMTP_FROM || (process.env.SMTP_USER ? `"Vòng Quay May Mắn" <${process.env.SMTP_USER}>` : 'vongquay@localhost');
 
-function couponEmailHtml({ shopName, customerName, prize, code, spinLimit }) {
+function couponEmailHtml({ shopName, customerName, prize, code, spinLimit, zaloLink }) {
+  const zaloBtn = zaloLink && /^https:\/\/\S+$/i.test(zaloLink)
+    ? `<div style="margin-top:18px;"><a href="${esc(zaloLink)}" style="display:inline-block;background:#0068ff;color:#fff;font-weight:700;padding:12px 24px;border-radius:10px;text-decoration:none;">💬 Tham gia nhóm Zalo của ${esc(shopName)} — nhận thêm quà tặng!</a></div>`
+    : '';
   return `
   <div style="font-family:system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;background:#0f172a;color:#e2e8f0;border-radius:14px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:26px;text-align:center;">
@@ -216,6 +222,7 @@ function couponEmailHtml({ shopName, customerName, prize, code, spinLimit }) {
       <p style="margin:14px 0 6px;color:#94a3b8;">Mã giảm giá của bạn:</p>
       <div style="display:inline-block;border:2px dashed #f59e0b;border-radius:10px;padding:12px 26px;font-size:1.5rem;letter-spacing:3px;font-weight:800;color:#fbbf24;background:#1e293b;">${esc(code)}</div>
       <p style="color:#94a3b8;font-size:.9rem;margin-top:18px;">Hãy đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.<br>Mỗi số điện thoại được quay tối đa ${spinLimit} lượt/ngày — hẹn gặp lại bạn!</p>
+      ${zaloBtn}
     </div>
     <div style="background:#1e293b;padding:14px;text-align:center;color:#64748b;font-size:.78rem;">
       Email được gửi tự động từ hệ thống Vòng Quay May Mắn của ${esc(shopName)}.
@@ -225,13 +232,13 @@ function couponEmailHtml({ shopName, customerName, prize, code, spinLimit }) {
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-function sendCouponEmail(spinId, { to, shopName, customerName, prize, code, spinLimit }) {
+function sendCouponEmail(spinId, { to, shopName, customerName, prize, code, spinLimit, zaloLink }) {
   if (!mailer || !to || !code) return;
   mailer.sendMail({
     from: MAIL_FROM,
     to,
     subject: `🎁 ${shopName}: Bạn trúng "${prize}" - Mã giảm giá ${code}`,
-    html: couponEmailHtml({ shopName, customerName, prize, code, spinLimit }),
+    html: couponEmailHtml({ shopName, customerName, prize, code, spinLimit, zaloLink }),
     text: `Chúc mừng ${customerName}! Bạn trúng "${prize}" tại ${shopName}. Mã giảm giá: ${code}. Đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.`,
   }).then((info) => {
     db.prepare(`UPDATE spins SET email_sent=1 WHERE id=?`).run(spinId);
@@ -374,16 +381,21 @@ app.post('/api/change-password', requireAuth(), (req, res) => {
 app.get('/api/shop', requireAuth('owner'), (req, res) => res.json(req.shop));
 
 app.put('/api/shop', requireAuth('owner'), (req, res) => {
-  const { name, description, spin_limit_per_day, spin_mode, theme_color } = req.body || {};
+  const { name, description, spin_limit_per_day, spin_mode, theme_color, zalo_link } = req.body || {};
   const mode = ['free', 'order'].includes(spin_mode) ? spin_mode : req.shop.spin_mode;
   const color = /^#[0-9a-fA-F]{6}$/.test(String(theme_color || '')) ? theme_color : (req.shop.theme_color || '#f59e0b');
-  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, spin_mode=?, theme_color=? WHERE id=?`)
+  // Link nhóm Zalo: bắt buộc https:// để an toàn; để trống = tắt tính năng
+  let zl = zalo_link === undefined ? (req.shop.zalo_link || '') : String(zalo_link).trim();
+  if (zl && (!/^https:\/\/\S+$/i.test(zl) || zl.length > 300))
+    return res.status(400).json({ error: 'Link nhóm Zalo không hợp lệ — phải bắt đầu bằng https:// (VD: https://zalo.me/g/abcxyz).' });
+  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, spin_mode=?, theme_color=?, zalo_link=? WHERE id=?`)
     .run(
       String(name || req.shop.name).trim(),
       String(description ?? req.shop.description),
       Math.max(1, parseInt(spin_limit_per_day, 10) || 1),
       mode,
       color,
+      zl,
       req.shop.id
     );
   res.json(q.shopById.get(req.shop.id));
@@ -671,6 +683,7 @@ app.get('/api/public/shop/:slug', (req, res) => {
     spin_limit_per_day: sh.spin_limit_per_day,
     spin_mode: sh.spin_mode || 'free',
     theme_color: sh.theme_color || '#f59e0b',
+    zalo_link: sh.zalo_link || '',
     segments: prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]),
   });
 });
@@ -796,6 +809,7 @@ app.post('/api/public/claim/:slug', (req, res) => {
     sendCouponEmail(spin.id, {
       to: cust.email, shopName: sh.name, customerName: cust.name,
       prize: spin.prize_label, code: spin.coupon_code, spinLimit: sh.spin_limit_per_day,
+      zaloLink: sh.zalo_link || '',
     });
   }
 
@@ -806,6 +820,7 @@ app.post('/api/public/claim/:slug', (req, res) => {
     prize: spin.prize_label,
     coupon_code: spin.coupon_code,
     emailed: willEmail,
+    zalo_link: sh.zalo_link || '',
   });
 });
 

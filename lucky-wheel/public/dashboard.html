@@ -166,6 +166,12 @@
       <input id="sName">
       <label>Lời giới thiệu (hiện trên trang vòng quay)</label>
       <textarea id="sDesc" rows="2" placeholder="VD: Quay là trúng - Ưu đãi mỗi ngày tại Cà phê Ban Mai!"></textarea>
+      <label>💬 Link nhóm Zalo của quán <span class="muted" style="font-weight:400;">(để trống = không hiện)</span></label>
+      <input id="sZalo" placeholder="VD: https://zalo.me/g/abcxyz123">
+      <p class="muted" style="font-size:.82rem; margin-top:4px;">
+        Khách quay xong sẽ thấy nút <b>"Tham gia nhóm Zalo nhận thêm quà tặng"</b> dẫn vào nhóm của bạn — cách kéo thành viên rất hiệu quả.
+        Lấy link: mở nhóm Zalo → bấm tên nhóm → <b>Link tham gia nhóm</b> → Sao chép.
+      </p>
       <div class="row">
         <div class="grow">
           <label>Chế độ quay</label>
@@ -239,6 +245,7 @@ function renderShop() {
   document.getElementById('sLimit').value = shop.spin_limit_per_day;
   document.getElementById('sMode').value = shop.spin_mode || 'free';
   document.getElementById('sColor').value = shop.theme_color || '#f59e0b';
+  document.getElementById('sZalo').value = shop.zalo_link || '';
 }
 
 // -------- Phần quà --------
@@ -441,8 +448,11 @@ async function saveShop() {
       spin_limit_per_day: document.getElementById('sLimit').value,
       spin_mode: document.getElementById('sMode').value,
       theme_color: document.getElementById('sColor').value,
+      zalo_link: document.getElementById('sZalo').value,
     }),
   });
+  if (!r.ok) { document.getElementById('sMsg').textContent = '❌ ' + (r.data.error || 'Lưu thất bại.'); document.getElementById('sMsg').className = 'error'; return; }
+  document.getElementById('sMsg').className = 'success';
   if (r.ok) { shop = r.data; renderShop(); document.getElementById('sMsg').textContent = '✓ Đã lưu!'; setTimeout(() => document.getElementById('sMsg').textContent = '', 2000); }
 }
 async function changePw() {
