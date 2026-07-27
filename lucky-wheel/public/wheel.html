@@ -70,6 +70,7 @@
       <p class="muted">Mã giảm giá của bạn (bấm để sao chép):</p>
       <div class="coupon" id="couponCode" title="Bấm để sao chép"></div>
       <p class="muted" style="font-size:.85rem;">📸 Hãy chụp màn hình và đưa mã này cho nhân viên khi sử dụng.</p>
+      <p class="success" id="emailNote" style="display:none; font-size:.9rem;">📧 Mã giảm giá cũng đã được gửi vào email của bạn!</p>
     </div>
     <p class="muted" id="modalNote" style="margin-top:8px;"></p>
     <button class="btn full" onclick="closeModal()">Đóng</button>
@@ -208,6 +209,7 @@ function showResult(data) {
     codeEl.textContent = data.coupon_code;
     codeEl.dataset.code = data.coupon_code;
   } else cw.style.display = 'none';
+  document.getElementById('emailNote').style.display = data.emailed ? 'block' : 'none';
   document.getElementById('modalNote').textContent =
     data.spinsLeftToday > 0 ? ('Bạn còn ' + data.spinsLeftToday + ' lượt quay hôm nay.') : 'Hẹn gặp lại bạn ngày mai nhé!';
   document.getElementById('modalBg').classList.add('show');

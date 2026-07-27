@@ -84,7 +84,7 @@
       <h2 style="margin-top:0;">Lịch sử quay gần nhất</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT</th><th>Kết quả</th><th>Mã giảm giá</th></tr></thead>
+          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT</th><th>Kết quả</th><th>Mã giảm giá</th><th>Email</th></tr></thead>
           <tbody id="spinRows"></tbody>
         </table>
       </div>
@@ -245,8 +245,9 @@ async function loadSpins() {
   document.getElementById('spinRows').innerHTML = data.map(s => `
     <tr><td class="muted">${s.created_at}</td><td>${esc(s.customer_name)}</td><td>${esc(s.customer_phone)}</td>
     <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
-    <td>${esc(s.coupon_code) || '<span class="muted">—</span>'}</td></tr>`).join('')
-    || '<tr><td colspan="5" class="muted">Chưa có lượt quay nào.</td></tr>';
+    <td>${esc(s.coupon_code) || '<span class="muted">—</span>'}</td>
+    <td>${s.email_sent ? '<span class="badge on">📧 Đã gửi</span>' : '<span class="muted">—</span>'}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Chưa có lượt quay nào.</td></tr>';
 }
 
 // -------- Cài đặt --------

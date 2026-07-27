@@ -14,6 +14,7 @@
 
 - 🎯 Chủ quán tự đặt **tỷ lệ trúng (%)** và **số lượng** từng phần quà — hết quà tự ngừng trúng
 - 🎟️ Khách trúng nhận **mã giảm giá** ngay trên màn hình (bấm để sao chép)
+- 📧 **Tự động gửi mã giảm giá vào email khách** khi trúng thưởng (cấu hình SMTP/Gmail)
 - 🛡️ Kết quả quay xử lý **tại máy chủ** — không thể gian lận; giới hạn lượt quay/SĐT/ngày
 - 🔗 Mỗi quán có link riêng + nút tạo mã QR để in dán tại quán
 - 📋 Xuất data khách hàng ra **CSV (mở bằng Excel)** — hỗ trợ tiếng Việt
@@ -77,6 +78,25 @@ docker run -d -p 3000:3000 -v vongquay-data:/data \
   --name vongquay vongquay
 ```
 
+## 📧 Bật tính năng tự động gửi mã giảm giá qua email
+
+Khi khách trúng thưởng, hệ thống tự gửi email chứa mã giảm giá (thiết kế đẹp, tiếng Việt) vào hộp thư của khách. Không cấu hình thì app vẫn chạy bình thường, chỉ tắt phần email.
+
+**Dùng Gmail (miễn phí, dễ nhất):**
+1. Vào [Tài khoản Google → Bảo mật](https://myaccount.google.com/security), bật **Xác minh 2 bước**
+2. Vào [Mật khẩu ứng dụng](https://myaccount.google.com/apppasswords), tạo một **App Password** (16 ký tự)
+3. Đặt biến môi trường khi chạy app:
+
+```bash
+SMTP_HOST=smtp.gmail.com SMTP_PORT=465 \
+SMTP_USER=email-cua-ban@gmail.com SMTP_PASS=matkhauungdung16kytu \
+npm start
+```
+
+> Gmail miễn phí giới hạn ~500 email/ngày. Khi lượng khách lớn, dùng dịch vụ chuyên nghiệp như Brevo (miễn phí 300 email/ngày), SendGrid, Mailgun... — chỉ cần đổi `SMTP_HOST/PORT/USER/PASS` tương ứng.
+
+**Chạy thử không cần tài khoản email:** đặt `SMTP_JSON=1` — email không gửi thật mà in ra log để kiểm tra nội dung.
+
 ## Biến môi trường
 
 | Biến | Mặc định | Ý nghĩa |
@@ -86,6 +106,12 @@ docker run -d -p 3000:3000 -v vongquay-data:/data \
 | `ADMIN_EMAIL` | `admin@vongquay.local` | Email admin (chỉ áp dụng lần khởi tạo đầu) |
 | `ADMIN_PASSWORD` | `admin123` | Mật khẩu admin (chỉ áp dụng lần khởi tạo đầu) |
 | `SESSION_SECRET` | tự sinh | Khóa mã hóa phiên đăng nhập |
+| `SMTP_HOST` | _(trống = tắt email)_ | Máy chủ SMTP, VD `smtp.gmail.com` |
+| `SMTP_PORT` | `465` | Cổng SMTP (465 = SSL; dùng 587 thì thêm `SMTP_SECURE=false`) |
+| `SMTP_USER` | — | Tài khoản email gửi đi |
+| `SMTP_PASS` | — | Mật khẩu ứng dụng (App Password) |
+| `SMTP_FROM` | `"Vòng Quay May Mắn" <SMTP_USER>` | Tên người gửi hiển thị |
+| `SMTP_JSON` | — | Đặt `1` để thử nghiệm: email chỉ in ra log, không gửi thật |
 
 ## Lưu ý pháp lý khi kinh doanh
 

@@ -13,6 +13,7 @@ const { DatabaseSync } = require('node:sqlite');
 const express = require('express');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -85,6 +86,68 @@ if (!db.prepare(`SELECT id FROM users WHERE role='admin' LIMIT 1`).get()) {
   if (!process.env.ADMIN_PASSWORD) {
     console.log('>> CẢNH BÁO: đang dùng mật khẩu mặc định. Hãy đặt biến môi trường ADMIN_EMAIL, ADMIN_PASSWORD!');
   }
+}
+
+// Nâng cấp CSDL cũ: thêm cột trạng thái gửi email cho từng lượt quay
+try { db.exec(`ALTER TABLE spins ADD COLUMN email_sent INTEGER NOT NULL DEFAULT 0`); } catch (e) { /* cột đã tồn tại */ }
+
+// ------------------------------------------------------------------ Gửi email mã giảm giá
+// Cấu hình SMTP qua biến môi trường. Không cấu hình = tính năng email tắt, app vẫn chạy bình thường.
+// Gmail: SMTP_HOST=smtp.gmail.com SMTP_PORT=465 SMTP_USER=ban@gmail.com SMTP_PASS=<mật khẩu ứng dụng>
+let mailer = null;
+if (process.env.SMTP_JSON === '1') {
+  mailer = nodemailer.createTransport({ jsonTransport: true }); // chế độ thử nghiệm: chỉ in email ra log
+  console.log('>> Email: đang chạy chế độ THỬ NGHIỆM (SMTP_JSON=1), email chỉ in ra log.');
+} else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  mailer = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    secure: process.env.SMTP_SECURE !== 'false', // cổng 465 = true; cổng 587 đặt SMTP_SECURE=false
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  console.log(`>> Email: đã bật gửi mã giảm giá tự động qua ${process.env.SMTP_HOST}`);
+} else {
+  console.log('>> Email: chưa cấu hình SMTP nên tính năng gửi mã qua email đang TẮT. Xem README để bật.');
+}
+const MAIL_FROM = process.env.SMTP_FROM || (process.env.SMTP_USER ? `"Vòng Quay May Mắn" <${process.env.SMTP_USER}>` : 'vongquay@localhost');
+
+function couponEmailHtml({ shopName, customerName, prize, code, spinLimit }) {
+  return `
+  <div style="font-family:system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;background:#0f172a;color:#e2e8f0;border-radius:14px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:26px;text-align:center;">
+      <div style="font-size:2.4rem;">🎉</div>
+      <h1 style="margin:6px 0 0;color:#fff;font-size:1.4rem;">Chúc mừng ${esc(customerName)}!</h1>
+    </div>
+    <div style="padding:26px;text-align:center;">
+      <p style="margin:0 0 6px;color:#94a3b8;">Bạn vừa trúng thưởng tại</p>
+      <p style="margin:0;font-size:1.2rem;font-weight:700;color:#fbbf24;">${esc(shopName)}</p>
+      <p style="font-size:1.25rem;font-weight:800;margin:18px 0 6px;">${esc(prize)}</p>
+      <p style="margin:14px 0 6px;color:#94a3b8;">Mã giảm giá của bạn:</p>
+      <div style="display:inline-block;border:2px dashed #f59e0b;border-radius:10px;padding:12px 26px;font-size:1.5rem;letter-spacing:3px;font-weight:800;color:#fbbf24;background:#1e293b;">${esc(code)}</div>
+      <p style="color:#94a3b8;font-size:.9rem;margin-top:18px;">Hãy đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.<br>Mỗi số điện thoại được quay tối đa ${spinLimit} lượt/ngày — hẹn gặp lại bạn!</p>
+    </div>
+    <div style="background:#1e293b;padding:14px;text-align:center;color:#64748b;font-size:.78rem;">
+      Email được gửi tự động từ hệ thống Vòng Quay May Mắn của ${esc(shopName)}.
+    </div>
+  </div>`;
+}
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function sendCouponEmail(spinId, { to, shopName, customerName, prize, code, spinLimit }) {
+  if (!mailer || !to || !code) return;
+  mailer.sendMail({
+    from: MAIL_FROM,
+    to,
+    subject: `🎁 ${shopName}: Bạn trúng "${prize}" - Mã giảm giá ${code}`,
+    html: couponEmailHtml({ shopName, customerName, prize, code, spinLimit }),
+    text: `Chúc mừng ${customerName}! Bạn trúng "${prize}" tại ${shopName}. Mã giảm giá: ${code}. Đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.`,
+  }).then((info) => {
+    db.prepare(`UPDATE spins SET email_sent=1 WHERE id=?`).run(spinId);
+    if (process.env.SMTP_JSON === '1') console.log('>> [Email thử nghiệm]', info.message);
+  }).catch((e) => {
+    console.error(`>> Lỗi gửi email tới ${to}:`, e.message);
+  });
 }
 
 // ------------------------------------------------------------------ App setup
@@ -385,6 +448,8 @@ app.post('/api/public/spin/:slug', (req, res) => {
     cust = db.prepare(`SELECT * FROM customers WHERE shop_id=? AND phone=?`).get(sh.id, phone);
   } else if (email && email !== cust.email) {
     db.prepare(`UPDATE customers SET email=?, name=? WHERE id=?`).run(email, name, cust.id);
+    cust.email = email;
+    cust.name = name;
   }
 
   // Giới hạn lượt quay trong ngày
@@ -406,8 +471,17 @@ app.post('/api/public/spin/:slug', (req, res) => {
   if (won && won.quantity !== -1) {
     db.prepare(`UPDATE prizes SET remaining=remaining-1 WHERE id=?`).run(won.id);
   }
-  db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code) VALUES (?,?,?,?,?)`)
+  const spinInfo = db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code) VALUES (?,?,?,?,?)`)
     .run(sh.id, cust.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', won ? won.coupon_code : '');
+
+  // Trúng thưởng có mã → tự động gửi mã giảm giá vào email khách (không chặn phản hồi)
+  const willEmail = !!(mailer && won && won.coupon_code && cust.email);
+  if (willEmail) {
+    sendCouponEmail(Number(spinInfo.lastInsertRowid), {
+      to: cust.email, shopName: sh.name, customerName: cust.name,
+      prize: won.label, code: won.coupon_code, spinLimit: sh.spin_limit_per_day,
+    });
+  }
 
   // segmentIndex: vị trí ô trên vòng quay hiển thị phía khách (ô cuối = trượt)
   const segIdx = won ? prizes.findIndex(p => p.id === won.id) : prizes.length;
@@ -415,6 +489,7 @@ app.post('/api/public/spin/:slug', (req, res) => {
     win: !!won,
     prize: won ? won.label : 'Chúc bạn may mắn lần sau',
     coupon_code: won ? won.coupon_code : '',
+    emailed: willEmail,
     segmentIndex: segIdx,
     spinsLeftToday: sh.spin_limit_per_day - today - 1,
   });
