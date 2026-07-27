@@ -16,7 +16,7 @@
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
-  .wheel-page { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; text-align: center; position: relative; }
+  .wheel-page { max-width: 520px; margin: 0 auto; padding: 46px 16px 60px; text-align: center; position: relative; }
   .shop-name {
     font-size: 1.8rem; font-weight: 800; color: var(--accent2); margin-top: 10px;
     text-shadow: 0 0 18px rgba(251,191,36,.45);
@@ -57,6 +57,24 @@
     100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
   }
   #confettiCv { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
+  /* Ô góc phải: mời chủ quán khác đăng ký dùng app */
+  .app-badge {
+    position: fixed; top: 10px; right: 10px; z-index: 40;
+    background: rgba(15,23,42,.85); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 7px 13px;
+    font-size: .74rem; font-weight: 700; color: var(--accent2);
+    text-decoration: none; backdrop-filter: blur(4px);
+    box-shadow: 0 2px 10px rgba(0,0,0,.4);
+    animation: badgeGlow 2.5s ease-in-out infinite;
+  }
+  @keyframes badgeGlow {
+    0%, 100% { box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+    50% { box-shadow: 0 0 14px rgba(251,191,36,.55); }
+  }
+  .owner-invite {
+    display: block; margin-top: 14px; font-size: .8rem; color: var(--muted);
+  }
+  .owner-invite a { color: var(--accent2); font-weight: 700; }
   .float-emoji {
     position: absolute; font-size: 1.5rem; opacity: .5; pointer-events: none;
     animation: floatUp 7s linear infinite;
@@ -92,6 +110,7 @@
 </head>
 <body>
 <canvas id="confettiCv"></canvas>
+<a class="app-badge" href="/" target="_blank" rel="noopener">🎡 Đăng ký dùng app cho quán bạn</a>
 <div class="wheel-page">
   <div class="logo" style="font-size:.95rem;">🎡 Vòng Quay <span>May Mắn</span></div>
   <div class="shop-name" id="shopName">Đang tải...</div>
@@ -162,6 +181,7 @@
         <button class="btn ghost" onclick="closeModal()">Đóng (đã chụp màn hình 📸)</button>
       </div>
       <p class="muted" style="font-size:.82rem; margin-top:10px;">Đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.<br><b>Lưu ý: mã chỉ sử dụng được 1 lần.</b></p>
+      <span class="owner-invite">Bạn cũng có quán/shop? <a href="/" target="_blank" rel="noopener">Tạo vòng quay MIỄN PHÍ cho quán của bạn →</a></span>
     </div>
 
   </div>
