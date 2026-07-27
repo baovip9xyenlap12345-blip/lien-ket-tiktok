@@ -3,9 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vòng Quay May Mắn - Nền tảng khuyến mãi tăng doanh số cho cửa hàng</title>
-<meta name="description" content="Tạo vòng quay may mắn tặng mã giảm giá cho khách hàng. Thu thập data khách hàng, tăng doanh số, chăm sóc khách hàng sau bán.">
+<title>Vòng Quay May Mắn - Biến khách vãng lai thành khách quen, tăng doanh số cho quán & shop</title>
+<meta name="description" content="Tạo vòng quay trúng thưởng cho quán trong 2 phút. 100% khách trúng thưởng để lại SĐT/email. Kéo khách mua lại bằng voucher + nhóm Zalo. Đăng ký miễn phí.">
 <link rel="stylesheet" href="/style.css">
+<style>
+  .pain-list { max-width: 680px; margin: 0 auto; text-align: left; }
+  .pain-item { display: flex; gap: 12px; margin: 14px 0; align-items: flex-start; font-size: 1.02rem; }
+  .pain-item span.x { flex: 0 0 auto; font-size: 1.2rem; }
+  .big-num { font-size: 2rem; font-weight: 800; color: var(--accent2); }
+  .step-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; margin-top: 20px; }
+  .step-card { background: var(--card2); border-radius: var(--radius); padding: 18px; text-align: center; }
+  .step-card .n {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #111;
+    font-weight: 800; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;
+  }
+  .roi-table td { font-size: .98rem; }
+  .faq-q { font-weight: 700; margin-top: 16px; }
+  .faq-a { color: var(--muted); margin-top: 4px; }
+  .cta-mid { text-align: center; margin: 30px 0; }
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -17,51 +33,138 @@
   </div>
 </header>
 
+<!-- ===== HEADLINE + SUB ===== -->
 <div class="hero">
-  <h1>Tăng doanh số với <span class="accent">Vòng Quay May Mắn</span><br>tặng mã giảm giá cho khách hàng</h1>
-  <p class="muted" style="margin-top:14px; max-width:640px; margin-left:auto; margin-right:auto;">
-    Chủ quán cà phê, nhà hàng, shop thời trang... tạo vòng quay trúng thưởng riêng trong 2 phút.
-    Khách nhập tên, số điện thoại, email để quay — bạn vừa tặng ưu đãi, vừa có data khách hàng để chăm sóc lại.
+  <h1>Khách đến một lần rồi <span class="accent">biến mất</span>?<br>
+  Biến mỗi lượt ghé quán thành <span class="accent">số điện thoại + đơn hàng tiếp theo</span></h1>
+  <p class="muted" style="margin-top:14px; max-width:660px; margin-left:auto; margin-right:auto; font-size:1.05rem;">
+    Vòng Quay May Mắn giúp quán cà phê, nhà hàng, shop online tạo vòng quay trúng thưởng riêng
+    trong <b style="color:var(--accent2);">2 phút</b> — khách quét QR quay ngay, muốn nhận quà phải để lại
+    <b style="color:var(--accent2);">tên + SĐT/email</b>, rồi được mời vào <b style="color:var(--accent2);">nhóm Zalo</b> của bạn.
+    Không cần biết công nghệ. Không cần cài app.
   </p>
   <div style="margin-top:26px;">
-    <a class="btn" href="/register.html" style="font-size:1.1rem;">🚀 Tạo vòng quay miễn phí</a>
+    <a class="btn" href="/register.html" style="font-size:1.15rem;">🚀 Tạo vòng quay MIỄN PHÍ ngay</a>
+    <p class="muted" style="margin-top:10px; font-size:.85rem;">Đăng ký 2 phút · Không cần thẻ · Có sẵn bộ quà mẫu để chạy luôn</p>
   </div>
 </div>
 
 <div class="container">
-  <div class="features">
-    <div class="card">
-      <h2>🎯 Tự đặt tỷ lệ trúng</h2>
-      <p class="muted">Cài đặt từng phần quà: giảm 10%, giảm 20%, quà tặng... kèm tỷ lệ trúng (%) và số lượng quà. Hết quà tự động ngừng trúng.</p>
-    </div>
-    <div class="card">
-      <h2>🎟️ Mã giảm giá tự động</h2>
-      <p class="muted">Khách trúng thưởng nhận ngay mã giảm giá trên màn hình. Bạn đối chiếu mã khi khách đến quán sử dụng.</p>
-    </div>
-    <div class="card">
-      <h2>📋 Thu thập data khách hàng</h2>
-      <p class="muted">Mỗi lượt quay lưu lại họ tên, số điện thoại, email của khách. Xuất file Excel/CSV để chạy chương trình chăm sóc, remarketing.</p>
-    </div>
-    <div class="card">
-      <h2>🔗 Chia sẻ dễ dàng</h2>
-      <p class="muted">Mỗi cửa hàng có 1 đường link riêng (VD: <code>/w/ca-phe-abc</code>). In mã QR dán tại quán hoặc gửi qua Zalo, Facebook.</p>
-    </div>
-    <div class="card">
-      <h2>📱 Chạy trên mọi thiết bị</h2>
-      <p class="muted">Khách quay trực tiếp trên điện thoại, không cần cài app. Giao diện đẹp, quay mượt.</p>
-    </div>
-    <div class="card">
-      <h2>🛡️ Chống gian lận</h2>
-      <p class="muted">Giới hạn lượt quay mỗi ngày theo số điện thoại. Kết quả quay xử lý tại máy chủ, không thể can thiệp.</p>
+
+  <!-- ===== KHOÉT ĐAU ===== -->
+  <div class="card">
+    <h2 style="text-align:center;">Anh chị có thấy quán mình trong 3 câu này không?</h2>
+    <div class="pain-list">
+      <div class="pain-item"><span class="x">😓</span><div><b>Đốt tiền chạy quảng cáo, khách đến 1 lần rồi thôi.</b> Mỗi khách mới từ quảng cáo tốn 30.000–200.000đ, nhưng họ ăn xong, mua xong là quên luôn quán mình.</div></div>
+      <div class="pain-item"><span class="x">😓</span><div><b>Không có SĐT của khách</b> — nên khi ra món mới, có khuyến mãi, muốn mời khách cũ quay lại cũng <b>không có cách nào liên lạc</b>. Tài sản quý nhất của quán đang rơi vãi mỗi ngày.</div></div>
+      <div class="pain-item"><span class="x">😓</span><div><b>Giảm giá thẳng thì lỗ mà chẳng ai nhớ.</b> Treo biển "giảm 10%" ai cũng lướt qua. Nhưng cũng ưu đãi đó đặt vào vòng quay trúng thưởng — khách xếp hàng chơi, chụp màn hình khoe, và quay lại dùng cho được cái mã.</div></div>
     </div>
   </div>
 
-  <div class="card" style="text-align:center; margin-top:26px;">
-    <h2>Bắt đầu ngay hôm nay</h2>
-    <p class="muted">Đăng ký tài khoản cửa hàng, cài đặt phần quà và gửi link cho khách — tất cả trong vài phút.</p>
+  <!-- ===== LỢI ÍCH CHÍNH (4 lợi ích chủ quán nhận được) ===== -->
+  <h2 style="text-align:center; margin-top:34px; font-size:1.5rem;">Một vòng quay — <span style="color:var(--accent2);">4 thứ quán bạn nhận về</span></h2>
+  <div class="features">
+    <div class="card">
+      <div class="big-num">100%</div>
+      <h2>📋 Khách trúng thưởng để lại thông tin</h2>
+      <p class="muted">App <b>khóa mã giảm giá cho đến khi khách nhập tên + SĐT hoặc email</b> — muốn nhận quà là phải để lại thông tin, không nhập không có mã. Mỗi ngày chạy là mỗi ngày danh sách khách hàng của bạn dài thêm, xuất Excel bất cứ lúc nào.</p>
+    </div>
+    <div class="card">
+      <div class="big-num">🔁</div>
+      <h2>Kéo khách mua lại — tự động</h2>
+      <p class="muted">Mã trúng thưởng chính là <b>lý do để khách quay lại</b>: trúng "Giảm 20% đơn sau" thì phải mua lần nữa mới dùng được. Khách mua thêm đơn, nhập mã vận đơn là được <b>quay tiếp</b> — mua càng nhiều, quay càng nhiều, nghiện lúc nào không hay.</p>
+    </div>
+    <div class="card">
+      <div class="big-num">💬</div>
+      <h2>Nhóm Zalo đông thành viên</h2>
+      <p class="muted">Sau khi quay, khách được mời <b>vào nhóm Zalo riêng của quán</b> để nhận thêm quà. Nhóm Zalo là kênh chăm sóc <b>0 đồng</b>: đăng món mới, flash sale, mời quay tiếp — chạm tới khách cũ mỗi ngày mà không tốn một xu quảng cáo.</p>
+    </div>
+    <div class="card">
+      <div class="big-num">💰</div>
+      <h2>Tiết kiệm cả trăm triệu tiền quảng cáo</h2>
+      <p class="muted">Thử tính: kéo lại 2.000 khách cũ bằng quảng cáo (50.000đ/khách) tốn <b>100 triệu đồng</b>. Cũng 2.000 khách đó đã nằm trong data + nhóm Zalo của bạn? <b>Một tin nhắn, 0 đồng.</b> Giữ khách cũ luôn rẻ hơn nhiều lần tìm khách mới — ai bán hàng lâu năm đều biết.</p>
+    </div>
+  </div>
+
+  <div class="cta-mid">
+    <a class="btn" href="/register.html" style="font-size:1.05rem;">🎯 Tôi muốn có data khách hàng — Tạo vòng quay ngay</a>
+  </div>
+
+  <!-- ===== CÁCH HOẠT ĐỘNG 3 BƯỚC ===== -->
+  <div class="card">
+    <h2 style="text-align:center; margin-top:0;">Chạy được ngay trong 3 bước — không cần biết công nghệ</h2>
+    <div class="step-row">
+      <div class="step-card"><div class="n">1</div><b>Đăng ký & cài quà (2 phút)</b><p class="muted" style="margin-top:6px;">Đặt tên quán, chọn màu thương hiệu, cài phần quà + tỷ lệ trúng từng món. Có sẵn bộ quà mẫu, sửa là chạy.</p></div>
+      <div class="step-card"><div class="n">2</div><b>In mã QR dán tại quán</b><p class="muted" style="margin-top:6px;">Mỗi quán có link + mã QR riêng. Dán ở quầy, trên bàn, trong túi hàng, gửi Zalo/Facebook — khách quét là quay, không cần cài gì.</p></div>
+      <div class="step-card"><div class="n">3</div><b>Nhận data & xác nhận mã</b><p class="muted" style="margin-top:6px;">Khách quay → để lại SĐT → nhận mã dùng 1 lần. Khách đến mua, nhân viên nhập mã xác nhận là xong. Data xuất Excel chăm sóc lại.</p></div>
+    </div>
+  </div>
+
+  <!-- ===== TÍNH NĂNG (viết theo lợi ích) ===== -->
+  <div class="features">
+    <div class="card">
+      <h2>🎯 Toàn quyền kiểm soát chi phí quà</h2>
+      <p class="muted">Tự đặt tỷ lệ trúng (%) và số lượng từng phần quà — VD chỉ có 50 phần, hết là tự ngừng trúng. Không bao giờ "vỡ quỹ quà". Hệ thống chặn đặt tổng quá 100%.</p>
+    </div>
+    <div class="card">
+      <h2>🎫 Mỗi mã chỉ dùng được 1 lần</h2>
+      <p class="muted">Mỗi khách trúng nhận mã riêng (VD GIAM10-X7K2P). Nhân viên xác nhận tại quầy, dùng rồi là khóa vĩnh viễn — không ai xài chùa, không ai dùng lại.</p>
+    </div>
+    <div class="card">
+      <h2>🛡️ Chống gian lận nhiều lớp</h2>
+      <p class="muted">Kết quả quay xử lý tại máy chủ — không thể can thiệp. Giới hạn lượt/thiết bị/ngày, mỗi SĐT chỉ nhận đủ số mã quy định. Mở ẩn danh quay lại cũng không ăn gian được.</p>
+    </div>
+    <div class="card">
+      <h2>📦 Quay theo mã đơn hàng (cho shop online)</h2>
+      <p class="muted">Dán danh sách mã đơn/vận đơn, app tự sinh mã quay cho từng đơn — khách MUA HÀNG mới được quay. Biến mỗi kiện hàng thành một tấm vé số khiến khách mong mở gói hàng của bạn.</p>
+    </div>
+    <div class="card">
+      <h2>📧 Gửi mã tự động qua email</h2>
+      <p class="muted">Khách trúng nhận email chúc mừng kèm mã + nút vào nhóm Zalo — chuyên nghiệp như các chuỗi lớn, mà bạn không phải làm gì cả.</p>
+    </div>
+    <div class="card">
+      <h2>✨ Vòng quay đẹp, khách thích chơi</h2>
+      <p class="muted">Đèn nhấp nháy, âm thanh, pháo giấy khi trúng, màu theo thương hiệu quán. Trải nghiệm vui đến mức khách tự rủ bạn bè quét thử — quán được quảng cáo miễn phí.</p>
+    </div>
+  </div>
+
+  <!-- ===== SO SÁNH ROI ===== -->
+  <div class="card">
+    <h2 style="text-align:center; margin-top:0;">So sánh cho dễ quyết định</h2>
+    <div class="table-wrap">
+      <table class="roi-table">
+        <thead><tr><th></th><th>❌ Cách cũ</th><th>✅ Với Vòng Quay May Mắn</th></tr></thead>
+        <tbody>
+          <tr><td><b>Kéo 1 khách cũ quay lại</b></td><td>30.000–200.000đ tiền quảng cáo</td><td>1 tin nhắn Zalo — 0đ</td></tr>
+          <tr><td><b>Data khách hàng</b></td><td>Không có gì trong tay</td><td>Tên + SĐT/email từng khách, xuất Excel</td></tr>
+          <tr><td><b>Khuyến mãi</b></td><td>Treo biển giảm giá, ai cũng lướt</td><td>Trò chơi trúng thưởng — khách tranh nhau quét</td></tr>
+          <tr><td><b>Kiểm soát chi phí quà</b></td><td>Khó — phát tràn lan, dùng lại nhiều lần</td><td>Tỷ lệ + số lượng tự đặt, mã dùng đúng 1 lần</td></tr>
+          <tr><td><b>Chi phí bắt đầu</b></td><td>Thuê người làm app: 30–100 triệu</td><td><b style="color:var(--accent2);">Đăng ký miễn phí, chạy sau 2 phút</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== XỬ LÝ NGHI NGỜ ===== -->
+  <div class="card">
+    <h2 style="margin-top:0;">Câu hỏi chủ quán hay hỏi trước khi dùng</h2>
+    <div class="faq-q">❓ "Tặng quà vậy có lỗ không?"</div>
+    <div class="faq-a">Bạn toàn quyền quyết định: quà gì, tỷ lệ bao nhiêu %, tối đa bao nhiêu phần. Đặt "Giảm 10% cho đơn từ 200k" thì mỗi mã trúng thực chất là một đơn hàng 200k bạn sắp có. Quà là mồi câu — đơn hàng là cá.</div>
+    <div class="faq-q">❓ "Tôi không rành công nghệ, có làm được không?"</div>
+    <div class="faq-a">Đăng ký xong là có sẵn bộ quà mẫu chạy được luôn. Trang <a href="/huong-dan.html">Hướng dẫn sử dụng</a> viết từng bước bằng tiếng Việt dễ hiểu, kèm chiến lược cài quà tối ưu.</div>
+    <div class="faq-q">❓ "Khách gian lận quay nhiều lần thì sao?"</div>
+    <div class="faq-a">Máy chủ giới hạn lượt quay mỗi ngày, mỗi SĐT chỉ nhận đủ số mã quy định, mỗi mã dùng đúng 1 lần có nhân viên xác nhận. Kết quả quay tính trên máy chủ — không cách nào can thiệp.</div>
+    <div class="faq-q">❓ "Mất phí không?"</div>
+    <div class="faq-a">Đăng ký và tạo vòng quay miễn phí. Cứ chạy thử cho quán mình trước — thấy data khách đổ về rồi hãy tính tiếp.</div>
+  </div>
+
+  <!-- ===== CTA CUỐI ===== -->
+  <div class="card" style="text-align:center; margin-top:26px; border-color:var(--accent);">
+    <h2 style="margin-top:0;">Mỗi ngày chưa chạy là một ngày data khách rơi vãi</h2>
+    <p class="muted">Hôm nay quán bạn có bao nhiêu khách ghé? Bấy nhiêu SĐT lẽ ra đã nằm trong tay bạn tối nay.<br>Tạo vòng quay mất 2 phút — làm ngay bây giờ, tối nay đã có những khách hàng đầu tiên trong danh sách.</p>
     <div class="row" style="margin-top:16px; justify-content:center;">
-      <a class="btn" href="/register.html">Đăng ký cửa hàng</a>
-      <a class="btn ghost" href="/huong-dan.html">📖 Xem hướng dẫn sử dụng</a>
+      <a class="btn" href="/register.html" style="font-size:1.1rem;">🚀 Tạo vòng quay MIỄN PHÍ cho quán tôi</a>
+      <a class="btn ghost" href="/huong-dan.html">📖 Xem hướng dẫn trước</a>
     </div>
   </div>
 
