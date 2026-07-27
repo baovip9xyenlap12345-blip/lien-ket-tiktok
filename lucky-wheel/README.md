@@ -26,7 +26,8 @@
 
 ## Tính năng chính
 
-- 🎯 Chủ quán tự đặt **tỷ lệ trúng (%)** và **số lượng** từng phần quà — hết quà tự ngừng trúng
+- 🎯 Chủ quán tự đặt **tỷ lệ trúng (%)** và **số lượng** từng phần quà (VD: 10% trúng giảm giá, 20% trúng quà X, 5% trúng quà đặc biệt) — hệ thống chặn tổng vượt 100%, phần còn lại là tỷ lệ không trúng; hết quà tự ngừng trúng
+- ✨ Trang vòng quay **sống động**: nền chuyển màu động, dàn đèn nhấp nháy quanh vòng, âm thanh tách-tách khi quay, pháo giấy + nhạc mừng khi trúng — mỗi quán tự chọn **màu chủ đạo** theo thương hiệu
 - 🎟️ Mã giảm giá chỉ hiện **sau khi khách nhập thông tin** — đảm bảo quán luôn thu được data
 - 🎫 **Mỗi khách trúng nhận mã RIÊNG** (VD: `GIAM10-X7K2P`) và **mã chỉ dùng được 1 lần** — nhân viên xác nhận tại tab "Xác nhận mã", dùng rồi là khóa vĩnh viễn
 - 🖼️ Mã hiển thị dạng **thẻ đẹp + tải về thành ảnh PNG** để lưu/chia sẻ

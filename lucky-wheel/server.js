@@ -142,6 +142,9 @@ try { db.exec(`ALTER TABLE spins ADD COLUMN redeemed_at TEXT DEFAULT ''`); } cat
 // Chế độ quay: 'free' = ai vào cũng quay được (giới hạn lượt/ngày), 'order' = phải có mã quay theo đơn hàng
 try { db.exec(`ALTER TABLE shops ADD COLUMN spin_mode TEXT NOT NULL DEFAULT 'free'`); } catch (e) { /* cột đã tồn tại */ }
 
+// Màu chủ đạo trang vòng quay — mỗi quán tự chọn cho hợp thương hiệu
+try { db.exec(`ALTER TABLE shops ADD COLUMN theme_color TEXT NOT NULL DEFAULT '#f59e0b'`); } catch (e) { /* cột đã tồn tại */ }
+
 // Mã đơn hàng của shop: mỗi mã đơn tương ứng đúng 1 mã quay thưởng (app tự sinh)
 db.exec(`
   CREATE TABLE IF NOT EXISTS order_codes (
@@ -371,14 +374,16 @@ app.post('/api/change-password', requireAuth(), (req, res) => {
 app.get('/api/shop', requireAuth('owner'), (req, res) => res.json(req.shop));
 
 app.put('/api/shop', requireAuth('owner'), (req, res) => {
-  const { name, description, spin_limit_per_day, spin_mode } = req.body || {};
+  const { name, description, spin_limit_per_day, spin_mode, theme_color } = req.body || {};
   const mode = ['free', 'order'].includes(spin_mode) ? spin_mode : req.shop.spin_mode;
-  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, spin_mode=? WHERE id=?`)
+  const color = /^#[0-9a-fA-F]{6}$/.test(String(theme_color || '')) ? theme_color : (req.shop.theme_color || '#f59e0b');
+  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, spin_mode=?, theme_color=? WHERE id=?`)
     .run(
       String(name || req.shop.name).trim(),
       String(description ?? req.shop.description),
       Math.max(1, parseInt(spin_limit_per_day, 10) || 1),
       mode,
+      color,
       req.shop.id
     );
   res.json(q.shopById.get(req.shop.id));
@@ -386,10 +391,20 @@ app.put('/api/shop', requireAuth('owner'), (req, res) => {
 
 app.get('/api/prizes', requireAuth('owner'), (req, res) => res.json(q.prizesByShop.all(req.shop.id)));
 
+// Tổng tỷ lệ trúng của các phần quà đang bật không được vượt 100%
+// (phần còn thiếu tới 100% chính là tỷ lệ "không trúng")
+function totalOtherRates(shopId, excludeId) {
+  return db.prepare(`SELECT COALESCE(SUM(win_rate),0) s FROM prizes WHERE shop_id=? AND active=1 AND id<>?`)
+    .get(shopId, excludeId || 0).s;
+}
+
 app.post('/api/prizes', requireAuth('owner'), (req, res) => {
   const { label, coupon_code, win_rate, quantity, color } = req.body || {};
   if (!label) return res.status(400).json({ error: 'Vui lòng nhập tên phần quà.' });
   const rate = Math.min(100, Math.max(0, parseFloat(win_rate) || 0));
+  const others = totalOtherRates(req.shop.id, 0);
+  if (others + rate > 100.0001)
+    return res.status(400).json({ error: `Tổng tỷ lệ trúng sẽ là ${Math.round((others + rate) * 10) / 10}% — vượt quá 100%. Hãy giảm tỷ lệ (các phần quà hiện có đã chiếm ${Math.round(others * 10) / 10}%).` });
   const qty = parseInt(quantity, 10);
   const qv = Number.isFinite(qty) && qty >= 0 ? qty : -1;
   db.prepare(`INSERT INTO prizes (shop_id,label,coupon_code,win_rate,quantity,remaining,color) VALUES (?,?,?,?,?,?,?)`)
@@ -402,6 +417,12 @@ app.put('/api/prizes/:id', requireAuth('owner'), (req, res) => {
   if (!p) return res.status(404).json({ error: 'Không tìm thấy phần quà.' });
   const { label, coupon_code, win_rate, quantity, color, active } = req.body || {};
   const rate = Math.min(100, Math.max(0, parseFloat(win_rate ?? p.win_rate) || 0));
+  const willBeActive = active === undefined ? p.active : (active ? 1 : 0);
+  if (willBeActive) {
+    const others = totalOtherRates(req.shop.id, p.id);
+    if (others + rate > 100.0001)
+      return res.status(400).json({ error: `Tổng tỷ lệ trúng sẽ là ${Math.round((others + rate) * 10) / 10}% — vượt quá 100%. Hãy giảm tỷ lệ (các phần quà khác đã chiếm ${Math.round(others * 10) / 10}%).` });
+  }
   let qv = p.quantity, remaining = p.remaining;
   if (quantity !== undefined) {
     const qty = parseInt(quantity, 10);
@@ -603,6 +624,7 @@ app.get('/api/public/shop/:slug', (req, res) => {
     name: sh.name, description: sh.description,
     spin_limit_per_day: sh.spin_limit_per_day,
     spin_mode: sh.spin_mode || 'free',
+    theme_color: sh.theme_color || '#f59e0b',
     segments: prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]),
   });
 });

@@ -99,8 +99,9 @@
   <div id="tab-prizes" class="tab-page" style="display:none;">
     <div class="card">
       <h2 style="margin-top:0;">Danh sách phần quà</h2>
-      <p class="muted">Tổng tỷ lệ trúng của các phần quà: <b id="totalRate">0</b>%.
-        Phần trăm còn lại là tỷ lệ khách <i>không trúng</i>. Quà hết số lượng sẽ tự động ngừng trúng.</p>
+      <p class="muted">Tổng tỷ lệ trúng: <b id="totalRate">0</b>% — Tỷ lệ không trúng: <b id="loseRate">100</b>%.
+        Hệ thống chặn không cho tổng vượt 100%. Quà hết số lượng sẽ tự động ngừng trúng.
+        <br>VD: Giảm 10% đặt <b>20%</b>, Giảm 20% đặt <b>10%</b>, Quà đặc biệt đặt <b>5%</b> → khách không trúng <b>65%</b>.</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Phần quà</th><th>Tiền tố mã</th><th>Tỷ lệ trúng</th><th>Còn lại / Tổng</th><th>Trạng thái</th><th></th></tr></thead>
@@ -173,6 +174,10 @@
           <label>Số lượt quay tối đa / khách / ngày</label>
           <input id="sLimit" type="number" min="1" value="1">
         </div>
+        <div>
+          <label>Màu chủ đạo vòng quay</label>
+          <input id="sColor" type="color" value="#f59e0b" style="height:46px; padding:4px; width:90px;">
+        </div>
       </div>
       <p class="muted" style="font-size:.85rem; margin-top:8px;">
         <b>Quay tự do:</b> phù hợp quán cà phê, sự kiện — khách quét QR là quay ngay.
@@ -229,6 +234,7 @@ function renderShop() {
   document.getElementById('sDesc').value = shop.description || '';
   document.getElementById('sLimit').value = shop.spin_limit_per_day;
   document.getElementById('sMode').value = shop.spin_mode || 'free';
+  document.getElementById('sColor').value = shop.theme_color || '#f59e0b';
 }
 
 // -------- Phần quà --------
@@ -257,6 +263,7 @@ async function loadPrizes() {
   const totalEl = document.getElementById('totalRate');
   totalEl.textContent = Math.round(total * 10) / 10;
   totalEl.style.color = total > 100 ? '#ef4444' : '#86efac';
+  document.getElementById('loseRate').textContent = Math.max(0, Math.round((100 - total) * 10) / 10);
 }
 
 async function addPrize() {
@@ -280,7 +287,8 @@ async function addPrize() {
 }
 
 async function togglePrize(id, active) {
-  await api('/api/prizes/' + id, { method: 'PUT', body: JSON.stringify({ active }) });
+  const r = await api('/api/prizes/' + id, { method: 'PUT', body: JSON.stringify({ active }) });
+  if (!r.ok) alert(r.data.error);
   loadPrizes();
 }
 async function editPrize(id) {
@@ -290,10 +298,11 @@ async function editPrize(id) {
   const code = prompt('Mã giảm giá:', p.coupon_code); if (code === null) return;
   const rate = prompt('Tỷ lệ trúng (%):', p.win_rate); if (rate === null) return;
   const qty = prompt('Số lượng quà (-1 = không giới hạn):', p.quantity); if (qty === null) return;
-  await api('/api/prizes/' + id, {
+  const r = await api('/api/prizes/' + id, {
     method: 'PUT',
     body: JSON.stringify({ label, coupon_code: code, win_rate: rate, quantity: qty }),
   });
+  if (!r.ok) alert(r.data.error);
   loadPrizes();
 }
 async function delPrize(id) {
@@ -412,6 +421,7 @@ async function saveShop() {
       description: document.getElementById('sDesc').value,
       spin_limit_per_day: document.getElementById('sLimit').value,
       spin_mode: document.getElementById('sMode').value,
+      theme_color: document.getElementById('sColor').value,
     }),
   });
   if (r.ok) { shop = r.data; renderShop(); document.getElementById('sMsg').textContent = '✓ Đã lưu!'; setTimeout(() => document.getElementById('sMsg').textContent = '', 2000); }

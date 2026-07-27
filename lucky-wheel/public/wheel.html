@@ -6,16 +6,33 @@
 <title>Vòng Quay May Mắn</title>
 <link rel="stylesheet" href="/style.css">
 <style>
-  body { background: radial-gradient(circle at 50% 0%, #1e3a5f, #0f172a 60%); }
-  .wheel-page { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; text-align: center; }
-  .shop-name { font-size: 1.7rem; font-weight: 800; color: var(--accent2); margin-top: 10px; }
+  body {
+    background: linear-gradient(-45deg, #0f172a, #312e81, #1e3a5f, #4c1d95, #0f172a);
+    background-size: 400% 400%;
+    animation: bgmove 18s ease infinite;
+  }
+  @keyframes bgmove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .wheel-page { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; text-align: center; position: relative; }
+  .shop-name {
+    font-size: 1.8rem; font-weight: 800; color: var(--accent2); margin-top: 10px;
+    text-shadow: 0 0 18px rgba(251,191,36,.45);
+    animation: glowText 2.4s ease-in-out infinite;
+  }
+  @keyframes glowText {
+    0%, 100% { text-shadow: 0 0 10px rgba(251,191,36,.3); }
+    50% { text-shadow: 0 0 26px rgba(251,191,36,.75); }
+  }
   .wheel-wrap { position: relative; width: min(92vw, 420px); margin: 22px auto; }
-  #wheel { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 24px rgba(0,0,0,.5)); }
+  #wheel { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 30px rgba(0,0,0,.55)); }
   .pointer {
     position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent;
     border-top: 30px solid var(--accent); z-index: 5;
-    filter: drop-shadow(0 3px 4px rgba(0,0,0,.5));
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,.6));
   }
   .hub {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
@@ -23,8 +40,32 @@
     background: radial-gradient(circle at 35% 35%, #fde68a, var(--accent));
     display: flex; align-items: center; justify-content: center;
     font-size: 1.6rem; z-index: 4; border: 3px solid #fff3;
+    animation: hubPulse 1.8s ease-in-out infinite;
   }
-  #spinBtn { font-size: 1.25rem; padding: 16px 46px; border-radius: 999px; }
+  @keyframes hubPulse {
+    0%, 100% { transform: translate(-50%,-50%) scale(1); }
+    50% { transform: translate(-50%,-50%) scale(1.08); }
+  }
+  #spinBtn {
+    font-size: 1.3rem; padding: 17px 50px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    animation: btnPulse 1.6s infinite;
+  }
+  @keyframes btnPulse {
+    0% { box-shadow: 0 0 0 0 rgba(251,191,36,.55); }
+    70% { box-shadow: 0 0 0 24px rgba(251,191,36,0); }
+    100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+  }
+  #confettiCv { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
+  .float-emoji {
+    position: absolute; font-size: 1.5rem; opacity: .5; pointer-events: none;
+    animation: floatUp 7s linear infinite;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(0) rotate(0); opacity: 0; }
+    12% { opacity: .55; }
+    100% { transform: translateY(-105vh) rotate(360deg); opacity: 0; }
+  }
   .claim-form { text-align: left; }
   .coupon-card {
     background: linear-gradient(135deg, #1e293b, #0f172a);
@@ -43,6 +84,7 @@
 </style>
 </head>
 <body>
+<canvas id="confettiCv"></canvas>
 <div class="wheel-page">
   <div class="logo" style="font-size:.95rem;">🎡 Vòng Quay <span>May Mắn</span></div>
   <div class="shop-name" id="shopName">Đang tải...</div>
@@ -126,8 +168,29 @@ let claimToken = '';
 let shopName = '';
 let spinMode = 'free';
 let coupon = null; // {shopName, prize, code, customerName}
+let THEME = { accent: '#f59e0b', accent2: '#fbbf24' };
 
-function drawWheel(angle) {
+// ---- Âm thanh: tiếng tách khi quay + nhạc mừng khi trúng ----
+let actx = null;
+function beep(freq, dur, type, gain) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    g.gain.value = gain || 0.04;
+    o.connect(g); g.connect(actx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (dur || 0.05));
+    o.stop(actx.currentTime + (dur || 0.05));
+  } catch (e) { /* trình duyệt chặn âm thanh thì bỏ qua */ }
+}
+function winFanfare() {
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'triangle', 0.07), i * 130));
+}
+
+function drawWheel(angle, t) {
   const n = segments.length;
   if (!n) return;
   const arc = (2 * Math.PI) / n;
@@ -139,7 +202,7 @@ function drawWheel(angle) {
     const start = i * arc - Math.PI / 2 - arc / 2;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.arc(0, 0, R - 6, start, start + arc);
+    ctx.arc(0, 0, R - 14, start, start + arc);
     ctx.closePath();
     ctx.fillStyle = segments[i].color || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
     ctx.fill();
@@ -155,15 +218,106 @@ function drawWheel(angle) {
     ctx.shadowBlur = 4;
     let label = segments[i].label;
     if (label.length > 18) label = label.slice(0, 17) + '…';
-    ctx.fillText(label, R - 26, 8);
+    ctx.fillText(label, R - 34, 8);
     ctx.restore();
   }
   ctx.restore();
+  // viền ngoài theo màu quán
   ctx.beginPath();
-  ctx.arc(R, R, R - 4, 0, 2 * Math.PI);
-  ctx.strokeStyle = '#fbbf24';
-  ctx.lineWidth = 7;
+  ctx.arc(R, R, R - 10, 0, 2 * Math.PI);
+  ctx.strokeStyle = THEME.accent2;
+  ctx.lineWidth = 9;
   ctx.stroke();
+  // dàn đèn nhấp nháy quanh vòng — quay nhanh thì chớp nhanh
+  const BULBS = 18;
+  const speed = spinning ? 120 : 420;
+  for (let i = 0; i < BULBS; i++) {
+    const a = (i / BULBS) * 2 * Math.PI;
+    const on = (Math.floor((t || 0) / speed) + i) % 2 === 0;
+    ctx.beginPath();
+    ctx.arc(R + Math.cos(a) * (R - 10), R + Math.sin(a) * (R - 10), 6.5, 0, 2 * Math.PI);
+    ctx.fillStyle = on ? '#fffbeb' : 'rgba(0,0,0,.35)';
+    ctx.shadowColor = on ? THEME.accent2 : 'transparent';
+    ctx.shadowBlur = on ? 14 : 0;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+// Vòng lặp vẽ liên tục: đèn luôn nhấp nháy kể cả khi chưa quay
+let lastTickSeg = -1;
+function renderLoop(t) {
+  drawWheel(currentAngle, t);
+  // tiếng "tách" mỗi khi một ô lướt qua kim
+  if (spinning && segments.length) {
+    const arc = (2 * Math.PI) / segments.length;
+    const seg = Math.round(-currentAngle / arc);
+    if (seg !== lastTickSeg) { lastTickSeg = seg; beep(880, 0.03, 'square', 0.025); }
+  }
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+// ---- Pháo giấy khi trúng thưởng ----
+function confetti() {
+  const cv = document.getElementById('confettiCv');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const g = cv.getContext('2d');
+  const cols = [THEME.accent, THEME.accent2, '#ef4444', '#22c55e', '#3b82f6', '#ec4899', '#fff'];
+  const ps = Array.from({ length: 140 }, () => ({
+    x: Math.random() * cv.width,
+    y: -20 - Math.random() * cv.height * 0.4,
+    vx: (Math.random() - 0.5) * 2.4,
+    vy: 2.2 + Math.random() * 3.4,
+    s: 6 + Math.random() * 7,
+    r: Math.random() * 6.28,
+    vr: (Math.random() - 0.5) * 0.3,
+    col: cols[Math.floor(Math.random() * cols.length)],
+  }));
+  const t0 = performance.now();
+  (function f(t) {
+    g.clearRect(0, 0, cv.width, cv.height);
+    for (const p of ps) {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(p.r);
+      g.fillStyle = p.col;
+      g.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+      g.restore();
+    }
+    if (t - t0 < 3800) requestAnimationFrame(f);
+    else g.clearRect(0, 0, cv.width, cv.height);
+  })(t0);
+}
+
+// ---- Emoji quà bay nhẹ trên nền cho vui mắt ----
+(function floatEmojis() {
+  const icons = ['🎁', '⭐', '🎉', '💰', '🍀'];
+  for (let i = 0; i < 6; i++) {
+    const el = document.createElement('div');
+    el.className = 'float-emoji';
+    el.textContent = icons[i % icons.length];
+    el.style.left = (8 + Math.random() * 84) + '%';
+    el.style.bottom = '-40px';
+    el.style.animationDelay = (Math.random() * 7) + 's';
+    el.style.animationDuration = (6 + Math.random() * 5) + 's';
+    document.querySelector('.wheel-page').appendChild(el);
+  }
+})();
+
+// Chuyển màu HEX của quán thành phiên bản sáng hơn (cho viền, chữ phát sáng)
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = c => Math.min(255, Math.round(c + (255 - c) * amt));
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+function applyTheme(color) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color || '')) return;
+  THEME = { accent: color, accent2: lighten(color, 0.4) };
+  document.documentElement.style.setProperty('--accent', THEME.accent);
+  document.documentElement.style.setProperty('--accent2', THEME.accent2);
 }
 
 async function loadShop() {
@@ -176,6 +330,7 @@ async function loadShop() {
   }
   shopName = data.name;
   spinMode = data.spin_mode || 'free';
+  applyTheme(data.theme_color);
   document.getElementById('shopName').textContent = data.name;
   document.getElementById('shopDesc').textContent = data.description || '';
   document.title = data.name + ' - Vòng Quay May Mắn';
@@ -204,8 +359,7 @@ function spinTo(segmentIndex, done) {
   function frame(t) {
     const p = Math.min(1, (t - t0) / duration);
     const ease = 1 - Math.pow(1 - p, 4);
-    currentAngle = from + (to - from) * ease;
-    drawWheel(currentAngle);
+    currentAngle = from + (to - from) * ease; // renderLoop sẽ tự vẽ theo góc này
     if (p < 1) requestAnimationFrame(frame);
     else done();
   }
@@ -245,11 +399,14 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
 
 function showResult(data) {
   showStep('stepResult');
+  if (data.win) { confetti(); winFanfare(); }
   document.getElementById('modalEmoji').textContent = data.win ? '🎉' : '🍀';
   document.getElementById('modalTitle').textContent = data.win ? 'Chúc mừng bạn!' : 'Tiếc quá!';
   document.getElementById('modalPrize').textContent = data.prize;
   document.getElementById('claimBtn').style.display = data.win ? 'block' : 'none';
-  document.getElementById('closeBtn1').style.display = data.win ? 'none' : 'block';
+  const closeBtn = document.getElementById('closeBtn1');
+  closeBtn.style.display = data.win ? 'none' : 'block';
+  closeBtn.textContent = (!data.win && data.spinsLeftToday > 0) ? '🎯 Quay tiếp ngay!' : 'Đóng';
   document.getElementById('modalNote').textContent =
     data.win ? 'Bấm nút bên dưới để nhận mã giảm giá của bạn.'
     : data.spinsLeftToday == null ? 'Cảm ơn bạn! Mua hàng lần sau để nhận thêm mã quay nhé.'
