@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hướng dẫn sử dụng - Vòng Quay May Mắn</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .toc a { display: block; padding: 8px 14px; border-radius: 8px; color: var(--text); }
+  .toc a:hover { background: var(--card2); }
+  .step { display: flex; gap: 14px; margin: 14px 0; align-items: flex-start; }
+  .step .num {
+    flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--accent);
+    color: #111; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  .tip { background: rgba(34,197,94,.08); border-left: 3px solid var(--ok); padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: .92rem; }
+  .warn { background: rgba(239,68,68,.08); border-left: 3px solid var(--danger); padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: .92rem; }
+  h2 { color: var(--accent2); margin-top: 26px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="/">🎡 Vòng Quay <span>May Mắn</span></a>
+  <div class="row">
+    <a class="btn ghost sm" href="/login.html">Đăng nhập</a>
+    <a class="btn sm" href="/register.html">Đăng ký cửa hàng</a>
+  </div>
+</header>
+
+<div class="container" style="max-width:860px;">
+  <h1>📖 Hướng dẫn sử dụng</h1>
+  <p class="muted">Dành cho chủ quán cà phê, nhà hàng, shop bán hàng... muốn dùng vòng quay trúng thưởng để tăng doanh số và thu thập data khách hàng.</p>
+
+  <div class="card toc">
+    <b>Mục lục</b>
+    <a href="#bat-dau">1. Bắt đầu: tạo vòng quay trong 2 phút</a>
+    <a href="#phan-qua">2. Cài đặt phần quà và tỷ lệ trúng</a>
+    <a href="#che-do">3. Chọn chế độ quay: tự do hay theo đơn hàng</a>
+    <a href="#chia-se">4. Chia sẻ vòng quay cho khách (link + mã QR)</a>
+    <a href="#khach-quay">5. Khách quay và nhận mã như thế nào?</a>
+    <a href="#xac-nhan">6. Xác nhận mã khi khách đến mua (quan trọng!)</a>
+    <a href="#data">7. Xem và xuất data khách hàng</a>
+    <a href="#cau-hoi">8. Câu hỏi thường gặp</a>
+  </div>
+
+  <div class="card" id="bat-dau">
+    <h2 style="margin-top:0;">1. Bắt đầu: tạo vòng quay trong 2 phút</h2>
+    <div class="step"><div class="num">1</div><div>Bấm <b>"Đăng ký cửa hàng"</b> ở góc phải màn hình → điền tên quán, họ tên, email và mật khẩu.</div></div>
+    <div class="step"><div class="num">2</div><div>Đăng ký xong, bạn vào ngay <b>trang quản lý</b> — hệ thống đã tặng sẵn 3 phần quà mẫu để bạn chỉnh sửa.</div></div>
+    <div class="step"><div class="num">3</div><div>Vào tab <b>⚙️ Cài đặt quán</b>: viết lời giới thiệu, chọn <b>màu chủ đạo</b> theo thương hiệu của quán → bấm Lưu.</div></div>
+    <div class="tip">💡 Link vòng quay của quán nằm ngay đầu trang quản lý — bấm <b>"Mở thử"</b> để xem vòng quay của mình như khách hàng.</div>
+  </div>
+
+  <div class="card" id="phan-qua">
+    <h2 style="margin-top:0;">2. Cài đặt phần quà và tỷ lệ trúng</h2>
+    <p>Vào tab <b>🎁 Phần quà & tỷ lệ</b>. Với mỗi phần quà bạn đặt:</p>
+    <ul style="margin:10px 0 10px 22px; line-height:1.9;">
+      <li><b>Tên phần quà</b> — VD: "Giảm 15% tổng hóa đơn", "1 ly trà sữa miễn phí"</li>
+      <li><b>Tiền tố mã giảm giá</b> — VD: <code>GIAM15</code>. Mỗi khách trúng sẽ nhận mã riêng như <code>GIAM15-X7K2P</code>, <b>mỗi mã chỉ dùng được 1 lần</b></li>
+      <li><b>Tỷ lệ trúng (%)</b> — VD đặt 10 nghĩa là trung bình 100 người quay có 10 người trúng quà này</li>
+      <li><b>Số lượng quà</b> — để trống là không giới hạn; đặt 50 thì hết 50 phần là quà tự ngừng trúng</li>
+      <li><b>Màu ô</b> — màu hiển thị trên vòng quay</li>
+    </ul>
+    <p><b>Ví dụ cách chia tỷ lệ hay dùng:</b> Giảm 10% → đặt <b>20%</b> · Giảm 20% → đặt <b>10%</b> · Quà đặc biệt → đặt <b>5%</b> → còn lại <b>65%</b> khách không trúng (hệ thống tự tính, và chặn nếu bạn đặt tổng vượt 100%).</p>
+    <div class="tip">💡 Muốn "quay là trúng" để hút khách: đặt tổng đúng 100%, trong đó quà nhỏ (VD giảm 5%) chiếm tỷ lệ lớn.</div>
+    <div class="warn">⚠️ Bấm <b>"Sửa"</b> ở phần quà nào thì thông tin tự điền xuống form bên dưới (kể cả màu) — chỉnh xong bấm <b>"Cập nhật phần quà"</b>.</div>
+  </div>
+
+  <div class="card" id="che-do">
+    <h2 style="margin-top:0;">3. Chọn chế độ quay (tab Cài đặt quán)</h2>
+    <p><b>🆓 Quay tự do</b> — hợp với quán cà phê, sự kiện, khai trương: khách quét QR là quay ngay. Bạn đặt <b>số lượt quay tối đa mỗi khách mỗi ngày</b> (thường để 1).</p>
+    <p style="margin-top:10px;"><b>📦 Quay theo mã đơn hàng</b> — hợp với shop bán hàng: khách <u>mua hàng mới được quay</u>.</p>
+    <div class="step"><div class="num">1</div><div>Vào tab <b>📦 Mã đơn hàng</b> → dán danh sách mã đơn (mỗi dòng 1 mã) → bấm <b>"Tạo mã quay cho các đơn"</b></div></div>
+    <div class="step"><div class="num">2</div><div>App tự sinh <b>mã quay thưởng riêng cho từng đơn</b> — bấm <b>"Xuất Excel/CSV"</b> để in/gửi mã kèm đơn cho khách</div></div>
+    <div class="step"><div class="num">3</div><div>Khách vào vòng quay, nhập mã quay (hoặc chính mã đơn hàng) → quay. <b>Mỗi đơn đúng 1 lượt.</b></div></div>
+  </div>
+
+  <div class="card" id="chia-se">
+    <h2 style="margin-top:0;">4. Chia sẻ vòng quay cho khách</h2>
+    <p>Đầu trang quản lý có <b>link riêng của quán bạn</b> (dạng <code>/w/ten-quan</code>):</p>
+    <ul style="margin:10px 0 10px 22px; line-height:1.9;">
+      <li>Bấm vào link để <b>sao chép</b> → gửi qua Zalo, Facebook, tin nhắn</li>
+      <li>Bấm <b>"Tạo mã QR"</b> → tải ảnh QR về → <b>in dán tại quầy, trên bàn, trên túi/hộp hàng</b></li>
+      <li>Khách dùng điện thoại quét là vào quay ngay, <b>không cần cài app gì</b></li>
+    </ul>
+  </div>
+
+  <div class="card" id="khach-quay">
+    <h2 style="margin-top:0;">5. Khách quay và nhận mã như thế nào?</h2>
+    <div class="step"><div class="num">1</div><div>Khách quét QR / bấm link → bấm <b>"QUAY NGAY!"</b> (chế độ theo đơn hàng: nhập mã quay trước)</div></div>
+    <div class="step"><div class="num">2</div><div><b>Trúng thưởng</b> → khách bấm "Nhận mã giảm giá" → nhập <b>họ tên + số điện thoại HOẶC email</b> (bắt buộc — nhờ đó bạn có data khách hàng)</div></div>
+    <div class="step"><div class="num">3</div><div>Khách nhận <b>thẻ mã giảm giá</b>: chụp màn hình, tải ảnh về máy, hoặc nhận qua email tự động (nếu nhập email)</div></div>
+    <div class="tip">💡 Mã giảm giá <b>chỉ hiện sau khi khách để lại thông tin</b> — không nhập thì không nhận được mã.</div>
+  </div>
+
+  <div class="card" id="xac-nhan">
+    <h2 style="margin-top:0;">6. Xác nhận mã khi khách đến mua (quan trọng!)</h2>
+    <p>Khi khách đưa ảnh mã để dùng ưu đãi, <b>nhân viên làm 3 bước</b> trong tab <b>🎫 Xác nhận mã</b>:</p>
+    <div class="step"><div class="num">1</div><div>Nhập mã khách đưa (VD <code>GIAM15-X7K2P</code>) → bấm <b>"Kiểm tra"</b></div></div>
+    <div class="step"><div class="num">2</div><div>Hệ thống hiện: phần quà, tên khách, SĐT, và trạng thái <span class="badge on">✅ HỢP LỆ</span> hay <span class="badge off">⛔ ĐÃ SỬ DỤNG</span></div></div>
+    <div class="step"><div class="num">3</div><div>Nếu hợp lệ → áp dụng ưu đãi cho khách → bấm <b>"Xác nhận sử dụng"</b></div></div>
+    <div class="warn">⚠️ Sau khi xác nhận, mã bị <b>khóa vĩnh viễn</b> — khách đưa lại lần 2 hệ thống báo ngay "ĐÃ SỬ DỤNG" kèm thời điểm. Nhờ vậy không ai dùng 1 mã nhiều lần được. <b>Luôn bấm Xác nhận trước khi tính tiền ưu đãi!</b></div>
+  </div>
+
+  <div class="card" id="data">
+    <h2 style="margin-top:0;">7. Xem và xuất data khách hàng</h2>
+    <ul style="margin:10px 0 10px 22px; line-height:1.9;">
+      <li>Tab <b>👥 Khách hàng</b>: danh sách họ tên, SĐT, email, số lượt quay, số lần trúng của từng khách</li>
+      <li>Bấm <b>"Xuất Excel/CSV"</b> → mở bằng Excel để gọi điện chăm sóc, chạy quảng cáo lại, gửi khuyến mãi mới</li>
+      <li>Tab <b>🎡 Lịch sử quay</b>: từng lượt quay — ai quay, trúng gì, đã nhận mã chưa, mã đã dùng chưa</li>
+    </ul>
+    <div class="tip">💡 Data khách hàng là tài sản quý nhất của chương trình: khách đã từng quay là khách đã đến quán — hãy nhắn tin/gọi lại mời họ quay tiếp tuần sau!</div>
+  </div>
+
+  <div class="card" id="cau-hoi">
+    <h2 style="margin-top:0;">8. Câu hỏi thường gặp</h2>
+    <p><b>Khách quay mãi không trúng?</b><br><span class="muted">Kiểm tra tab Phần quà: tổng tỷ lệ trúng đang là bao nhiêu %, quà còn số lượng không, phần quà có đang bật không.</span></p>
+    <p style="margin-top:12px;"><b>Một khách quay được nhiều lần trong ngày?</b><br><span class="muted">Chế độ tự do giới hạn theo thiết bị + mỗi SĐT/email chỉ nhận đủ số mã trong ngày. Muốn chặt hơn nữa, dùng chế độ theo mã đơn hàng.</span></p>
+    <p style="margin-top:12px;"><b>Muốn tạm dừng chương trình?</b><br><span class="muted">Tắt hết các phần quà (nút "Tắt") — khách vẫn quay được nhưng không trúng; hoặc liên hệ quản trị viên để khóa link tạm thời.</span></p>
+    <p style="margin-top:12px;"><b>Quên mật khẩu?</b><br><span class="muted">Liên hệ quản trị viên hệ thống để được hỗ trợ đặt lại.</span></p>
+    <p style="margin-top:12px;"><b>Đổi tên quán, lời giới thiệu, màu sắc?</b><br><span class="muted">Tab ⚙️ Cài đặt quán — đổi xong bấm Lưu là link vòng quay cập nhật ngay.</span></p>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <h2 style="margin-top:0;">Sẵn sàng bắt đầu?</h2>
+    <a class="btn" href="/register.html">🚀 Tạo vòng quay cho quán của bạn</a>
+  </div>
+
+  <p class="muted" style="text-align:center; padding:24px 0;">© Vòng Quay May Mắn</p>
+</div>
+</body>
+</html>
