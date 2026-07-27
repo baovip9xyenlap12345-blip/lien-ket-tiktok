@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị hệ thống - Vòng Quay May Mắn</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="/">🎡 Vòng Quay <span>May Mắn</span> <small style="color:var(--danger);">ADMIN</small></a>
+  <div class="row">
+    <span class="muted" id="whoami"></span>
+    <button class="btn ghost sm" onclick="logout()">Đăng xuất</button>
+  </div>
+</header>
+
+<div class="container">
+  <h1>Bảng điều khiển quản trị viên</h1>
+  <p class="muted">Quản lý toàn bộ cửa hàng và dữ liệu khách hàng trên hệ thống.</p>
+
+  <div class="stat-grid" style="margin:18px 0;">
+    <div class="stat"><b id="stShops">0</b><span>Cửa hàng</span></div>
+    <div class="stat"><b id="stCustomers">0</b><span>Khách hàng</span></div>
+    <div class="stat"><b id="stSpins">0</b><span>Lượt quay</span></div>
+    <div class="stat"><b id="stWins">0</b><span>Lượt trúng</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <h2 style="margin:0;">Danh sách cửa hàng</h2>
+      <a class="btn sm" href="/api/admin/export.csv">⬇️ Xuất toàn bộ data khách hàng</a>
+    </div>
+    <div class="table-wrap" style="margin-top:12px;">
+      <table>
+        <thead><tr><th>Cửa hàng</th><th>Chủ cửa hàng</th><th>Email</th><th>SĐT</th><th>Khách</th><th>Lượt quay</th><th>Ngày tạo</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody id="shopRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="detailCard" style="display:none;">
+    <div class="row" style="justify-content:space-between;">
+      <h2 style="margin:0;" id="detailTitle"></h2>
+      <button class="btn sm ghost" onclick="document.getElementById('detailCard').style.display='none'">✕ Đóng</button>
+    </div>
+    <div class="tabs">
+      <button data-dtab="dcust" class="active">👥 Khách hàng</button>
+      <button data-dtab="dspins">🎡 Lượt quay</button>
+    </div>
+    <div id="dtab-dcust" class="table-wrap">
+      <table>
+        <thead><tr><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th></tr></thead>
+        <tbody id="dCustRows"></tbody>
+      </table>
+    </div>
+    <div id="dtab-dspins" class="table-wrap" style="display:none;">
+      <table>
+        <thead><tr><th>Thời gian</th><th>Khách</th><th>SĐT</th><th>Kết quả</th><th>Mã</th></tr></thead>
+        <tbody id="dSpinRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function api(url, opts) {
+  const res = await fetch(url, opts ? Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts) : undefined);
+  if (res.status === 401) { location.href = '/login.html'; throw new Error('auth'); }
+  if (res.status === 403) { location.href = '/dashboard.html'; throw new Error('role'); }
+  return { ok: res.ok, data: await res.json() };
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+async function init() {
+  const me = await api('/api/me');
+  document.getElementById('whoami').textContent = me.data.name + ' (' + me.data.email + ')';
+  const ov = await api('/api/admin/overview');
+  document.getElementById('stShops').textContent = ov.data.shops;
+  document.getElementById('stCustomers').textContent = ov.data.customers;
+  document.getElementById('stSpins').textContent = ov.data.spins;
+  document.getElementById('stWins').textContent = ov.data.wins;
+  loadShops();
+}
+
+async function loadShops() {
+  const { data } = await api('/api/admin/shops');
+  document.getElementById('shopRows').innerHTML = data.map(s => `
+    <tr>
+      <td><b>${esc(s.name)}</b><br><a href="/w/${esc(s.slug)}" target="_blank" class="muted" style="font-size:.8rem;">/w/${esc(s.slug)} ↗</a></td>
+      <td>${esc(s.owner_name)}</td>
+      <td>${esc(s.owner_email)}</td>
+      <td>${esc(s.owner_phone) || '—'}</td>
+      <td>${s.customer_count}</td>
+      <td>${s.spin_count}</td>
+      <td class="muted">${s.created_at}</td>
+      <td>${s.active ? '<span class="badge on">Hoạt động</span>' : '<span class="badge off">Đã khóa</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn sm ghost" onclick="viewShop(${s.id}, '${esc(s.name).replace(/'/g, '')}')">Xem data</button>
+        <button class="btn sm ${s.active ? 'danger' : ''}" onclick="toggleShop(${s.id}, ${s.active ? 0 : 1})">${s.active ? 'Khóa' : 'Mở khóa'}</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="9" class="muted">Chưa có cửa hàng nào đăng ký.</td></tr>';
+}
+
+async function toggleShop(id, active) {
+  if (!active && !confirm('Khóa cửa hàng này? Chủ cửa hàng sẽ không đăng nhập được và vòng quay sẽ ngừng hoạt động.')) return;
+  await api('/api/admin/shops/' + id, { method: 'PUT', body: JSON.stringify({ active: !!active }) });
+  loadShops();
+}
+
+async function viewShop(id, name) {
+  document.getElementById('detailTitle').textContent = '📊 Data của: ' + name;
+  document.getElementById('detailCard').style.display = 'block';
+  const [cust, spins] = await Promise.all([
+    api('/api/admin/shops/' + id + '/customers'),
+    api('/api/admin/shops/' + id + '/spins'),
+  ]);
+  document.getElementById('dCustRows').innerHTML = cust.data.map(c => `
+    <tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.email) || '—'}</td>
+    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Chưa có khách hàng.</td></tr>';
+  document.getElementById('dSpinRows').innerHTML = spins.data.map(s => `
+    <tr><td class="muted">${s.created_at}</td><td>${esc(s.customer_name)}</td><td>${esc(s.customer_phone)}</td>
+    <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
+    <td>${esc(s.coupon_code) || '—'}</td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">Chưa có lượt quay.</td></tr>';
+  document.getElementById('detailCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+document.querySelectorAll('[data-dtab]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-dtab]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('dtab-dcust').style.display = b.dataset.dtab === 'dcust' ? 'block' : 'none';
+  document.getElementById('dtab-dspins').style.display = b.dataset.dtab === 'dspins' ? 'block' : 'none';
+}));
+
+async function logout() { await fetch('/api/logout', { method: 'POST' }); location.href = '/'; }
+init();
+</script>
+</body>
+</html>

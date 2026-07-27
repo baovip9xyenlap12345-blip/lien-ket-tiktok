@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý cửa hàng - Vòng Quay May Mắn</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="/">🎡 Vòng Quay <span>May Mắn</span></a>
+  <div class="row">
+    <span class="muted" id="whoami"></span>
+    <button class="btn ghost sm" onclick="logout()">Đăng xuất</button>
+  </div>
+</header>
+
+<div class="container">
+  <h1 id="shopTitle">Đang tải...</h1>
+  <div class="card" style="padding:14px 18px;">
+    <div class="row">
+      <span class="muted">🔗 Link vòng quay của bạn (gửi cho khách):</span>
+      <code class="copy" id="publicLink" title="Bấm để sao chép"></code>
+      <a class="btn sm ghost" id="openLink" target="_blank" rel="noopener">Mở thử ↗</a>
+      <a class="btn sm ghost" id="qrLink" target="_blank" rel="noopener">Tạo mã QR</a>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="prizes" class="active">🎁 Phần quà & tỷ lệ</button>
+    <button data-tab="customers">👥 Khách hàng</button>
+    <button data-tab="spins">🎡 Lịch sử quay</button>
+    <button data-tab="settings">⚙️ Cài đặt quán</button>
+  </div>
+
+  <!-- ==================== PHẦN QUÀ ==================== -->
+  <div id="tab-prizes" class="tab-page">
+    <div class="card">
+      <h2 style="margin-top:0;">Danh sách phần quà</h2>
+      <p class="muted">Tổng tỷ lệ trúng của các phần quà: <b id="totalRate">0</b>%.
+        Phần trăm còn lại là tỷ lệ khách <i>không trúng</i>. Quà hết số lượng sẽ tự động ngừng trúng.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Phần quà</th><th>Mã giảm giá</th><th>Tỷ lệ trúng</th><th>Còn lại / Tổng</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody id="prizeRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;">➕ Thêm phần quà mới</h2>
+      <div class="row">
+        <div class="grow"><label>Tên phần quà</label><input id="pLabel" placeholder="VD: Giảm 15% tổng hóa đơn"></div>
+        <div class="grow"><label>Mã giảm giá</label><input id="pCode" placeholder="VD: GIAM15"></div>
+      </div>
+      <div class="row">
+        <div class="grow"><label>Tỷ lệ trúng (%)</label><input id="pRate" type="number" min="0" max="100" step="0.1" value="10"></div>
+        <div class="grow"><label>Số lượng quà (để trống = không giới hạn)</label><input id="pQty" type="number" min="0" placeholder="Không giới hạn"></div>
+        <div><label>Màu ô</label><input id="pColor" type="color" value="#f59e0b" style="height:46px; padding:4px;"></div>
+      </div>
+      <div class="error" id="pErr"></div>
+      <button class="btn" style="margin-top:14px;" onclick="addPrize()">Thêm phần quà</button>
+    </div>
+  </div>
+
+  <!-- ==================== KHÁCH HÀNG ==================== -->
+  <div id="tab-customers" class="tab-page" style="display:none;">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0;">Khách hàng đã tham gia (<span id="custCount">0</span>)</h2>
+        <a class="btn sm" href="/api/export/customers.csv">⬇️ Xuất Excel/CSV</a>
+      </div>
+      <div class="table-wrap" style="margin-top:12px;">
+        <table>
+          <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th></tr></thead>
+          <tbody id="custRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LỊCH SỬ QUAY ==================== -->
+  <div id="tab-spins" class="tab-page" style="display:none;">
+    <div class="card">
+      <h2 style="margin-top:0;">Lịch sử quay gần nhất</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT</th><th>Kết quả</th><th>Mã giảm giá</th></tr></thead>
+          <tbody id="spinRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CÀI ĐẶT ==================== -->
+  <div id="tab-settings" class="tab-page" style="display:none;">
+    <div class="card">
+      <h2 style="margin-top:0;">Thông tin cửa hàng</h2>
+      <label>Tên cửa hàng</label>
+      <input id="sName">
+      <label>Lời giới thiệu (hiện trên trang vòng quay)</label>
+      <textarea id="sDesc" rows="2" placeholder="VD: Quay là trúng - Ưu đãi mỗi ngày tại Cà phê Ban Mai!"></textarea>
+      <div class="row">
+        <div class="grow">
+          <label>Số lượt quay tối đa / SĐT / ngày</label>
+          <input id="sLimit" type="number" min="1" value="1">
+        </div>
+        <div class="grow">
+          <label>Bắt buộc nhập email?</label>
+          <select id="sEmail"><option value="1">Có - thu thập email khách</option><option value="0">Không bắt buộc</option></select>
+        </div>
+      </div>
+      <div class="success" id="sMsg"></div>
+      <button class="btn" style="margin-top:14px;" onclick="saveShop()">💾 Lưu cài đặt</button>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;">Đổi mật khẩu</h2>
+      <div class="row">
+        <div class="grow"><label>Mật khẩu hiện tại</label><input type="password" id="oldPw"></div>
+        <div class="grow"><label>Mật khẩu mới</label><input type="password" id="newPw"></div>
+      </div>
+      <div class="error" id="pwMsg"></div>
+      <button class="btn ghost" style="margin-top:14px;" onclick="changePw()">Đổi mật khẩu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let shop = null;
+
+async function api(url, opts) {
+  const res = await fetch(url, opts ? Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts) : undefined);
+  if (res.status === 401) { location.href = '/login.html'; throw new Error('auth'); }
+  return { ok: res.ok, data: await res.json() };
+}
+
+async function init() {
+  const me = await api('/api/me');
+  if (!me.ok) return;
+  if (me.data.role === 'admin') { location.href = '/admin.html'; return; }
+  document.getElementById('whoami').textContent = me.data.name;
+  shop = me.data.shop;
+  renderShop();
+  loadPrizes();
+  loadCustomers();
+  loadSpins();
+}
+
+function renderShop() {
+  document.getElementById('shopTitle').textContent = '🏪 ' + shop.name;
+  const link = location.origin + '/w/' + shop.slug;
+  const el = document.getElementById('publicLink');
+  el.textContent = link;
+  el.onclick = () => { navigator.clipboard.writeText(link); el.textContent = '✓ Đã sao chép!'; setTimeout(() => el.textContent = link, 1200); };
+  document.getElementById('openLink').href = link;
+  document.getElementById('qrLink').href =
+    'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(link);
+  document.getElementById('sName').value = shop.name;
+  document.getElementById('sDesc').value = shop.description || '';
+  document.getElementById('sLimit').value = shop.spin_limit_per_day;
+  document.getElementById('sEmail').value = String(shop.require_email);
+}
+
+// -------- Phần quà --------
+async function loadPrizes() {
+  const { data } = await api('/api/prizes');
+  const tbody = document.getElementById('prizeRows');
+  tbody.innerHTML = '';
+  let total = 0;
+  for (const p of data) {
+    if (p.active) total += p.win_rate;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${p.color || '#64748b'};margin-right:8px;vertical-align:middle;"></span>${esc(p.label)}</td>
+      <td>${esc(p.coupon_code) || '<span class="muted">—</span>'}</td>
+      <td><b>${p.win_rate}%</b></td>
+      <td>${p.quantity === -1 ? '<span class="muted">Không giới hạn</span>' : p.remaining + ' / ' + p.quantity}</td>
+      <td>${p.active ? '<span class="badge on">Đang chạy</span>' : '<span class="badge off">Tạm tắt</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn sm ghost" onclick="togglePrize(${p.id}, ${p.active ? 0 : 1})">${p.active ? 'Tắt' : 'Bật'}</button>
+        <button class="btn sm ghost" onclick="editPrize(${p.id})">Sửa</button>
+        <button class="btn sm danger" onclick="delPrize(${p.id})">Xóa</button>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+  window._prizes = data;
+  const totalEl = document.getElementById('totalRate');
+  totalEl.textContent = Math.round(total * 10) / 10;
+  totalEl.style.color = total > 100 ? '#ef4444' : '#86efac';
+}
+
+async function addPrize() {
+  const err = document.getElementById('pErr');
+  err.textContent = '';
+  const qty = document.getElementById('pQty').value;
+  const r = await api('/api/prizes', {
+    method: 'POST',
+    body: JSON.stringify({
+      label: document.getElementById('pLabel').value,
+      coupon_code: document.getElementById('pCode').value,
+      win_rate: document.getElementById('pRate').value,
+      quantity: qty === '' ? -1 : qty,
+      color: document.getElementById('pColor').value,
+    }),
+  });
+  if (!r.ok) { err.textContent = r.data.error; return; }
+  document.getElementById('pLabel').value = '';
+  document.getElementById('pCode').value = '';
+  loadPrizes();
+}
+
+async function togglePrize(id, active) {
+  await api('/api/prizes/' + id, { method: 'PUT', body: JSON.stringify({ active }) });
+  loadPrizes();
+}
+async function editPrize(id) {
+  const p = (window._prizes || []).find(x => x.id === id);
+  if (!p) return;
+  const label = prompt('Tên phần quà:', p.label); if (label === null) return;
+  const code = prompt('Mã giảm giá:', p.coupon_code); if (code === null) return;
+  const rate = prompt('Tỷ lệ trúng (%):', p.win_rate); if (rate === null) return;
+  const qty = prompt('Số lượng quà (-1 = không giới hạn):', p.quantity); if (qty === null) return;
+  await api('/api/prizes/' + id, {
+    method: 'PUT',
+    body: JSON.stringify({ label, coupon_code: code, win_rate: rate, quantity: qty }),
+  });
+  loadPrizes();
+}
+async function delPrize(id) {
+  if (!confirm('Xóa phần quà này? Lịch sử quay của khách vẫn được giữ.')) return;
+  await api('/api/prizes/' + id, { method: 'DELETE' });
+  loadPrizes();
+}
+
+// -------- Khách hàng & lịch sử --------
+async function loadCustomers() {
+  const { data } = await api('/api/customers');
+  document.getElementById('custCount').textContent = data.length;
+  document.getElementById('custRows').innerHTML = data.map(c => `
+    <tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.email) || '<span class="muted">—</span>'}</td>
+    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Chưa có khách hàng nào. Hãy chia sẻ link vòng quay!</td></tr>';
+}
+async function loadSpins() {
+  const { data } = await api('/api/spins');
+  document.getElementById('spinRows').innerHTML = data.map(s => `
+    <tr><td class="muted">${s.created_at}</td><td>${esc(s.customer_name)}</td><td>${esc(s.customer_phone)}</td>
+    <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
+    <td>${esc(s.coupon_code) || '<span class="muted">—</span>'}</td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">Chưa có lượt quay nào.</td></tr>';
+}
+
+// -------- Cài đặt --------
+async function saveShop() {
+  const r = await api('/api/shop', {
+    method: 'PUT',
+    body: JSON.stringify({
+      name: document.getElementById('sName').value,
+      description: document.getElementById('sDesc').value,
+      spin_limit_per_day: document.getElementById('sLimit').value,
+      require_email: document.getElementById('sEmail').value === '1',
+    }),
+  });
+  if (r.ok) { shop = r.data; renderShop(); document.getElementById('sMsg').textContent = '✓ Đã lưu!'; setTimeout(() => document.getElementById('sMsg').textContent = '', 2000); }
+}
+async function changePw() {
+  const msg = document.getElementById('pwMsg');
+  const r = await api('/api/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ oldPassword: document.getElementById('oldPw').value, newPassword: document.getElementById('newPw').value }),
+  });
+  msg.textContent = r.ok ? '✓ Đã đổi mật khẩu.' : r.data.error;
+  msg.className = r.ok ? 'success' : 'error';
+}
+
+async function logout() { await fetch('/api/logout', { method: 'POST' }); location.href = '/'; }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.tab-page').forEach(x => x.style.display = 'none');
+  document.getElementById('tab-' + b.dataset.tab).style.display = 'block';
+}));
+
+init();
+</script>
+</body>
+</html>

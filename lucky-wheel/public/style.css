@@ -1,0 +1,108 @@
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --card2: #273549;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #f59e0b;
+  --accent2: #fbbf24;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --radius: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh;
+}
+a { color: var(--accent2); text-decoration: none; }
+.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.narrow { max-width: 440px; }
+
+header.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; background: rgba(30,41,59,.9); position: sticky; top: 0; z-index: 10;
+  border-bottom: 1px solid #334155; backdrop-filter: blur(6px);
+}
+.logo { font-weight: 800; font-size: 1.15rem; color: var(--accent2); }
+.logo span { color: var(--text); }
+
+.card {
+  background: var(--card); border: 1px solid #334155; border-radius: var(--radius);
+  padding: 22px; margin: 16px 0;
+}
+h1 { font-size: 1.6rem; margin-bottom: 8px; }
+h2 { font-size: 1.2rem; margin: 14px 0 10px; }
+p.muted, .muted { color: var(--muted); }
+
+label { display: block; margin: 12px 0 5px; font-weight: 600; font-size: .92rem; }
+input, textarea, select {
+  width: 100%; padding: 11px 13px; border-radius: 9px; border: 1px solid #475569;
+  background: #0f172a; color: var(--text); font-size: 1rem;
+}
+input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+.btn {
+  display: inline-block; border: 0; cursor: pointer; font-weight: 700; font-size: 1rem;
+  padding: 12px 22px; border-radius: 10px; background: var(--accent); color: #111;
+  transition: transform .08s, filter .15s;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn:active { transform: scale(.97); }
+.btn.full { width: 100%; margin-top: 16px; }
+.btn.sm { padding: 7px 13px; font-size: .85rem; }
+.btn.ghost { background: transparent; border: 1px solid #475569; color: var(--text); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.error { color: #fca5a5; margin-top: 10px; font-size: .92rem; min-height: 1.2em; }
+.success { color: #86efac; margin-top: 10px; font-size: .92rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #334155; }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 6px; }
+.tabs button {
+  background: var(--card); color: var(--muted); border: 1px solid #334155;
+  padding: 9px 16px; border-radius: 999px; cursor: pointer; font-weight: 600;
+}
+.tabs button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; }
+.stat { background: var(--card2); border-radius: var(--radius); padding: 16px; text-align: center; }
+.stat b { display: block; font-size: 1.7rem; color: var(--accent2); }
+.stat span { color: var(--muted); font-size: .85rem; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+.badge.on { background: rgba(34,197,94,.15); color: var(--ok); }
+.badge.off { background: rgba(239,68,68,.15); color: var(--danger); }
+
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.grow { flex: 1; min-width: 180px; }
+
+.hero { text-align: center; padding: 60px 16px 30px; }
+.hero h1 { font-size: 2.3rem; line-height: 1.25; }
+.hero .accent { color: var(--accent2); }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 14px; margin-top: 30px; }
+
+code.copy {
+  background: #0f172a; border: 1px dashed var(--accent); padding: 6px 12px;
+  border-radius: 8px; font-size: 1rem; color: var(--accent2); cursor: pointer;
+}
+
+/* Modal */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none;
+  align-items: center; justify-content: center; z-index: 50; padding: 16px;
+}
+.modal-bg.show { display: flex; }
+.modal { background: var(--card); border-radius: var(--radius); padding: 28px; max-width: 420px; width: 100%; text-align: center; }
+.modal h2 { font-size: 1.4rem; }
+.modal .prize-name { font-size: 1.5rem; color: var(--accent2); font-weight: 800; margin: 12px 0; }
+
+@media (max-width: 600px) {
+  .hero h1 { font-size: 1.6rem; }
+  .card { padding: 16px; }
+}

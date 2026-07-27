@@ -1,0 +1,19 @@
+{
+  "name": "vong-quay-may-man",
+  "version": "1.0.0",
+  "description": "Vòng Quay May Mắn - Nền tảng khuyến mãi giảm giá đa cửa hàng (SaaS)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-session": "^2.1.0",
+    "express": "^4.19.2"
+  },
+  "license": "MIT"
+}
