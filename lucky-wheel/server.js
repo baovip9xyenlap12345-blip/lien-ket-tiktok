@@ -251,7 +251,7 @@ if (!SESSION_SECRET) {
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json());
+app.use(express.json({ limit: '25mb' })); // đủ chỗ cho file sao lưu/phục hồi dữ liệu
 app.use(cookieSession({
   name: 'vqmm',
   secret: SESSION_SECRET,
@@ -601,6 +601,52 @@ app.get('/api/admin/shops/:id/spins', requireAuth('admin'), (req, res) => {
     FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
     WHERE s.shop_id=? ORDER BY s.created_at DESC LIMIT 500
   `).all(req.params.id));
+});
+
+// ---- Sao lưu & phục hồi TOÀN BỘ dữ liệu (chỉ quản trị viên) ----
+// Tải file JSON về cất giữ (Google Drive, máy tính...). Khi dữ liệu bị reset
+// (gói miễn phí không có ổ cứng), tải file lên là khôi phục nguyên trạng.
+const BACKUP_TABLES = ['users', 'shops', 'prizes', 'customers', 'spins', 'order_codes'];
+
+app.get('/api/admin/backup', requireAuth('admin'), (req, res) => {
+  const dump = { app: 'vong-quay-may-man', version: 1, exported_at: new Date().toISOString(), tables: {} };
+  for (const t of BACKUP_TABLES) dump.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  res.setHeader('Content-Disposition', `attachment; filename="vongquay-saoluu-${stamp}.json"`);
+  res.json(dump);
+});
+
+app.post('/api/admin/restore', requireAuth('admin'), (req, res) => {
+  const dump = req.body || {};
+  if (dump.app !== 'vong-quay-may-man' || !dump.tables)
+    return res.status(400).json({ error: 'File không đúng định dạng sao lưu của Vòng Quay May Mắn.' });
+
+  // Chỉ nhận các cột có thật trong từng bảng (an toàn khi phục hồi bản cũ lên bản mới)
+  const colsOf = {};
+  for (const t of BACKUP_TABLES) {
+    colsOf[t] = new Set(db.prepare(`SELECT name FROM pragma_table_info('${t}')`).all().map(r => r.name));
+  }
+
+  db.exec('BEGIN');
+  try {
+    for (const t of [...BACKUP_TABLES].reverse()) db.exec(`DELETE FROM ${t}`);
+    const counts = {};
+    for (const t of BACKUP_TABLES) {
+      const rows = Array.isArray(dump.tables[t]) ? dump.tables[t] : [];
+      for (const row of rows) {
+        const cols = Object.keys(row).filter(c => colsOf[t].has(c));
+        if (!cols.length) continue;
+        db.prepare(`INSERT INTO ${t} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`)
+          .run(...cols.map(c => row[c]));
+      }
+      counts[t] = rows.length;
+    }
+    db.exec('COMMIT');
+    res.json({ ok: true, counts });
+  } catch (e) {
+    db.exec('ROLLBACK');
+    res.status(400).json({ error: 'Phục hồi thất bại, dữ liệu hiện tại được giữ nguyên. Chi tiết: ' + e.message });
+  }
 });
 
 app.get('/api/admin/export.csv', requireAuth('admin'), (req, res) => {

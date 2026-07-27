@@ -39,6 +39,18 @@
     </div>
   </div>
 
+  <div class="card">
+    <h2 style="margin:0 0 6px;">💾 Sao lưu & phục hồi dữ liệu</h2>
+    <p class="muted" style="font-size:.9rem;">Tải file sao lưu về và cất vào <b>Google Drive / máy tính</b> của bạn. Khi dữ liệu bị reset (gói máy chủ miễn phí), chọn file rồi bấm Phục hồi là mọi tài khoản, khách hàng, lượt quay trở lại nguyên vẹn. <b>Nên tải bản sao lưu mỗi ngày</b> và trước mỗi lần cập nhật app.</p>
+    <div class="row" style="margin-top:10px;">
+      <a class="btn sm" href="/api/admin/backup">⬇️ Tải bản sao lưu (JSON)</a>
+      <input type="file" id="restoreFile" accept=".json,application/json" style="width:auto; flex:1; min-width:200px;">
+      <button class="btn sm danger" onclick="restoreBackup()">♻️ Phục hồi từ file</button>
+    </div>
+    <div class="error" id="restoreErr"></div>
+    <div class="success" id="restoreOk"></div>
+  </div>
+
   <div class="card" id="detailCard" style="display:none;">
     <div class="row" style="justify-content:space-between;">
       <h2 style="margin:0;" id="detailTitle"></h2>
@@ -139,6 +151,22 @@ document.querySelectorAll('[data-dtab]').forEach(b => b.addEventListener('click'
   document.getElementById('dtab-dcust').style.display = b.dataset.dtab === 'dcust' ? 'block' : 'none';
   document.getElementById('dtab-dspins').style.display = b.dataset.dtab === 'dspins' ? 'block' : 'none';
 }));
+
+async function restoreBackup() {
+  const errEl = document.getElementById('restoreErr'), okEl = document.getElementById('restoreOk');
+  errEl.textContent = ''; okEl.textContent = '';
+  const f = document.getElementById('restoreFile').files[0];
+  if (!f) { errEl.textContent = 'Hãy chọn file sao lưu (.json) trước.'; return; }
+  if (!confirm('⚠️ PHỤC HỒI sẽ XÓA toàn bộ dữ liệu hiện tại và thay bằng dữ liệu trong file sao lưu.\n\nBạn chắc chắn muốn tiếp tục?')) return;
+  let dump;
+  try { dump = JSON.parse(await f.text()); }
+  catch (e) { errEl.textContent = 'File không đọc được (không phải file JSON hợp lệ).'; return; }
+  const r = await api('/api/admin/restore', { method: 'POST', body: JSON.stringify(dump) });
+  if (!r.ok) { errEl.textContent = r.data.error || 'Phục hồi thất bại.'; return; }
+  const c = r.data.counts || {};
+  okEl.textContent = `✅ Phục hồi xong! ${c.shops || 0} cửa hàng, ${c.customers || 0} khách hàng, ${c.spins || 0} lượt quay. Nếu bị đăng xuất, hãy đăng nhập lại.`;
+  setTimeout(() => location.reload(), 2500);
+}
 
 async function logout() { await fetch('/api/logout', { method: 'POST' }); location.href = '/'; }
 init();
