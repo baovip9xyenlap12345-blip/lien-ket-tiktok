@@ -109,8 +109,8 @@
         </table>
       </div>
     </div>
-    <div class="card">
-      <h2 style="margin-top:0;">➕ Thêm phần quà mới</h2>
+    <div class="card" id="prizeFormCard">
+      <h2 style="margin-top:0;" id="pFormTitle">➕ Thêm phần quà mới</h2>
       <div class="row">
         <div class="grow"><label>Tên phần quà</label><input id="pLabel" placeholder="VD: Giảm 15% tổng hóa đơn"></div>
         <div class="grow"><label>Tiền tố mã giảm giá</label><input id="pCode" placeholder="VD: GIAM15"><p class="muted" style="font-size:.78rem; margin-top:4px;">Mỗi khách trúng sẽ nhận mã riêng, VD: GIAM15-X7K2P — mã chỉ dùng được 1 lần.</p></div>
@@ -121,7 +121,10 @@
         <div><label>Màu ô</label><input id="pColor" type="color" value="#f59e0b" style="height:46px; padding:4px;"></div>
       </div>
       <div class="error" id="pErr"></div>
-      <button class="btn" style="margin-top:14px;" onclick="addPrize()">Thêm phần quà</button>
+      <div class="row" style="margin-top:14px;">
+        <button class="btn" id="pSubmitBtn" onclick="addPrize()">Thêm phần quà</button>
+        <button class="btn ghost" id="pCancelBtn" onclick="cancelEditPrize()" style="display:none;">Hủy sửa</button>
+      </div>
     </div>
   </div>
 
@@ -266,24 +269,38 @@ async function loadPrizes() {
   document.getElementById('loseRate').textContent = Math.max(0, Math.round((100 - total) * 10) / 10);
 }
 
+let editingPrizeId = null;
+
 async function addPrize() {
   const err = document.getElementById('pErr');
   err.textContent = '';
   const qty = document.getElementById('pQty').value;
-  const r = await api('/api/prizes', {
-    method: 'POST',
-    body: JSON.stringify({
-      label: document.getElementById('pLabel').value,
-      coupon_code: document.getElementById('pCode').value,
-      win_rate: document.getElementById('pRate').value,
-      quantity: qty === '' ? -1 : qty,
-      color: document.getElementById('pColor').value,
-    }),
-  });
+  const body = {
+    label: document.getElementById('pLabel').value,
+    coupon_code: document.getElementById('pCode').value,
+    win_rate: document.getElementById('pRate').value,
+    quantity: qty === '' ? -1 : qty,
+    color: document.getElementById('pColor').value,
+  };
+  const r = editingPrizeId
+    ? await api('/api/prizes/' + editingPrizeId, { method: 'PUT', body: JSON.stringify(body) })
+    : await api('/api/prizes', { method: 'POST', body: JSON.stringify(body) });
   if (!r.ok) { err.textContent = r.data.error; return; }
+  cancelEditPrize();
+  loadPrizes();
+}
+
+function cancelEditPrize() {
+  editingPrizeId = null;
   document.getElementById('pLabel').value = '';
   document.getElementById('pCode').value = '';
-  loadPrizes();
+  document.getElementById('pRate').value = 10;
+  document.getElementById('pQty').value = '';
+  document.getElementById('pColor').value = '#f59e0b';
+  document.getElementById('pErr').textContent = '';
+  document.getElementById('pFormTitle').textContent = '➕ Thêm phần quà mới';
+  document.getElementById('pSubmitBtn').textContent = 'Thêm phần quà';
+  document.getElementById('pCancelBtn').style.display = 'none';
 }
 
 async function togglePrize(id, active) {
@@ -291,19 +308,20 @@ async function togglePrize(id, active) {
   if (!r.ok) alert(r.data.error);
   loadPrizes();
 }
-async function editPrize(id) {
+function editPrize(id) {
   const p = (window._prizes || []).find(x => x.id === id);
   if (!p) return;
-  const label = prompt('Tên phần quà:', p.label); if (label === null) return;
-  const code = prompt('Mã giảm giá:', p.coupon_code); if (code === null) return;
-  const rate = prompt('Tỷ lệ trúng (%):', p.win_rate); if (rate === null) return;
-  const qty = prompt('Số lượng quà (-1 = không giới hạn):', p.quantity); if (qty === null) return;
-  const r = await api('/api/prizes/' + id, {
-    method: 'PUT',
-    body: JSON.stringify({ label, coupon_code: code, win_rate: rate, quantity: qty }),
-  });
-  if (!r.ok) alert(r.data.error);
-  loadPrizes();
+  // Đưa thông tin phần quà (kể cả MÀU) xuống form để chỉnh sửa
+  editingPrizeId = id;
+  document.getElementById('pLabel').value = p.label;
+  document.getElementById('pCode').value = p.coupon_code || '';
+  document.getElementById('pRate').value = p.win_rate;
+  document.getElementById('pQty').value = p.quantity === -1 ? '' : p.quantity;
+  document.getElementById('pColor').value = /^#[0-9a-fA-F]{6}$/.test(p.color || '') ? p.color : '#f59e0b';
+  document.getElementById('pFormTitle').textContent = '✏️ Đang sửa: ' + p.label;
+  document.getElementById('pSubmitBtn').textContent = '💾 Cập nhật phần quà';
+  document.getElementById('pCancelBtn').style.display = 'inline-block';
+  document.getElementById('prizeFormCard').scrollIntoView({ behavior: 'smooth' });
 }
 async function delPrize(id) {
   if (!confirm('Xóa phần quà này? Lịch sử quay của khách vẫn được giữ.')) return;
