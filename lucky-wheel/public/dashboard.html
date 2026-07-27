@@ -28,10 +28,41 @@
 
   <div class="tabs">
     <button data-tab="redeem" class="active">🎫 Xác nhận mã</button>
+    <button data-tab="orders">📦 Mã đơn hàng</button>
     <button data-tab="prizes">🎁 Phần quà & tỷ lệ</button>
     <button data-tab="customers">👥 Khách hàng</button>
     <button data-tab="spins">🎡 Lịch sử quay</button>
     <button data-tab="settings">⚙️ Cài đặt quán</button>
+  </div>
+
+  <!-- ==================== MÃ ĐƠN HÀNG → MÃ QUAY ==================== -->
+  <div id="tab-orders" class="tab-page" style="display:none;">
+    <div class="card">
+      <h2 style="margin-top:0;">📦 Nhập danh sách mã đơn hàng</h2>
+      <p class="muted">Dán danh sách mã đơn hàng (mỗi dòng 1 mã, hoặc cách nhau bằng dấu phẩy).
+        App sẽ <b>tự động sinh mã quay thưởng tương ứng</b> cho từng đơn — mỗi mã quay được đúng 1 lần.
+        <br>⚠️ Tính năng này dùng khi bật chế độ <b>"Quay theo mã đơn hàng"</b> trong tab Cài đặt quán.</p>
+      <textarea id="ocInput" rows="5" placeholder="VD:&#10;DH0001&#10;DH0002&#10;DH0003"></textarea>
+      <div class="error" id="ocErr"></div>
+      <div class="success" id="ocMsg"></div>
+      <button class="btn" style="margin-top:12px;" onclick="addOrderCodes()">➕ Tạo mã quay cho các đơn</button>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0;">Danh sách mã (<span id="ocCount">0</span>)</h2>
+        <div class="row">
+          <input id="ocSearch" placeholder="🔍 Tìm mã..." style="width:180px;" oninput="renderOrderCodes()">
+          <a class="btn sm" href="/api/export/order-codes.csv">⬇️ Xuất Excel/CSV</a>
+        </div>
+      </div>
+      <p class="muted" style="font-size:.85rem; margin-top:8px;">In hoặc gửi <b>mã quay thưởng</b> kèm đơn hàng cho khách. Khách vào vòng quay, nhập mã là quay được.</p>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead><tr><th>Mã đơn hàng</th><th>Mã quay thưởng</th><th>Trạng thái</th><th>Kết quả quay</th><th>Ngày tạo</th><th></th></tr></thead>
+          <tbody id="ocRows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== XÁC NHẬN MÃ TẠI QUẦY ==================== -->
@@ -132,13 +163,21 @@
       <textarea id="sDesc" rows="2" placeholder="VD: Quay là trúng - Ưu đãi mỗi ngày tại Cà phê Ban Mai!"></textarea>
       <div class="row">
         <div class="grow">
+          <label>Chế độ quay</label>
+          <select id="sMode">
+            <option value="free">🆓 Quay tự do — ai vào cũng quay được (giới hạn lượt/ngày)</option>
+            <option value="order">📦 Quay theo mã đơn hàng — khách mua hàng mới được quay</option>
+          </select>
+        </div>
+        <div class="grow" id="limitField">
           <label>Số lượt quay tối đa / khách / ngày</label>
           <input id="sLimit" type="number" min="1" value="1">
         </div>
       </div>
       <p class="muted" style="font-size:.85rem; margin-top:8px;">
-        Khách quay ngay không cần nhập trước. Khi trúng, khách phải nhập <b>họ tên + SĐT hoặc email</b> mới nhận được mã —
-        nhận qua ảnh tải về, chụp màn hình, chia sẻ Zalo, hoặc tự động gửi email.
+        <b>Quay tự do:</b> phù hợp quán cà phê, sự kiện — khách quét QR là quay ngay.
+        <b>Quay theo mã đơn hàng:</b> nhập danh sách mã đơn ở tab "📦 Mã đơn hàng", mỗi đơn 1 lượt quay.
+        Khi trúng, khách phải nhập <b>họ tên + SĐT hoặc email</b> mới nhận được mã giảm giá.
       </p>
       <div class="success" id="sMsg"></div>
       <button class="btn" style="margin-top:14px;" onclick="saveShop()">💾 Lưu cài đặt</button>
@@ -174,6 +213,7 @@ async function init() {
   loadPrizes();
   loadCustomers();
   loadSpins();
+  loadOrderCodes();
 }
 
 function renderShop() {
@@ -188,6 +228,7 @@ function renderShop() {
   document.getElementById('sName').value = shop.name;
   document.getElementById('sDesc').value = shop.description || '';
   document.getElementById('sLimit').value = shop.spin_limit_per_day;
+  document.getElementById('sMode').value = shop.spin_mode || 'free';
 }
 
 // -------- Phần quà --------
@@ -287,6 +328,45 @@ async function loadSpins() {
     || '<tr><td colspan="7" class="muted">Chưa có lượt quay nào.</td></tr>';
 }
 
+// -------- Mã đơn hàng → mã quay --------
+let _orderCodes = [];
+async function loadOrderCodes() {
+  const { data } = await api('/api/order-codes');
+  _orderCodes = data;
+  renderOrderCodes();
+}
+function renderOrderCodes() {
+  const kw = (document.getElementById('ocSearch').value || '').trim().toUpperCase();
+  const list = kw ? _orderCodes.filter(o => o.order_code.includes(kw) || o.spin_code.includes(kw)) : _orderCodes;
+  document.getElementById('ocCount').textContent = _orderCodes.length;
+  document.getElementById('ocRows').innerHTML = list.map(o => `
+    <tr><td><b>${esc(o.order_code)}</b></td>
+    <td style="color:var(--accent2); font-weight:700; letter-spacing:1px;">${esc(o.spin_code)}</td>
+    <td>${o.used ? '<span class="badge off">Đã quay</span><div class="muted" style="font-size:.75rem;">' + o.used_at + '</div>' : '<span class="badge on">Chưa quay</span>'}</td>
+    <td>${o.used ? (o.prize_label && o.prize_label !== 'Chúc bạn may mắn lần sau' ? '🎉 ' + esc(o.prize_label) : '<span class="muted">Không trúng</span>') : '<span class="muted">—</span>'}</td>
+    <td class="muted">${o.created_at}</td>
+    <td>${o.used ? '' : '<button class="btn sm danger" onclick="delOrderCode(' + o.id + ')">Xóa</button>'}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Chưa có mã đơn hàng nào. Dán danh sách ở trên để tạo.</td></tr>';
+}
+async function addOrderCodes() {
+  const errEl = document.getElementById('ocErr'), msgEl = document.getElementById('ocMsg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  const r = await api('/api/order-codes', {
+    method: 'POST',
+    body: JSON.stringify({ codes: document.getElementById('ocInput').value }),
+  });
+  if (!r.ok) { errEl.textContent = r.data.error; return; }
+  msgEl.textContent = `✓ Đã tạo ${r.data.added} mã quay` + (r.data.skipped ? ` (bỏ qua ${r.data.skipped} mã trùng/không hợp lệ)` : '') + '.';
+  document.getElementById('ocInput').value = '';
+  loadOrderCodes();
+}
+async function delOrderCode(id) {
+  if (!confirm('Xóa mã đơn này?')) return;
+  const r = await api('/api/order-codes/' + id, { method: 'DELETE' });
+  if (!r.ok) alert(r.data.error);
+  loadOrderCodes();
+}
+
 // -------- Xác nhận mã tại quầy --------
 let lastCheckedCode = '';
 async function checkCode() {
@@ -331,6 +411,7 @@ async function saveShop() {
       name: document.getElementById('sName').value,
       description: document.getElementById('sDesc').value,
       spin_limit_per_day: document.getElementById('sLimit').value,
+      spin_mode: document.getElementById('sMode').value,
     }),
   });
   if (r.ok) { shop = r.data; renderShop(); document.getElementById('sMsg').textContent = '✓ Đã lưu!'; setTimeout(() => document.getElementById('sMsg').textContent = '', 2000); }

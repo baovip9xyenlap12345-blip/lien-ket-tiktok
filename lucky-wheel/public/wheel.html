@@ -54,6 +54,10 @@
     <canvas id="wheel" width="600" height="600"></canvas>
   </div>
 
+  <div id="orderCodeField" style="display:none; max-width:340px; margin:0 auto 14px;">
+    <input id="orderCode" placeholder="Nhập mã quay thưởng trên đơn hàng"
+      style="text-align:center; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px;">
+  </div>
   <div class="error" id="err"></div>
   <button class="btn" id="spinBtn">🎯 QUAY NGAY!</button>
   <p class="muted" style="margin-top:12px; font-size:.85rem;" id="limitNote"></p>
@@ -120,6 +124,7 @@ let currentAngle = 0;
 let spinning = false;
 let claimToken = '';
 let shopName = '';
+let spinMode = 'free';
 let coupon = null; // {shopName, prize, code, customerName}
 
 function drawWheel(angle) {
@@ -170,11 +175,18 @@ async function loadShop() {
     return;
   }
   shopName = data.name;
+  spinMode = data.spin_mode || 'free';
   document.getElementById('shopName').textContent = data.name;
   document.getElementById('shopDesc').textContent = data.description || '';
   document.title = data.name + ' - Vòng Quay May Mắn';
-  document.getElementById('limitNote').textContent =
-    'Bạn có ' + data.spin_limit_per_day + ' lượt quay miễn phí mỗi ngày.';
+  if (spinMode === 'order') {
+    document.getElementById('orderCodeField').style.display = 'block';
+    document.getElementById('limitNote').textContent =
+      'Mỗi đơn hàng được tặng 1 mã quay thưởng — nhập mã để quay nhé!';
+  } else {
+    document.getElementById('limitNote').textContent =
+      'Bạn có ' + data.spin_limit_per_day + ' lượt quay miễn phí mỗi ngày.';
+  }
   segments = data.segments;
   drawWheel(0);
 }
@@ -209,10 +221,16 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
   btn.disabled = true;
   spinning = true;
   try {
-    const res = await fetch('/api/public/spin/' + encodeURIComponent(slug), { method: 'POST' });
+    const opts = { method: 'POST' };
+    if (spinMode === 'order') {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify({ code: document.getElementById('orderCode').value });
+    }
+    const res = await fetch('/api/public/spin/' + encodeURIComponent(slug), opts);
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error || 'Có lỗi xảy ra.'; spinning = false; btn.disabled = false; return; }
     claimToken = data.claimToken || '';
+    if (spinMode === 'order') document.getElementById('orderCode').value = '';
     spinTo(data.segmentIndex, () => {
       spinning = false;
       btn.disabled = false;
@@ -234,7 +252,9 @@ function showResult(data) {
   document.getElementById('closeBtn1').style.display = data.win ? 'none' : 'block';
   document.getElementById('modalNote').textContent =
     data.win ? 'Bấm nút bên dưới để nhận mã giảm giá của bạn.'
-             : (data.spinsLeftToday > 0 ? ('Bạn còn ' + data.spinsLeftToday + ' lượt quay hôm nay.') : 'Hẹn gặp lại bạn ngày mai nhé!');
+    : data.spinsLeftToday == null ? 'Cảm ơn bạn! Mua hàng lần sau để nhận thêm mã quay nhé.'
+    : data.spinsLeftToday > 0 ? ('Bạn còn ' + data.spinsLeftToday + ' lượt quay hôm nay.')
+    : 'Hẹn gặp lại bạn ngày mai nhé!';
   document.getElementById('modalBg').classList.add('show');
 }
 

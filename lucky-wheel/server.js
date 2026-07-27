@@ -139,6 +139,24 @@ if (!db.prepare(`SELECT id FROM users WHERE role='admin' LIMIT 1`).get()) {
 try { db.exec(`ALTER TABLE spins ADD COLUMN redeemed INTEGER NOT NULL DEFAULT 0`); } catch (e) { /* cột đã tồn tại */ }
 try { db.exec(`ALTER TABLE spins ADD COLUMN redeemed_at TEXT DEFAULT ''`); } catch (e) { /* cột đã tồn tại */ }
 
+// Chế độ quay: 'free' = ai vào cũng quay được (giới hạn lượt/ngày), 'order' = phải có mã quay theo đơn hàng
+try { db.exec(`ALTER TABLE shops ADD COLUMN spin_mode TEXT NOT NULL DEFAULT 'free'`); } catch (e) { /* cột đã tồn tại */ }
+
+// Mã đơn hàng của shop: mỗi mã đơn tương ứng đúng 1 mã quay thưởng (app tự sinh)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS order_codes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop_id    INTEGER NOT NULL REFERENCES shops(id),
+    order_code TEXT NOT NULL,                        -- mã đơn hàng do shop nhập
+    spin_code  TEXT NOT NULL,                        -- mã quay thưởng app tự sinh
+    used       INTEGER NOT NULL DEFAULT 0,           -- 1 = khách đã dùng để quay
+    used_at    TEXT DEFAULT '',
+    spin_id    INTEGER,                              -- lượt quay tương ứng
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    UNIQUE(shop_id, order_code)
+  );
+`);
+
 // Sinh mã giảm giá RIÊNG cho từng lượt trúng (VD: GIAM10-X7K2P) — nhờ vậy mỗi mã chỉ dùng được 1 lần.
 // Bỏ các ký tự dễ nhầm lẫn (O/0, I/1/L) để nhân viên nhập lại không sai.
 function genUniqueCode(shopId, prefix) {
@@ -148,6 +166,16 @@ function genUniqueCode(shopId, prefix) {
     for (let i = 0; i < 5; i++) s += chars[crypto.randomInt(chars.length)];
     const code = (String(prefix || '').trim() ? String(prefix).trim().toUpperCase() : 'QUA') + '-' + s;
     if (!db.prepare(`SELECT id FROM spins WHERE shop_id=? AND coupon_code=?`).get(shopId, code)) return code;
+  }
+}
+
+// Sinh mã quay thưởng cho từng mã đơn hàng (6 ký tự, không trùng trong shop)
+function genSpinCode(shopId) {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  for (;;) {
+    let s = '';
+    for (let i = 0; i < 6; i++) s += chars[crypto.randomInt(chars.length)];
+    if (!db.prepare(`SELECT id FROM order_codes WHERE shop_id=? AND spin_code=?`).get(shopId, s)) return s;
   }
 }
 
@@ -343,13 +371,14 @@ app.post('/api/change-password', requireAuth(), (req, res) => {
 app.get('/api/shop', requireAuth('owner'), (req, res) => res.json(req.shop));
 
 app.put('/api/shop', requireAuth('owner'), (req, res) => {
-  const { name, description, spin_limit_per_day, require_email } = req.body || {};
-  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, require_email=? WHERE id=?`)
+  const { name, description, spin_limit_per_day, spin_mode } = req.body || {};
+  const mode = ['free', 'order'].includes(spin_mode) ? spin_mode : req.shop.spin_mode;
+  db.prepare(`UPDATE shops SET name=?, description=?, spin_limit_per_day=?, spin_mode=? WHERE id=?`)
     .run(
       String(name || req.shop.name).trim(),
       String(description ?? req.shop.description),
       Math.max(1, parseInt(spin_limit_per_day, 10) || 1),
-      require_email ? 1 : 0,
+      mode,
       req.shop.id
     );
   res.json(q.shopById.get(req.shop.id));
@@ -408,6 +437,55 @@ app.get('/api/spins', requireAuth('owner'), (req, res) => {
     FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
     WHERE s.shop_id=? ORDER BY s.created_at DESC LIMIT 500
   `).all(req.shop.id));
+});
+
+// ---- Mã đơn hàng → mã quay thưởng (chế độ quay theo đơn) ----
+// Chủ shop dán danh sách mã đơn, app tự sinh mã quay tương ứng cho từng đơn.
+app.get('/api/order-codes', requireAuth('owner'), (req, res) => {
+  res.json(db.prepare(`
+    SELECT oc.*, s.prize_label, s.claimed
+    FROM order_codes oc LEFT JOIN spins s ON s.id=oc.spin_id
+    WHERE oc.shop_id=? ORDER BY oc.id DESC LIMIT 2000
+  `).all(req.shop.id));
+});
+
+app.post('/api/order-codes', requireAuth('owner'), (req, res) => {
+  const raw = String((req.body || {}).codes || '');
+  // Nhận danh sách dán vào: mỗi dòng 1 mã, hoặc cách nhau bằng dấu phẩy / chấm phẩy / khoảng trắng
+  const list = [...new Set(raw.split(/[\n,;\t ]+/).map(s => s.trim().toUpperCase()).filter(Boolean))];
+  if (!list.length) return res.status(400).json({ error: 'Vui lòng dán danh sách mã đơn hàng (mỗi dòng 1 mã).' });
+  if (list.length > 1000) return res.status(400).json({ error: 'Tối đa 1000 mã mỗi lần nhập.' });
+
+  const ins = db.prepare(`INSERT INTO order_codes (shop_id,order_code,spin_code) VALUES (?,?,?)`);
+  const exists = db.prepare(`SELECT id FROM order_codes WHERE shop_id=? AND order_code=?`);
+  let added = 0, skipped = 0;
+  for (const oc of list) {
+    if (oc.length > 50) { skipped++; continue; }
+    if (exists.get(req.shop.id, oc)) { skipped++; continue; } // mã đơn đã nhập rồi thì bỏ qua
+    ins.run(req.shop.id, oc, genSpinCode(req.shop.id));
+    added++;
+  }
+  res.json({ ok: true, added, skipped });
+});
+
+app.delete('/api/order-codes/:id', requireAuth('owner'), (req, res) => {
+  const row = db.prepare(`SELECT * FROM order_codes WHERE id=? AND shop_id=?`).get(req.params.id, req.shop.id);
+  if (!row) return res.status(404).json({ error: 'Không tìm thấy mã đơn.' });
+  if (row.used) return res.status(400).json({ error: 'Mã này khách đã quay rồi, không xóa được.' });
+  db.prepare(`DELETE FROM order_codes WHERE id=?`).run(row.id);
+  res.json({ ok: true });
+});
+
+app.get('/api/export/order-codes.csv', requireAuth('owner'), (req, res) => {
+  const rows = db.prepare(`
+    SELECT oc.order_code, oc.spin_code,
+           CASE WHEN oc.used=1 THEN 'Đã quay' ELSE 'Chưa quay' END,
+           oc.used_at, COALESCE(s.prize_label,''), oc.created_at
+    FROM order_codes oc LEFT JOIN spins s ON s.id=oc.spin_id
+    WHERE oc.shop_id=? ORDER BY oc.id DESC
+  `).all(req.shop.id).map(r => Object.values(r));
+  sendCsv(res, 'ma-don-hang-ma-quay.csv',
+    ['Mã đơn hàng', 'Mã quay thưởng', 'Trạng thái', 'Thời gian quay', 'Kết quả', 'Ngày tạo'], rows);
 });
 
 // ---- Xác nhận mã tại quầy: mỗi mã chỉ sử dụng được 1 LẦN ----
@@ -524,6 +602,7 @@ app.get('/api/public/shop/:slug', (req, res) => {
   res.json({
     name: sh.name, description: sh.description,
     spin_limit_per_day: sh.spin_limit_per_day,
+    spin_mode: sh.spin_mode || 'free',
     segments: prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]),
   });
 });
@@ -537,11 +616,25 @@ app.post('/api/public/spin/:slug', (req, res) => {
   if (!req.session.dev) req.session.dev = crypto.randomBytes(12).toString('hex');
   const dev = req.session.dev;
 
-  const today = db.prepare(`
-    SELECT COUNT(*) n FROM spins WHERE shop_id=? AND device_id=? AND date(created_at)=date('now','localtime')
-  `).get(sh.id, dev).n;
-  if (today >= sh.spin_limit_per_day)
-    return res.status(429).json({ error: `Bạn đã hết ${sh.spin_limit_per_day} lượt quay hôm nay. Hẹn gặp lại ngày mai!` });
+  // Chế độ 'order': phải nhập mã quay thưởng theo đơn hàng, mỗi mã quay đúng 1 lần.
+  // Chế độ 'free': ai vào cũng quay được, giới hạn lượt/thiết bị/ngày.
+  let orderRow = null;
+  let today = 0;
+  if ((sh.spin_mode || 'free') === 'order') {
+    const codeIn = String((req.body || {}).code || '').trim().toUpperCase();
+    if (!codeIn) return res.status(400).json({ error: 'Vui lòng nhập mã quay thưởng in trên đơn hàng của bạn.' });
+    // Chấp nhận cả mã quay thưởng lẫn chính mã đơn hàng
+    orderRow = db.prepare(`SELECT * FROM order_codes WHERE shop_id=? AND (spin_code=? OR order_code=?)`)
+      .get(sh.id, codeIn, codeIn);
+    if (!orderRow) return res.status(400).json({ error: 'Mã quay không đúng. Kiểm tra lại mã trên đơn hàng nhé!' });
+    if (orderRow.used) return res.status(400).json({ error: 'Mã quay này đã được sử dụng rồi. Mỗi đơn hàng chỉ được quay 1 lần!' });
+  } else {
+    today = db.prepare(`
+      SELECT COUNT(*) n FROM spins WHERE shop_id=? AND device_id=? AND date(created_at)=date('now','localtime')
+    `).get(sh.id, dev).n;
+    if (today >= sh.spin_limit_per_day)
+      return res.status(429).json({ error: `Bạn đã hết ${sh.spin_limit_per_day} lượt quay hôm nay. Hẹn gặp lại ngày mai!` });
+  }
 
   // Quay số phía máy chủ theo tỷ lệ % từng phần quà (phần còn lại = không trúng)
   const prizes = q.activePrizes.all(sh.id);
@@ -559,8 +652,14 @@ app.post('/api/public/spin/:slug', (req, res) => {
   // Mỗi lượt trúng được sinh MÃ RIÊNG (dùng 1 lần) từ tiền tố mã của phần quà.
   const claimToken = won ? crypto.randomBytes(16).toString('hex') : '';
   const uniqueCode = won ? genUniqueCode(sh.id, won.coupon_code) : '';
-  db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code,claim_token,claimed,device_id) VALUES (?,NULL,?,?,?,?,0,?)`)
+  const spinInfo = db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code,claim_token,claimed,device_id) VALUES (?,NULL,?,?,?,?,0,?)`)
     .run(sh.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', uniqueCode, claimToken, dev);
+
+  // Đánh dấu mã đơn hàng đã dùng, gắn với lượt quay vừa tạo
+  if (orderRow) {
+    db.prepare(`UPDATE order_codes SET used=1, used_at=datetime('now','localtime'), spin_id=? WHERE id=?`)
+      .run(Number(spinInfo.lastInsertRowid), orderRow.id);
+  }
 
   // segmentIndex: vị trí ô trên vòng quay hiển thị phía khách (ô cuối = trượt)
   const segIdx = won ? prizes.findIndex(p => p.id === won.id) : prizes.length;
@@ -569,7 +668,7 @@ app.post('/api/public/spin/:slug', (req, res) => {
     prize: won ? won.label : 'Chúc bạn may mắn lần sau',
     claimToken,
     segmentIndex: segIdx,
-    spinsLeftToday: sh.spin_limit_per_day - today - 1,
+    spinsLeftToday: orderRow ? null : sh.spin_limit_per_day - today - 1,
   });
 });
 
@@ -595,14 +694,17 @@ app.post('/api/public/claim/:slug', (req, res) => {
   `).get(token, sh.id);
   if (!token || !spin) return res.status(400).json({ error: 'Lượt trúng thưởng không hợp lệ, đã nhận rồi hoặc đã hết hạn. Hãy quay lại nhé!' });
 
-  // Chống lạm dụng: mỗi SĐT/email chỉ được nhận số mã tối đa bằng số lượt quay/ngày
-  const claimedToday = db.prepare(`
-    SELECT COUNT(*) n FROM spins s JOIN customers c ON c.id=s.customer_id
-    WHERE s.shop_id=? AND s.claimed=1 AND date(s.created_at)=date('now','localtime')
-      AND ((?<>'' AND c.phone=?) OR (?<>'' AND c.email=?))
-  `).get(sh.id, phone, phone, email, email).n;
-  if (claimedToday >= sh.spin_limit_per_day)
-    return res.status(429).json({ error: 'Số điện thoại/email này đã nhận đủ mã hôm nay. Hẹn gặp lại ngày mai!' });
+  // Chống lạm dụng (chỉ áp dụng chế độ quay tự do): mỗi SĐT/email nhận tối đa số mã bằng số lượt quay/ngày.
+  // Chế độ theo đơn hàng không giới hạn — khách mua nhiều đơn được nhận nhiều mã.
+  if ((sh.spin_mode || 'free') !== 'order') {
+    const claimedToday = db.prepare(`
+      SELECT COUNT(*) n FROM spins s JOIN customers c ON c.id=s.customer_id
+      WHERE s.shop_id=? AND s.claimed=1 AND date(s.created_at)=date('now','localtime')
+        AND ((?<>'' AND c.phone=?) OR (?<>'' AND c.email=?))
+    `).get(sh.id, phone, phone, email, email).n;
+    if (claimedToday >= sh.spin_limit_per_day)
+      return res.status(429).json({ error: 'Số điện thoại/email này đã nhận đủ mã hôm nay. Hẹn gặp lại ngày mai!' });
+  }
 
   // Tìm hoặc tạo khách hàng theo SĐT (ưu tiên) hoặc email
   let cust = null;

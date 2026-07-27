@@ -10,10 +10,15 @@
 | **Chủ cửa hàng** | Cài đặt tên quán, phần quà, mã giảm giá, tỷ lệ trúng %, số lượng quà, giới hạn lượt quay/ngày; xem khách hàng + lịch sử quay của quán mình; xuất CSV |
 | **Khách hàng** | Quét QR/bấm link `/w/ten-quan` → **quay ngay** → trúng thì nhập **họ tên + SĐT hoặc email** để nhận mã |
 
+## 2 chế độ quay (chủ quán chọn trong Cài đặt)
+
+- **🆓 Quay tự do** — phù hợp quán cà phê, sự kiện: khách quét QR là quay ngay, giới hạn lượt/thiết bị/ngày.
+- **📦 Quay theo mã đơn hàng** — phù hợp shop bán hàng: chủ shop **dán danh sách mã đơn hàng** vào tab "Mã đơn hàng", app **tự sinh mã quay thưởng tương ứng cho từng đơn**. Khách mua hàng nhận mã quay kèm đơn, nhập mã mới quay được — **mỗi đơn hàng đúng 1 lượt quay**. Có xuất CSV danh sách "mã đơn ↔ mã quay" để in kèm đơn.
+
 ## Lộ trình khách hàng
 
 1. **Quét mã QR tại quán** hoặc **bấm vào link** được chia sẻ
-2. **Quay ngay** — không cần nhập gì trước
+2. **Quay ngay** — không cần nhập gì trước (chế độ theo đơn hàng: nhập mã quay in trên đơn)
 3. Trúng thưởng → bấm **"Nhận mã giảm giá"**
 4. Nhập **họ tên (bắt buộc)** + **số điện thoại HOẶC email** (ít nhất 1 trong 2)
 5. Nhận mã giảm giá dưới dạng **ảnh** — tải về máy, chụp màn hình, hoặc **tự động gửi vào email** (nếu nhập email)
