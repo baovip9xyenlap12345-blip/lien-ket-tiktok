@@ -16,13 +16,15 @@
 2. **Quay ngay** — không cần nhập gì trước
 3. Trúng thưởng → bấm **"Nhận mã giảm giá"**
 4. Nhập **họ tên (bắt buộc)** + **số điện thoại HOẶC email** (ít nhất 1 trong 2)
-5. Nhận mã giảm giá dưới dạng **ảnh** — tải về máy, chụp màn hình, **chia sẻ qua Zalo**, hoặc **tự động gửi vào email** (nếu nhập email)
+5. Nhận mã giảm giá dưới dạng **ảnh** — tải về máy, chụp màn hình, hoặc **tự động gửi vào email** (nếu nhập email)
+6. Khi mua hàng, khách đưa ảnh mã → nhân viên vào tab **"Xác nhận mã"** nhập mã kiểm tra và xác nhận — **mỗi mã chỉ sử dụng được 1 lần**, đưa lại lần nữa hệ thống báo ngay "đã sử dụng"
 
 ## Tính năng chính
 
 - 🎯 Chủ quán tự đặt **tỷ lệ trúng (%)** và **số lượng** từng phần quà — hết quà tự ngừng trúng
 - 🎟️ Mã giảm giá chỉ hiện **sau khi khách nhập thông tin** — đảm bảo quán luôn thu được data
-- 🖼️ Mã hiển thị dạng **thẻ đẹp + tải về thành ảnh PNG** để lưu/chia sẻ Zalo
+- 🎫 **Mỗi khách trúng nhận mã RIÊNG** (VD: `GIAM10-X7K2P`) và **mã chỉ dùng được 1 lần** — nhân viên xác nhận tại tab "Xác nhận mã", dùng rồi là khóa vĩnh viễn
+- 🖼️ Mã hiển thị dạng **thẻ đẹp + tải về thành ảnh PNG** để lưu/chia sẻ
 - 📧 **Tự động gửi mã giảm giá vào email khách** (cấu hình SMTP/Gmail)
 - 🛡️ Kết quả quay xử lý **tại máy chủ** — không thể gian lận; giới hạn lượt quay theo thiết bị/ngày + mỗi SĐT/email chỉ nhận đủ số mã/ngày; phiếu nhận mã dùng 1 lần
 - 🔗 Mỗi quán có link riêng + nút tạo mã QR để in dán tại quán

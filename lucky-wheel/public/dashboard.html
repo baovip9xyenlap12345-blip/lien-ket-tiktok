@@ -27,21 +27,52 @@
   </div>
 
   <div class="tabs">
-    <button data-tab="prizes" class="active">🎁 Phần quà & tỷ lệ</button>
+    <button data-tab="redeem" class="active">🎫 Xác nhận mã</button>
+    <button data-tab="prizes">🎁 Phần quà & tỷ lệ</button>
     <button data-tab="customers">👥 Khách hàng</button>
     <button data-tab="spins">🎡 Lịch sử quay</button>
     <button data-tab="settings">⚙️ Cài đặt quán</button>
   </div>
 
+  <!-- ==================== XÁC NHẬN MÃ TẠI QUẦY ==================== -->
+  <div id="tab-redeem" class="tab-page">
+    <div class="card">
+      <h2 style="margin-top:0;">🎫 Xác nhận mã giảm giá của khách</h2>
+      <p class="muted">Khách đưa ảnh mã khi mua hàng → nhập mã vào đây để kiểm tra. <b>Mỗi mã chỉ sử dụng được 1 lần</b> — sau khi bấm xác nhận, mã sẽ không dùng lại được nữa.</p>
+      <div class="row">
+        <input id="rCode" class="grow" placeholder="VD: GIAM10-X7K2P" style="text-transform:uppercase; font-size:1.2rem; letter-spacing:2px;">
+        <button class="btn" onclick="checkCode()">🔍 Kiểm tra</button>
+      </div>
+      <div class="error" id="rErr" style="font-size:1rem;"></div>
+      <div id="rResult" style="display:none; margin-top:14px;">
+        <div class="card" style="background:var(--card2); margin:0;">
+          <div class="row" style="justify-content:space-between;">
+            <div>
+              <div style="font-size:1.3rem; font-weight:800; color:var(--accent2);" id="rrCode"></div>
+              <div style="font-size:1.1rem; margin-top:6px;" id="rrPrize"></div>
+              <div class="muted" id="rrCustomer"></div>
+              <div class="muted" id="rrTime"></div>
+            </div>
+            <div style="text-align:right;">
+              <div id="rrStatus"></div>
+            </div>
+          </div>
+          <button class="btn full" id="rrConfirm" onclick="confirmCode()" style="margin-top:14px;">✅ Xác nhận sử dụng mã (dùng 1 lần)</button>
+        </div>
+      </div>
+      <div class="success" id="rOk" style="font-size:1.05rem;"></div>
+    </div>
+  </div>
+
   <!-- ==================== PHẦN QUÀ ==================== -->
-  <div id="tab-prizes" class="tab-page">
+  <div id="tab-prizes" class="tab-page" style="display:none;">
     <div class="card">
       <h2 style="margin-top:0;">Danh sách phần quà</h2>
       <p class="muted">Tổng tỷ lệ trúng của các phần quà: <b id="totalRate">0</b>%.
         Phần trăm còn lại là tỷ lệ khách <i>không trúng</i>. Quà hết số lượng sẽ tự động ngừng trúng.</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Phần quà</th><th>Mã giảm giá</th><th>Tỷ lệ trúng</th><th>Còn lại / Tổng</th><th>Trạng thái</th><th></th></tr></thead>
+          <thead><tr><th>Phần quà</th><th>Tiền tố mã</th><th>Tỷ lệ trúng</th><th>Còn lại / Tổng</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="prizeRows"></tbody>
         </table>
       </div>
@@ -50,7 +81,7 @@
       <h2 style="margin-top:0;">➕ Thêm phần quà mới</h2>
       <div class="row">
         <div class="grow"><label>Tên phần quà</label><input id="pLabel" placeholder="VD: Giảm 15% tổng hóa đơn"></div>
-        <div class="grow"><label>Mã giảm giá</label><input id="pCode" placeholder="VD: GIAM15"></div>
+        <div class="grow"><label>Tiền tố mã giảm giá</label><input id="pCode" placeholder="VD: GIAM15"><p class="muted" style="font-size:.78rem; margin-top:4px;">Mỗi khách trúng sẽ nhận mã riêng, VD: GIAM15-X7K2P — mã chỉ dùng được 1 lần.</p></div>
       </div>
       <div class="row">
         <div class="grow"><label>Tỷ lệ trúng (%)</label><input id="pRate" type="number" min="0" max="100" step="0.1" value="10"></div>
@@ -84,7 +115,7 @@
       <h2 style="margin-top:0;">Lịch sử quay gần nhất</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT / Email</th><th>Kết quả</th><th>Mã giảm giá</th><th>Nhận mã</th></tr></thead>
+          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT / Email</th><th>Kết quả</th><th>Mã giảm giá</th><th>Nhận mã</th><th>Sử dụng</th></tr></thead>
           <tbody id="spinRows"></tbody>
         </table>
       </div>
@@ -249,9 +280,48 @@ async function loadSpins() {
     <td>${esc(s.coupon_code) || '<span class="muted">—</span>'}</td>
     <td>${!s.prize_id ? '<span class="muted">—</span>'
         : s.claimed ? (s.email_sent ? '<span class="badge on">✅ Đã nhận + 📧</span>' : '<span class="badge on">✅ Đã nhận</span>')
-        : '<span class="badge off">⏳ Chưa nhận</span>'}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="muted">Chưa có lượt quay nào.</td></tr>';
+        : '<span class="badge off">⏳ Chưa nhận</span>'}</td>
+    <td>${!s.prize_id ? '<span class="muted">—</span>'
+        : s.redeemed ? '<span class="badge off">⛔ Đã dùng</span>'
+        : s.claimed ? '<span class="badge on">Chưa dùng</span>' : '<span class="muted">—</span>'}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">Chưa có lượt quay nào.</td></tr>';
 }
+
+// -------- Xác nhận mã tại quầy --------
+let lastCheckedCode = '';
+async function checkCode() {
+  const errEl = document.getElementById('rErr'), okEl = document.getElementById('rOk');
+  errEl.textContent = ''; okEl.textContent = '';
+  document.getElementById('rResult').style.display = 'none';
+  const code = document.getElementById('rCode').value.trim().toUpperCase();
+  const r = await api('/api/redeem/check', { method: 'POST', body: JSON.stringify({ code }) });
+  if (!r.ok) { errEl.textContent = '❌ ' + r.data.error; return; }
+  lastCheckedCode = r.data.coupon_code;
+  document.getElementById('rrCode').textContent = r.data.coupon_code;
+  document.getElementById('rrPrize').textContent = '🎁 ' + r.data.prize;
+  document.getElementById('rrCustomer').textContent = 'Khách: ' + (r.data.customer_name || '—') + (r.data.customer_contact ? ' • ' + r.data.customer_contact : '');
+  document.getElementById('rrTime').textContent = 'Trúng lúc: ' + r.data.won_at;
+  const st = document.getElementById('rrStatus');
+  if (r.data.redeemed) {
+    st.innerHTML = '<span class="badge off">⛔ ĐÃ SỬ DỤNG</span><div class="muted" style="margin-top:6px;">lúc ' + r.data.redeemed_at + '</div>';
+    document.getElementById('rrConfirm').style.display = 'none';
+  } else {
+    st.innerHTML = '<span class="badge on">✅ HỢP LỆ - Chưa sử dụng</span>';
+    document.getElementById('rrConfirm').style.display = 'block';
+  }
+  document.getElementById('rResult').style.display = 'block';
+}
+async function confirmCode() {
+  const errEl = document.getElementById('rErr'), okEl = document.getElementById('rOk');
+  errEl.textContent = ''; okEl.textContent = '';
+  const r = await api('/api/redeem/confirm', { method: 'POST', body: JSON.stringify({ code: lastCheckedCode }) });
+  if (!r.ok) { errEl.textContent = '❌ ' + r.data.error; document.getElementById('rResult').style.display = 'none'; return; }
+  document.getElementById('rResult').style.display = 'none';
+  document.getElementById('rCode').value = '';
+  okEl.textContent = '✅ Đã xác nhận! Áp dụng "' + r.data.prize + '" cho khách ' + (r.data.customer_name || '') + '. Mã này không dùng lại được nữa.';
+  loadSpins();
+}
+document.getElementById('rCode').addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
 
 // -------- Cài đặt --------
 async function saveShop() {

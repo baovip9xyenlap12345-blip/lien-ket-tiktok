@@ -135,6 +135,22 @@ if (!db.prepare(`SELECT id FROM users WHERE role='admin' LIMIT 1`).get()) {
   }
 }
 
+// Nâng cấp CSDL: mã giảm giá dùng 1 lần (đánh dấu đã sử dụng khi khách mua)
+try { db.exec(`ALTER TABLE spins ADD COLUMN redeemed INTEGER NOT NULL DEFAULT 0`); } catch (e) { /* cột đã tồn tại */ }
+try { db.exec(`ALTER TABLE spins ADD COLUMN redeemed_at TEXT DEFAULT ''`); } catch (e) { /* cột đã tồn tại */ }
+
+// Sinh mã giảm giá RIÊNG cho từng lượt trúng (VD: GIAM10-X7K2P) — nhờ vậy mỗi mã chỉ dùng được 1 lần.
+// Bỏ các ký tự dễ nhầm lẫn (O/0, I/1/L) để nhân viên nhập lại không sai.
+function genUniqueCode(shopId, prefix) {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  for (;;) {
+    let s = '';
+    for (let i = 0; i < 5; i++) s += chars[crypto.randomInt(chars.length)];
+    const code = (String(prefix || '').trim() ? String(prefix).trim().toUpperCase() : 'QUA') + '-' + s;
+    if (!db.prepare(`SELECT id FROM spins WHERE shop_id=? AND coupon_code=?`).get(shopId, code)) return code;
+  }
+}
+
 // ------------------------------------------------------------------ Gửi email mã giảm giá
 // Cấu hình SMTP qua biến môi trường. Không cấu hình = tính năng email tắt, app vẫn chạy bình thường.
 // Gmail: SMTP_HOST=smtp.gmail.com SMTP_PORT=465 SMTP_USER=ban@gmail.com SMTP_PASS=<mật khẩu ứng dụng>
@@ -394,6 +410,45 @@ app.get('/api/spins', requireAuth('owner'), (req, res) => {
   `).all(req.shop.id));
 });
 
+// ---- Xác nhận mã tại quầy: mỗi mã chỉ sử dụng được 1 LẦN ----
+function findCouponSpin(shopId, rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return { error: 'Vui lòng nhập mã giảm giá.' };
+  const spin = db.prepare(`
+    SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email
+    FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
+    WHERE s.shop_id=? AND s.coupon_code=? AND s.prize_id IS NOT NULL
+  `).get(shopId, code);
+  if (!spin) return { error: 'Không tìm thấy mã này. Kiểm tra lại xem khách nhập đúng chưa.' };
+  if (!spin.claimed) return { error: 'Mã này chưa được khách xác nhận nhận thưởng — không hợp lệ.' };
+  return { spin };
+}
+
+app.post('/api/redeem/check', requireAuth('owner'), (req, res) => {
+  const r = findCouponSpin(req.shop.id, (req.body || {}).code);
+  if (r.error) return res.status(400).json({ error: r.error });
+  const s = r.spin;
+  res.json({
+    coupon_code: s.coupon_code,
+    prize: s.prize_label,
+    customer_name: s.customer_name,
+    customer_contact: s.customer_phone || s.customer_email || '',
+    won_at: s.created_at,
+    redeemed: !!s.redeemed,
+    redeemed_at: s.redeemed_at || '',
+  });
+});
+
+app.post('/api/redeem/confirm', requireAuth('owner'), (req, res) => {
+  const r = findCouponSpin(req.shop.id, (req.body || {}).code);
+  if (r.error) return res.status(400).json({ error: r.error });
+  const s = r.spin;
+  if (s.redeemed)
+    return res.status(400).json({ error: `Mã này ĐÃ ĐƯỢC SỬ DỤNG lúc ${s.redeemed_at}. Mỗi mã chỉ dùng được 1 lần!` });
+  db.prepare(`UPDATE spins SET redeemed=1, redeemed_at=datetime('now','localtime') WHERE id=?`).run(s.id);
+  res.json({ ok: true, prize: s.prize_label, customer_name: s.customer_name });
+});
+
 app.get('/api/export/customers.csv', requireAuth('owner'), (req, res) => {
   const rows = db.prepare(`
     SELECT c.name, c.phone, c.email, c.created_at, COUNT(s.id),
@@ -500,10 +555,12 @@ app.post('/api/public/spin/:slug', (req, res) => {
   if (won && won.quantity !== -1) {
     db.prepare(`UPDATE prizes SET remaining=remaining-1 WHERE id=?`).run(won.id);
   }
-  // Phiếu nhận mã dùng 1 lần: khách phải nhập thông tin ở bước 2 mới thấy mã giảm giá
+  // Phiếu nhận mã dùng 1 lần: khách phải nhập thông tin ở bước 2 mới thấy mã giảm giá.
+  // Mỗi lượt trúng được sinh MÃ RIÊNG (dùng 1 lần) từ tiền tố mã của phần quà.
   const claimToken = won ? crypto.randomBytes(16).toString('hex') : '';
+  const uniqueCode = won ? genUniqueCode(sh.id, won.coupon_code) : '';
   db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code,claim_token,claimed,device_id) VALUES (?,NULL,?,?,?,?,0,?)`)
-    .run(sh.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', won ? won.coupon_code : '', claimToken, dev);
+    .run(sh.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', uniqueCode, claimToken, dev);
 
   // segmentIndex: vị trí ô trên vòng quay hiển thị phía khách (ô cuối = trượt)
   const segIdx = won ? prizes.findIndex(p => p.id === won.id) : prizes.length;

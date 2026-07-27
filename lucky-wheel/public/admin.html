@@ -126,6 +126,7 @@ async function viewShop(id, name) {
     <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
     <td>${esc(s.coupon_code) || '—'}</td>
     <td>${!s.prize_id ? '—'
+        : s.redeemed ? '<span class="badge off">⛔ Đã dùng</span>'
         : s.claimed ? (s.email_sent ? '<span class="badge on">✅ + 📧</span>' : '<span class="badge on">✅ Đã nhận</span>')
         : '<span class="badge off">⏳ Chưa</span>'}</td></tr>`).join('')
     || '<tr><td colspan="6" class="muted">Chưa có lượt quay.</td></tr>';
