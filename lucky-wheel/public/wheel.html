@@ -79,6 +79,13 @@
     background: #0f172a; border-radius: 10px; padding: 10px; margin: 10px 0 4px;
   }
   .coupon-card .c-name { color: var(--muted); font-size: .85rem; }
+  /* Tên quà trong hộp kết quả: to, rõ, tự xuống dòng, phát sáng */
+  .prize-name {
+    font-size: 1.6rem !important; line-height: 1.35; word-wrap: break-word;
+    background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.4);
+    border-radius: 12px; padding: 12px 14px;
+    text-shadow: 0 0 16px rgba(251,191,36,.5);
+  }
   .receive-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
   .receive-btns .btn { width: 100%; }
 </style>
@@ -196,6 +203,46 @@ function winFanfare() {
   [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'triangle', 0.07), i * 130));
 }
 
+// Cỡ chữ tự co theo số ô: càng nhiều quà chữ càng nhỏ vừa vặn, tối đa 2 dòng
+let LABEL_FS = 22;
+let segLines = []; // các dòng chữ đã bẻ sẵn cho từng ô
+
+function layoutLabels() {
+  const n = segments.length;
+  if (!n) return;
+  LABEL_FS = n <= 6 ? 24 : n <= 8 ? 21 : n <= 10 ? 19 : n <= 12 ? 17 : 15;
+  ctx.font = 'bold ' + LABEL_FS + 'px system-ui';
+  const maxW = R - 115; // chiều dài chữ: từ sát tâm vàng ra gần mép vòng
+  segLines = segments.map(s => wrapText(String(s.label || ''), maxW, 2));
+}
+
+function wrapText(text, maxWidth, maxLines) {
+  const words = text.trim().split(/\s+/);
+  const lines = [];
+  let cur = '';
+  let overflow = false;
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(test).width <= maxWidth || cur === '') {
+      cur = test;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      overflow = true;
+      break;
+    }
+  }
+  if (cur) lines.push(cur);
+  // dòng cuối quá dài hoặc còn chữ thừa → cắt gọn kèm dấu …
+  let last = lines[lines.length - 1] || '';
+  if (overflow || ctx.measureText(last).width > maxWidth) {
+    while (last && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+    lines[lines.length - 1] = last + '…';
+  }
+  return lines;
+}
+
 function drawWheel(angle, t) {
   const n = segments.length;
   if (!n) return;
@@ -219,12 +266,17 @@ function drawWheel(angle, t) {
     ctx.rotate(start + arc / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 22px system-ui';
-    ctx.shadowColor = 'rgba(0,0,0,.6)';
-    ctx.shadowBlur = 4;
-    let label = segments[i].label;
-    if (label.length > 18) label = label.slice(0, 17) + '…';
-    ctx.fillText(label, R - 34, 8);
+    ctx.font = 'bold ' + LABEL_FS + 'px system-ui';
+    ctx.shadowColor = 'rgba(0,0,0,.75)';
+    ctx.shadowBlur = 5;
+    const lines = segLines[i] || [String(segments[i].label || '')];
+    const lh = LABEL_FS + 4; // giãn dòng
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], R - 30, LABEL_FS * 0.36);
+    } else {
+      ctx.fillText(lines[0], R - 30, -lh / 2 + LABEL_FS * 0.36);
+      ctx.fillText(lines[1], R - 30, lh / 2 + LABEL_FS * 0.36);
+    }
     ctx.restore();
   }
   ctx.restore();
@@ -352,6 +404,7 @@ async function loadShop() {
     if (data.order_bonus) document.getElementById('bonusToggle').style.display = 'inline-block';
   }
   segments = data.segments;
+  layoutLabels();
   drawWheel(0);
 }
 
