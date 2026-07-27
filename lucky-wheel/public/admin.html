@@ -56,7 +56,7 @@
     </div>
     <div id="dtab-dspins" class="table-wrap" style="display:none;">
       <table>
-        <thead><tr><th>Thời gian</th><th>Khách</th><th>SĐT</th><th>Kết quả</th><th>Mã</th><th>Email</th></tr></thead>
+        <thead><tr><th>Thời gian</th><th>Khách</th><th>SĐT</th><th>Kết quả</th><th>Mã</th><th>Nhận mã</th></tr></thead>
         <tbody id="dSpinRows"></tbody>
       </table>
     </div>
@@ -120,10 +120,14 @@ async function viewShop(id, name) {
     <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td></tr>`).join('')
     || '<tr><td colspan="6" class="muted">Chưa có khách hàng.</td></tr>';
   document.getElementById('dSpinRows').innerHTML = spins.data.map(s => `
-    <tr><td class="muted">${s.created_at}</td><td>${esc(s.customer_name)}</td><td>${esc(s.customer_phone)}</td>
+    <tr><td class="muted">${s.created_at}</td>
+    <td>${s.customer_name ? esc(s.customer_name) : '<span class="muted">Chưa nhận</span>'}</td>
+    <td>${esc(s.customer_phone) || '—'}</td>
     <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
     <td>${esc(s.coupon_code) || '—'}</td>
-    <td>${s.email_sent ? '<span class="badge on">📧 Đã gửi</span>' : '—'}</td></tr>`).join('')
+    <td>${!s.prize_id ? '—'
+        : s.claimed ? (s.email_sent ? '<span class="badge on">✅ + 📧</span>' : '<span class="badge on">✅ Đã nhận</span>')
+        : '<span class="badge off">⏳ Chưa</span>'}</td></tr>`).join('')
     || '<tr><td colspan="6" class="muted">Chưa có lượt quay.</td></tr>';
   document.getElementById('detailCard').scrollIntoView({ behavior: 'smooth' });
 }

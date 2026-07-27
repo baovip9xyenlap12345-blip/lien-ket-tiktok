@@ -84,7 +84,7 @@
       <h2 style="margin-top:0;">Lịch sử quay gần nhất</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT</th><th>Kết quả</th><th>Mã giảm giá</th><th>Email</th></tr></thead>
+          <thead><tr><th>Thời gian</th><th>Khách hàng</th><th>SĐT / Email</th><th>Kết quả</th><th>Mã giảm giá</th><th>Nhận mã</th></tr></thead>
           <tbody id="spinRows"></tbody>
         </table>
       </div>
@@ -101,14 +101,14 @@
       <textarea id="sDesc" rows="2" placeholder="VD: Quay là trúng - Ưu đãi mỗi ngày tại Cà phê Ban Mai!"></textarea>
       <div class="row">
         <div class="grow">
-          <label>Số lượt quay tối đa / SĐT / ngày</label>
+          <label>Số lượt quay tối đa / khách / ngày</label>
           <input id="sLimit" type="number" min="1" value="1">
         </div>
-        <div class="grow">
-          <label>Bắt buộc nhập email?</label>
-          <select id="sEmail"><option value="1">Có - thu thập email khách</option><option value="0">Không bắt buộc</option></select>
-        </div>
       </div>
+      <p class="muted" style="font-size:.85rem; margin-top:8px;">
+        Khách quay ngay không cần nhập trước. Khi trúng, khách phải nhập <b>họ tên + SĐT hoặc email</b> mới nhận được mã —
+        nhận qua ảnh tải về, chụp màn hình, chia sẻ Zalo, hoặc tự động gửi email.
+      </p>
       <div class="success" id="sMsg"></div>
       <button class="btn" style="margin-top:14px;" onclick="saveShop()">💾 Lưu cài đặt</button>
     </div>
@@ -157,7 +157,6 @@ function renderShop() {
   document.getElementById('sName').value = shop.name;
   document.getElementById('sDesc').value = shop.description || '';
   document.getElementById('sLimit').value = shop.spin_limit_per_day;
-  document.getElementById('sEmail').value = String(shop.require_email);
 }
 
 // -------- Phần quà --------
@@ -243,10 +242,14 @@ async function loadCustomers() {
 async function loadSpins() {
   const { data } = await api('/api/spins');
   document.getElementById('spinRows').innerHTML = data.map(s => `
-    <tr><td class="muted">${s.created_at}</td><td>${esc(s.customer_name)}</td><td>${esc(s.customer_phone)}</td>
+    <tr><td class="muted">${s.created_at}</td>
+    <td>${s.customer_name ? esc(s.customer_name) : '<span class="muted">Chưa nhận mã</span>'}</td>
+    <td>${esc(s.customer_phone || s.customer_email) || '<span class="muted">—</span>'}</td>
     <td>${s.prize_id ? '🎉 ' + esc(s.prize_label) : '<span class="muted">Không trúng</span>'}</td>
     <td>${esc(s.coupon_code) || '<span class="muted">—</span>'}</td>
-    <td>${s.email_sent ? '<span class="badge on">📧 Đã gửi</span>' : '<span class="muted">—</span>'}</td></tr>`).join('')
+    <td>${!s.prize_id ? '<span class="muted">—</span>'
+        : s.claimed ? (s.email_sent ? '<span class="badge on">✅ Đã nhận + 📧</span>' : '<span class="badge on">✅ Đã nhận</span>')
+        : '<span class="badge off">⏳ Chưa nhận</span>'}</td></tr>`).join('')
     || '<tr><td colspan="6" class="muted">Chưa có lượt quay nào.</td></tr>';
 }
 
@@ -258,7 +261,6 @@ async function saveShop() {
       name: document.getElementById('sName').value,
       description: document.getElementById('sDesc').value,
       spin_limit_per_day: document.getElementById('sLimit').value,
-      require_email: document.getElementById('sEmail').value === '1',
     }),
   });
   if (r.ok) { shop = r.data; renderShop(); document.getElementById('sMsg').textContent = '✓ Đã lưu!'; setTimeout(() => document.getElementById('sMsg').textContent = '', 2000); }

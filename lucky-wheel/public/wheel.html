@@ -24,13 +24,22 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 1.6rem; z-index: 4; border: 3px solid #fff3;
   }
-  #spinBtn { font-size: 1.15rem; padding: 14px 36px; border-radius: 999px; }
-  .form-card { text-align: left; }
-  .coupon {
-    font-size: 1.3rem; letter-spacing: 2px; background: #0f172a;
-    border: 2px dashed var(--accent); color: var(--accent2);
-    padding: 10px 18px; border-radius: 10px; display: inline-block; margin: 10px 0; cursor: pointer;
+  #spinBtn { font-size: 1.25rem; padding: 16px 46px; border-radius: 999px; }
+  .claim-form { text-align: left; }
+  .coupon-card {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 2px dashed var(--accent); border-radius: 14px;
+    padding: 20px; margin: 14px 0;
   }
+  .coupon-card .c-shop { color: var(--muted); font-size: .9rem; }
+  .coupon-card .c-prize { font-size: 1.25rem; font-weight: 800; margin: 6px 0; }
+  .coupon-card .c-code {
+    font-size: 1.7rem; letter-spacing: 3px; font-weight: 800; color: var(--accent2);
+    background: #0f172a; border-radius: 10px; padding: 10px; margin: 10px 0 4px;
+  }
+  .coupon-card .c-name { color: var(--muted); font-size: .85rem; }
+  .receive-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .receive-btns .btn { width: 100%; }
 </style>
 </head>
 <body>
@@ -45,35 +54,58 @@
     <canvas id="wheel" width="600" height="600"></canvas>
   </div>
 
-  <div class="card form-card" id="formCard">
-    <h2 style="margin-top:0;">Nhập thông tin để quay 🎯</h2>
-    <label>Họ tên</label>
-    <input id="name" required placeholder="VD: Nguyễn Thị B">
-    <label>Số điện thoại</label>
-    <input id="phone" required inputmode="numeric" placeholder="VD: 0912345678">
-    <div id="emailField">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="ban@email.com">
-    </div>
-    <div class="error" id="err"></div>
-    <button class="btn full" id="spinBtn">QUAY NGAY!</button>
-    <p class="muted" style="margin-top:10px; font-size:.85rem;" id="limitNote"></p>
-  </div>
+  <div class="error" id="err"></div>
+  <button class="btn" id="spinBtn">🎯 QUAY NGAY!</button>
+  <p class="muted" style="margin-top:12px; font-size:.85rem;" id="limitNote"></p>
 </div>
 
+<!-- ===== Modal kết quả: 3 bước (kết quả → nhập thông tin → nhận mã) ===== -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
-    <div id="modalEmoji" style="font-size:3rem;">🎉</div>
-    <h2 id="modalTitle">Chúc mừng!</h2>
-    <div class="prize-name" id="modalPrize"></div>
-    <div id="couponWrap" style="display:none;">
-      <p class="muted">Mã giảm giá của bạn (bấm để sao chép):</p>
-      <div class="coupon" id="couponCode" title="Bấm để sao chép"></div>
-      <p class="muted" style="font-size:.85rem;">📸 Hãy chụp màn hình và đưa mã này cho nhân viên khi sử dụng.</p>
-      <p class="success" id="emailNote" style="display:none; font-size:.9rem;">📧 Mã giảm giá cũng đã được gửi vào email của bạn!</p>
+
+    <!-- Bước 1: kết quả quay -->
+    <div id="stepResult">
+      <div id="modalEmoji" style="font-size:3rem;">🎉</div>
+      <h2 id="modalTitle">Chúc mừng!</h2>
+      <div class="prize-name" id="modalPrize"></div>
+      <p class="muted" id="modalNote"></p>
+      <button class="btn full" id="claimBtn" style="display:none;">🎁 Nhận mã giảm giá</button>
+      <button class="btn full ghost" onclick="closeModal()" id="closeBtn1">Đóng</button>
     </div>
-    <p class="muted" id="modalNote" style="margin-top:8px;"></p>
-    <button class="btn full" onclick="closeModal()">Đóng</button>
+
+    <!-- Bước 2: nhập thông tin để nhận mã -->
+    <div id="stepForm" style="display:none;" class="claim-form">
+      <h2 style="text-align:center;">📋 Nhập thông tin nhận mã</h2>
+      <p class="muted" style="text-align:center; font-size:.9rem;">Nhập họ tên và <b>số điện thoại hoặc email</b> (ít nhất 1 trong 2) để nhận mã giảm giá.</p>
+      <label>Họ tên <span style="color:var(--danger);">*</span></label>
+      <input id="cName" required placeholder="VD: Nguyễn Thị B">
+      <label>Số điện thoại</label>
+      <input id="cPhone" inputmode="numeric" placeholder="VD: 0912345678">
+      <label>Email <span class="muted" style="font-weight:400;">(nhận mã qua email)</span></label>
+      <input type="email" id="cEmail" placeholder="ban@email.com">
+      <div class="error" id="claimErr"></div>
+      <button class="btn full" id="submitClaim">Nhận mã ngay 🎁</button>
+    </div>
+
+    <!-- Bước 3: hiển thị mã giảm giá -->
+    <div id="stepCoupon" style="display:none;">
+      <div style="font-size:2.5rem;">🎊</div>
+      <h2>Mã giảm giá của bạn</h2>
+      <div class="coupon-card" id="couponCard">
+        <div class="c-shop" id="ccShop"></div>
+        <div class="c-prize" id="ccPrize"></div>
+        <div class="c-code" id="ccCode"></div>
+        <div class="c-name" id="ccName"></div>
+      </div>
+      <p class="success" id="emailNote" style="display:none;">📧 Mã cũng đã được gửi vào email của bạn!</p>
+      <div class="receive-btns">
+        <button class="btn" onclick="downloadCoupon()">⬇️ Tải ảnh mã giảm giá</button>
+        <button class="btn" style="background:#0068ff; color:#fff;" onclick="shareCoupon()">💬 Gửi qua Zalo / Chia sẻ</button>
+        <button class="btn ghost" onclick="closeModal()">Đóng (đã chụp màn hình 📸)</button>
+      </div>
+      <p class="muted" style="font-size:.82rem; margin-top:10px;">Đưa mã này cho nhân viên khi thanh toán để nhận ưu đãi.</p>
+    </div>
+
   </div>
 </div>
 
@@ -84,8 +116,11 @@ const ctx = canvas.getContext('2d');
 const SIZE = 600, R = SIZE / 2;
 const DEFAULT_COLORS = ['#f59e0b','#ef4444','#8b5cf6','#3b82f6','#22c55e','#ec4899','#14b8a6','#f97316'];
 let segments = [];
-let currentAngle = 0;   // góc xoay hiện tại (radian)
+let currentAngle = 0;
 let spinning = false;
+let claimToken = '';
+let shopName = '';
+let coupon = null; // {shopName, prize, code, customerName}
 
 function drawWheel(angle) {
   const n = segments.length;
@@ -106,7 +141,6 @@ function drawWheel(angle) {
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 3;
     ctx.stroke();
-    // chữ trên từng ô
     ctx.save();
     ctx.rotate(start + arc / 2);
     ctx.textAlign = 'right';
@@ -120,7 +154,6 @@ function drawWheel(angle) {
     ctx.restore();
   }
   ctx.restore();
-  // viền ngoài
   ctx.beginPath();
   ctx.arc(R, R, R - 4, 0, 2 * Math.PI);
   ctx.strokeStyle = '#fbbf24';
@@ -133,15 +166,15 @@ async function loadShop() {
   const data = await res.json();
   if (!res.ok) {
     document.getElementById('shopName').textContent = '😢 ' + (data.error || 'Không tìm thấy chương trình.');
-    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('spinBtn').style.display = 'none';
     return;
   }
+  shopName = data.name;
   document.getElementById('shopName').textContent = data.name;
   document.getElementById('shopDesc').textContent = data.description || '';
   document.title = data.name + ' - Vòng Quay May Mắn';
   document.getElementById('limitNote').textContent =
-    'Mỗi số điện thoại được quay tối đa ' + data.spin_limit_per_day + ' lượt/ngày.';
-  if (!data.require_email) document.getElementById('emailField').style.display = 'none';
+    'Bạn có ' + data.spin_limit_per_day + ' lượt quay miễn phí mỗi ngày.';
   segments = data.segments;
   drawWheel(0);
 }
@@ -149,17 +182,16 @@ async function loadShop() {
 function spinTo(segmentIndex, done) {
   const n = segments.length;
   const arc = (2 * Math.PI) / n;
-  // ô segmentIndex cần dừng ngay dưới kim (đỉnh vòng). Khi angle=0, tâm ô 0 ở đỉnh.
   const target = -(segmentIndex * arc);
-  const jitter = (Math.random() - 0.5) * arc * 0.6;  // dừng lệch nhẹ trong ô cho tự nhiên
-  const spins = 6 * 2 * Math.PI;                      // quay 6 vòng
+  const jitter = (Math.random() - 0.5) * arc * 0.6;
+  const spins = 6 * 2 * Math.PI;
   const from = currentAngle % (2 * Math.PI);
   const to = spins + target + jitter;
   const duration = 5200;
   const t0 = performance.now();
   function frame(t) {
     const p = Math.min(1, (t - t0) / duration);
-    const ease = 1 - Math.pow(1 - p, 4);              // ease-out mạnh
+    const ease = 1 - Math.pow(1 - p, 4);
     currentAngle = from + (to - from) * ease;
     drawWheel(currentAngle);
     if (p < 1) requestAnimationFrame(frame);
@@ -168,6 +200,7 @@ function spinTo(segmentIndex, done) {
   requestAnimationFrame(frame);
 }
 
+// ---- Bước 1: quay ngay, không cần nhập gì ----
 document.getElementById('spinBtn').addEventListener('click', async () => {
   if (spinning) return;
   const err = document.getElementById('err');
@@ -176,16 +209,10 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
   btn.disabled = true;
   spinning = true;
   try {
-    const res = await fetch('/api/public/spin/' + encodeURIComponent(slug), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: document.getElementById('name').value,
-        phone: document.getElementById('phone').value,
-        email: document.getElementById('email').value,
-      }),
-    });
+    const res = await fetch('/api/public/spin/' + encodeURIComponent(slug), { method: 'POST' });
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error || 'Có lỗi xảy ra.'; spinning = false; btn.disabled = false; return; }
+    claimToken = data.claimToken || '';
     spinTo(data.segmentIndex, () => {
       spinning = false;
       btn.disabled = false;
@@ -199,28 +226,126 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
 });
 
 function showResult(data) {
+  showStep('stepResult');
   document.getElementById('modalEmoji').textContent = data.win ? '🎉' : '🍀';
   document.getElementById('modalTitle').textContent = data.win ? 'Chúc mừng bạn!' : 'Tiếc quá!';
   document.getElementById('modalPrize').textContent = data.prize;
-  const cw = document.getElementById('couponWrap');
-  if (data.win && data.coupon_code) {
-    cw.style.display = 'block';
-    const codeEl = document.getElementById('couponCode');
-    codeEl.textContent = data.coupon_code;
-    codeEl.dataset.code = data.coupon_code;
-  } else cw.style.display = 'none';
-  document.getElementById('emailNote').style.display = data.emailed ? 'block' : 'none';
+  document.getElementById('claimBtn').style.display = data.win ? 'block' : 'none';
+  document.getElementById('closeBtn1').style.display = data.win ? 'none' : 'block';
   document.getElementById('modalNote').textContent =
-    data.spinsLeftToday > 0 ? ('Bạn còn ' + data.spinsLeftToday + ' lượt quay hôm nay.') : 'Hẹn gặp lại bạn ngày mai nhé!';
+    data.win ? 'Bấm nút bên dưới để nhận mã giảm giá của bạn.'
+             : (data.spinsLeftToday > 0 ? ('Bạn còn ' + data.spinsLeftToday + ' lượt quay hôm nay.') : 'Hẹn gặp lại bạn ngày mai nhé!');
   document.getElementById('modalBg').classList.add('show');
 }
-function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
-document.getElementById('couponCode').addEventListener('click', function () {
-  const original = this.dataset.code || this.textContent;
-  navigator.clipboard && navigator.clipboard.writeText(original);
-  this.textContent = '✓ Đã sao chép';
-  setTimeout(() => { this.textContent = original; }, 1000);
+
+// ---- Bước 2: nhập thông tin ----
+document.getElementById('claimBtn').addEventListener('click', () => showStep('stepForm'));
+
+document.getElementById('submitClaim').addEventListener('click', async () => {
+  const errEl = document.getElementById('claimErr');
+  errEl.textContent = '';
+  const btn = document.getElementById('submitClaim');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/public/claim/' + encodeURIComponent(slug), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        claimToken,
+        name: document.getElementById('cName').value,
+        phone: document.getElementById('cPhone').value,
+        email: document.getElementById('cEmail').value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Có lỗi xảy ra.'; btn.disabled = false; return; }
+    coupon = data;
+    showCoupon(data);
+  } catch (e) {
+    errEl.textContent = 'Mất kết nối, vui lòng thử lại.';
+  }
+  btn.disabled = false;
 });
+
+// ---- Bước 3: hiển thị mã ----
+function showCoupon(data) {
+  showStep('stepCoupon');
+  document.getElementById('ccShop').textContent = data.shopName;
+  document.getElementById('ccPrize').textContent = '🎁 ' + data.prize;
+  document.getElementById('ccCode').textContent = data.coupon_code || '(Nhận quà trực tiếp tại quán)';
+  document.getElementById('ccName').textContent = 'Khách hàng: ' + data.customerName + ' • ' + new Date().toLocaleDateString('vi-VN');
+  document.getElementById('emailNote').style.display = data.emailed ? 'block' : 'none';
+}
+
+// Vẽ mã giảm giá thành ảnh PNG để tải về / chia sẻ
+function couponToCanvas() {
+  const c = document.createElement('canvas');
+  c.width = 700; c.height = 420;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 700, 420);
+  grad.addColorStop(0, '#1e293b'); grad.addColorStop(1, '#0f172a');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 700, 420);
+  g.strokeStyle = '#f59e0b';
+  g.setLineDash([12, 8]);
+  g.lineWidth = 4;
+  g.strokeRect(14, 14, 672, 392);
+  g.setLineDash([]);
+  g.textAlign = 'center';
+  g.fillStyle = '#94a3b8';
+  g.font = '26px system-ui';
+  g.fillText(coupon.shopName, 350, 70);
+  g.font = '40px system-ui';
+  g.fillText('🎉', 350, 125);
+  g.fillStyle = '#e2e8f0';
+  g.font = 'bold 34px system-ui';
+  g.fillText(coupon.prize, 350, 180);
+  g.fillStyle = '#1e293b';
+  g.fillRect(110, 210, 480, 80);
+  g.strokeStyle = '#fbbf24';
+  g.lineWidth = 2;
+  g.strokeRect(110, 210, 480, 80);
+  g.fillStyle = '#fbbf24';
+  g.font = 'bold 44px monospace';
+  g.fillText(coupon.coupon_code || 'NHẬN TẠI QUÁN', 350, 264);
+  g.fillStyle = '#94a3b8';
+  g.font = '20px system-ui';
+  g.fillText('Khách hàng: ' + coupon.customerName + ' • ' + new Date().toLocaleDateString('vi-VN'), 350, 330);
+  g.fillText('Đưa mã này cho nhân viên khi thanh toán', 350, 365);
+  return c;
+}
+
+function downloadCoupon() {
+  if (!coupon) return;
+  const a = document.createElement('a');
+  a.download = 'ma-giam-gia-' + (coupon.coupon_code || 'qua-tang') + '.png';
+  a.href = couponToCanvas().toDataURL('image/png');
+  a.click();
+}
+
+async function shareCoupon() {
+  if (!coupon) return;
+  const text = '🎉 Tôi vừa trúng "' + coupon.prize + '" tại ' + coupon.shopName +
+    (coupon.coupon_code ? ' - Mã: ' + coupon.coupon_code : '') + ' 🎡 Quay thử tại: ' + location.href;
+  // Ưu tiên chia sẻ ảnh mã qua Zalo/ứng dụng bằng menu chia sẻ của điện thoại
+  try {
+    const blob = await new Promise(r => couponToCanvas().toBlob(r, 'image/png'));
+    const file = new File([blob], 'ma-giam-gia.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text });
+      return;
+    }
+    if (navigator.share) { await navigator.share({ text, url: location.href }); return; }
+  } catch (e) { /* người dùng hủy chia sẻ */ }
+  // Máy tính không có menu chia sẻ → tải ảnh về để gửi Zalo thủ công
+  downloadCoupon();
+  alert('Ảnh mã đã được tải về máy. Hãy mở Zalo và gửi ảnh này để lưu lại nhé!');
+}
+
+function showStep(id) {
+  for (const s of ['stepResult', 'stepForm', 'stepCoupon'])
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
 
 loadShop();
 </script>

@@ -60,21 +60,68 @@ db.exec(`
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     shop_id    INTEGER NOT NULL REFERENCES shops(id),
     name       TEXT NOT NULL,
-    phone      TEXT NOT NULL,
+    phone      TEXT DEFAULT '',                       -- khách chỉ cần SĐT HOẶC email
     email      TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-    UNIQUE(shop_id, phone)
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
   CREATE TABLE IF NOT EXISTS spins (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     shop_id     INTEGER NOT NULL REFERENCES shops(id),
-    customer_id INTEGER NOT NULL REFERENCES customers(id),
+    customer_id INTEGER,                              -- NULL = quay xong chưa nhận mã
     prize_id    INTEGER,                              -- NULL = không trúng
     prize_label TEXT NOT NULL,
     coupon_code TEXT DEFAULT '',
+    claim_token TEXT DEFAULT '',                      -- phiếu nhận mã dùng 1 lần
+    claimed     INTEGER NOT NULL DEFAULT 0,           -- 1 = khách đã nhập thông tin nhận mã
+    device_id   TEXT DEFAULT '',                      -- giới hạn lượt quay theo thiết bị
+    email_sent  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
 `);
+
+// Nâng cấp CSDL phiên bản cũ (khách bắt buộc SĐT, quay sau khi nhập thông tin) lên luồng mới
+const custSql = db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='customers'`).get();
+if (custSql && custSql.sql.includes('UNIQUE(shop_id, phone)')) {
+  db.exec(`
+    CREATE TABLE customers_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      name TEXT NOT NULL,
+      phone TEXT DEFAULT '',
+      email TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    INSERT INTO customers_new (id,shop_id,name,phone,email,created_at)
+      SELECT id,shop_id,name,phone,email,created_at FROM customers;
+    DROP TABLE customers;
+    ALTER TABLE customers_new RENAME TO customers;
+  `);
+  console.log('>> Đã nâng cấp bảng customers lên luồng mới (SĐT hoặc email).');
+}
+const spinSql = db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='spins'`).get();
+if (spinSql && spinSql.sql.includes('customer_id INTEGER NOT NULL')) {
+  const hasEmailSent = db.prepare(`SELECT COUNT(*) n FROM pragma_table_info('spins') WHERE name='email_sent'`).get().n > 0;
+  db.exec(`
+    CREATE TABLE spins_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      customer_id INTEGER,
+      prize_id INTEGER,
+      prize_label TEXT NOT NULL,
+      coupon_code TEXT DEFAULT '',
+      claim_token TEXT DEFAULT '',
+      claimed INTEGER NOT NULL DEFAULT 0,
+      device_id TEXT DEFAULT '',
+      email_sent INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    INSERT INTO spins_new (id,shop_id,customer_id,prize_id,prize_label,coupon_code,claimed,email_sent,created_at)
+      SELECT id,shop_id,customer_id,prize_id,prize_label,coupon_code,1,${hasEmailSent ? 'email_sent' : '0'},created_at FROM spins;
+    DROP TABLE spins;
+    ALTER TABLE spins_new RENAME TO spins;
+  `);
+  console.log('>> Đã nâng cấp bảng spins lên luồng mới (quay trước, nhận mã sau).');
+}
 
 // Tạo tài khoản quản trị viên lần đầu (đổi mật khẩu qua biến môi trường!)
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@vongquay.local';
@@ -87,9 +134,6 @@ if (!db.prepare(`SELECT id FROM users WHERE role='admin' LIMIT 1`).get()) {
     console.log('>> CẢNH BÁO: đang dùng mật khẩu mặc định. Hãy đặt biến môi trường ADMIN_EMAIL, ADMIN_PASSWORD!');
   }
 }
-
-// Nâng cấp CSDL cũ: thêm cột trạng thái gửi email cho từng lượt quay
-try { db.exec(`ALTER TABLE spins ADD COLUMN email_sent INTEGER NOT NULL DEFAULT 0`); } catch (e) { /* cột đã tồn tại */ }
 
 // ------------------------------------------------------------------ Gửi email mã giảm giá
 // Cấu hình SMTP qua biến môi trường. Không cấu hình = tính năng email tắt, app vẫn chạy bình thường.
@@ -345,7 +389,7 @@ app.get('/api/customers', requireAuth('owner'), (req, res) => {
 app.get('/api/spins', requireAuth('owner'), (req, res) => {
   res.json(db.prepare(`
     SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email
-    FROM spins s JOIN customers c ON c.id=s.customer_id
+    FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
     WHERE s.shop_id=? ORDER BY s.created_at DESC LIMIT 500
   `).all(req.shop.id));
 });
@@ -400,7 +444,7 @@ app.get('/api/admin/shops/:id/customers', requireAuth('admin'), (req, res) => {
 app.get('/api/admin/shops/:id/spins', requireAuth('admin'), (req, res) => {
   res.json(db.prepare(`
     SELECT s.*, c.name AS customer_name, c.phone AS customer_phone
-    FROM spins s JOIN customers c ON c.id=s.customer_id
+    FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
     WHERE s.shop_id=? ORDER BY s.created_at DESC LIMIT 500
   `).all(req.params.id));
 });
@@ -423,39 +467,24 @@ app.get('/api/public/shop/:slug', (req, res) => {
   const prizes = q.activePrizes.all(sh.id).map(p => ({ id: p.id, label: p.label, color: p.color }));
   // Không bao giờ trả tỷ lệ trúng / mã giảm giá ra public
   res.json({
-    name: sh.name, description: sh.description, require_email: !!sh.require_email,
+    name: sh.name, description: sh.description,
     spin_limit_per_day: sh.spin_limit_per_day,
     segments: prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]),
   });
 });
 
+// Bước 1: khách quét QR/bấm link và QUAY NGAY, chưa cần nhập thông tin.
+// Giới hạn lượt quay theo thiết bị (cookie) mỗi ngày.
 app.post('/api/public/spin/:slug', (req, res) => {
   const sh = q.shopBySlug.get(req.params.slug);
   if (!sh || !sh.active) return res.status(404).json({ error: 'Chương trình không tồn tại hoặc đã kết thúc.' });
 
-  const name = String((req.body || {}).name || '').trim();
-  const phone = normPhone((req.body || {}).phone);
-  const email = String((req.body || {}).email || '').trim().toLowerCase();
-  if (!name) return res.status(400).json({ error: 'Vui lòng nhập họ tên.' });
-  if (!validPhone(phone)) return res.status(400).json({ error: 'Số điện thoại không hợp lệ (VD: 0912345678).' });
-  if (sh.require_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return res.status(400).json({ error: 'Vui lòng nhập email hợp lệ.' });
+  if (!req.session.dev) req.session.dev = crypto.randomBytes(12).toString('hex');
+  const dev = req.session.dev;
 
-  // Tạo/tìm khách hàng của cửa hàng này
-  let cust = db.prepare(`SELECT * FROM customers WHERE shop_id=? AND phone=?`).get(sh.id, phone);
-  if (!cust) {
-    db.prepare(`INSERT INTO customers (shop_id,name,phone,email) VALUES (?,?,?,?)`).run(sh.id, name, phone, email);
-    cust = db.prepare(`SELECT * FROM customers WHERE shop_id=? AND phone=?`).get(sh.id, phone);
-  } else if (email && email !== cust.email) {
-    db.prepare(`UPDATE customers SET email=?, name=? WHERE id=?`).run(email, name, cust.id);
-    cust.email = email;
-    cust.name = name;
-  }
-
-  // Giới hạn lượt quay trong ngày
   const today = db.prepare(`
-    SELECT COUNT(*) n FROM spins WHERE customer_id=? AND date(created_at)=date('now','localtime')
-  `).get(cust.id).n;
+    SELECT COUNT(*) n FROM spins WHERE shop_id=? AND device_id=? AND date(created_at)=date('now','localtime')
+  `).get(sh.id, dev).n;
   if (today >= sh.spin_limit_per_day)
     return res.status(429).json({ error: `Bạn đã hết ${sh.spin_limit_per_day} lượt quay hôm nay. Hẹn gặp lại ngày mai!` });
 
@@ -471,27 +500,85 @@ app.post('/api/public/spin/:slug', (req, res) => {
   if (won && won.quantity !== -1) {
     db.prepare(`UPDATE prizes SET remaining=remaining-1 WHERE id=?`).run(won.id);
   }
-  const spinInfo = db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code) VALUES (?,?,?,?,?)`)
-    .run(sh.id, cust.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', won ? won.coupon_code : '');
-
-  // Trúng thưởng có mã → tự động gửi mã giảm giá vào email khách (không chặn phản hồi)
-  const willEmail = !!(mailer && won && won.coupon_code && cust.email);
-  if (willEmail) {
-    sendCouponEmail(Number(spinInfo.lastInsertRowid), {
-      to: cust.email, shopName: sh.name, customerName: cust.name,
-      prize: won.label, code: won.coupon_code, spinLimit: sh.spin_limit_per_day,
-    });
-  }
+  // Phiếu nhận mã dùng 1 lần: khách phải nhập thông tin ở bước 2 mới thấy mã giảm giá
+  const claimToken = won ? crypto.randomBytes(16).toString('hex') : '';
+  db.prepare(`INSERT INTO spins (shop_id,customer_id,prize_id,prize_label,coupon_code,claim_token,claimed,device_id) VALUES (?,NULL,?,?,?,?,0,?)`)
+    .run(sh.id, won ? won.id : null, won ? won.label : 'Chúc bạn may mắn lần sau', won ? won.coupon_code : '', claimToken, dev);
 
   // segmentIndex: vị trí ô trên vòng quay hiển thị phía khách (ô cuối = trượt)
   const segIdx = won ? prizes.findIndex(p => p.id === won.id) : prizes.length;
   res.json({
     win: !!won,
     prize: won ? won.label : 'Chúc bạn may mắn lần sau',
-    coupon_code: won ? won.coupon_code : '',
-    emailed: willEmail,
+    claimToken,
     segmentIndex: segIdx,
     spinsLeftToday: sh.spin_limit_per_day - today - 1,
+  });
+});
+
+// Bước 2: khách bấm "Nhận mã giảm giá" → nhập HỌ TÊN (bắt buộc) + SĐT hoặc EMAIL (ít nhất 1)
+// → nhận mã (ảnh chụp màn hình / tải ảnh / Zalo), có email thì gửi thêm qua email.
+app.post('/api/public/claim/:slug', (req, res) => {
+  const sh = q.shopBySlug.get(req.params.slug);
+  if (!sh || !sh.active) return res.status(404).json({ error: 'Chương trình không tồn tại hoặc đã kết thúc.' });
+
+  const token = String((req.body || {}).claimToken || '');
+  const name = String((req.body || {}).name || '').trim();
+  const phone = normPhone((req.body || {}).phone);
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+
+  if (!name) return res.status(400).json({ error: 'Vui lòng nhập họ tên.' });
+  if (!phone && !email) return res.status(400).json({ error: 'Vui lòng nhập số điện thoại hoặc email (ít nhất 1 trong 2).' });
+  if (phone && !validPhone(phone)) return res.status(400).json({ error: 'Số điện thoại không hợp lệ (VD: 0912345678).' });
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email không hợp lệ.' });
+
+  const spin = db.prepare(`
+    SELECT * FROM spins WHERE claim_token=? AND shop_id=? AND claimed=0 AND prize_id IS NOT NULL
+      AND date(created_at)=date('now','localtime')
+  `).get(token, sh.id);
+  if (!token || !spin) return res.status(400).json({ error: 'Lượt trúng thưởng không hợp lệ, đã nhận rồi hoặc đã hết hạn. Hãy quay lại nhé!' });
+
+  // Chống lạm dụng: mỗi SĐT/email chỉ được nhận số mã tối đa bằng số lượt quay/ngày
+  const claimedToday = db.prepare(`
+    SELECT COUNT(*) n FROM spins s JOIN customers c ON c.id=s.customer_id
+    WHERE s.shop_id=? AND s.claimed=1 AND date(s.created_at)=date('now','localtime')
+      AND ((?<>'' AND c.phone=?) OR (?<>'' AND c.email=?))
+  `).get(sh.id, phone, phone, email, email).n;
+  if (claimedToday >= sh.spin_limit_per_day)
+    return res.status(429).json({ error: 'Số điện thoại/email này đã nhận đủ mã hôm nay. Hẹn gặp lại ngày mai!' });
+
+  // Tìm hoặc tạo khách hàng theo SĐT (ưu tiên) hoặc email
+  let cust = null;
+  if (phone) cust = db.prepare(`SELECT * FROM customers WHERE shop_id=? AND phone=? AND phone<>''`).get(sh.id, phone);
+  if (!cust && email) cust = db.prepare(`SELECT * FROM customers WHERE shop_id=? AND email=? AND email<>''`).get(sh.id, email);
+  if (!cust) {
+    const info = db.prepare(`INSERT INTO customers (shop_id,name,phone,email) VALUES (?,?,?,?)`).run(sh.id, name, phone, email);
+    cust = db.prepare(`SELECT * FROM customers WHERE id=?`).get(Number(info.lastInsertRowid));
+  } else {
+    // Bổ sung thông tin còn thiếu cho khách cũ
+    db.prepare(`UPDATE customers SET name=?, phone=CASE WHEN phone='' THEN ? ELSE phone END, email=CASE WHEN email='' THEN ? ELSE email END WHERE id=?`)
+      .run(name, phone, email, cust.id);
+    cust = db.prepare(`SELECT * FROM customers WHERE id=?`).get(cust.id);
+  }
+
+  db.prepare(`UPDATE spins SET customer_id=?, claimed=1, claim_token='' WHERE id=?`).run(cust.id, spin.id);
+
+  // Có email → tự động gửi mã vào hộp thư (chạy ngầm, không chặn phản hồi)
+  const willEmail = !!(mailer && spin.coupon_code && cust.email);
+  if (willEmail) {
+    sendCouponEmail(spin.id, {
+      to: cust.email, shopName: sh.name, customerName: cust.name,
+      prize: spin.prize_label, code: spin.coupon_code, spinLimit: sh.spin_limit_per_day,
+    });
+  }
+
+  res.json({
+    ok: true,
+    shopName: sh.name,
+    customerName: cust.name,
+    prize: spin.prize_label,
+    coupon_code: spin.coupon_code,
+    emailed: willEmail,
   });
 });
 

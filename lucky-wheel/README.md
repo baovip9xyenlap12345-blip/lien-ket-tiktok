@@ -8,14 +8,23 @@
 |---|---|
 | **Quản trị viên (bạn)** | Xem/quản lý tất cả cửa hàng, tất cả chủ cửa hàng, **toàn bộ data khách hàng của mọi cửa hàng**, khóa/mở cửa hàng, xuất toàn bộ CSV |
 | **Chủ cửa hàng** | Cài đặt tên quán, phần quà, mã giảm giá, tỷ lệ trúng %, số lượng quà, giới hạn lượt quay/ngày; xem khách hàng + lịch sử quay của quán mình; xuất CSV |
-| **Khách hàng** | Vào link `/w/ten-quan`, nhập tên + SĐT + email, quay vòng quay, nhận mã giảm giá |
+| **Khách hàng** | Quét QR/bấm link `/w/ten-quan` → **quay ngay** → trúng thì nhập **họ tên + SĐT hoặc email** để nhận mã |
+
+## Lộ trình khách hàng
+
+1. **Quét mã QR tại quán** hoặc **bấm vào link** được chia sẻ
+2. **Quay ngay** — không cần nhập gì trước
+3. Trúng thưởng → bấm **"Nhận mã giảm giá"**
+4. Nhập **họ tên (bắt buộc)** + **số điện thoại HOẶC email** (ít nhất 1 trong 2)
+5. Nhận mã giảm giá dưới dạng **ảnh** — tải về máy, chụp màn hình, **chia sẻ qua Zalo**, hoặc **tự động gửi vào email** (nếu nhập email)
 
 ## Tính năng chính
 
 - 🎯 Chủ quán tự đặt **tỷ lệ trúng (%)** và **số lượng** từng phần quà — hết quà tự ngừng trúng
-- 🎟️ Khách trúng nhận **mã giảm giá** ngay trên màn hình (bấm để sao chép)
-- 📧 **Tự động gửi mã giảm giá vào email khách** khi trúng thưởng (cấu hình SMTP/Gmail)
-- 🛡️ Kết quả quay xử lý **tại máy chủ** — không thể gian lận; giới hạn lượt quay/SĐT/ngày
+- 🎟️ Mã giảm giá chỉ hiện **sau khi khách nhập thông tin** — đảm bảo quán luôn thu được data
+- 🖼️ Mã hiển thị dạng **thẻ đẹp + tải về thành ảnh PNG** để lưu/chia sẻ Zalo
+- 📧 **Tự động gửi mã giảm giá vào email khách** (cấu hình SMTP/Gmail)
+- 🛡️ Kết quả quay xử lý **tại máy chủ** — không thể gian lận; giới hạn lượt quay theo thiết bị/ngày + mỗi SĐT/email chỉ nhận đủ số mã/ngày; phiếu nhận mã dùng 1 lần
 - 🔗 Mỗi quán có link riêng + nút tạo mã QR để in dán tại quán
 - 📋 Xuất data khách hàng ra **CSV (mở bằng Excel)** — hỗ trợ tiếng Việt
 - 📱 Giao diện tiếng Việt, chạy mượt trên điện thoại, không cần cài app
