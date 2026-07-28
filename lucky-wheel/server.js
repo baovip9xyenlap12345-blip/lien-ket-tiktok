@@ -877,6 +877,15 @@ app.post('/api/public/claim/:slug', (req, res) => {
   });
 });
 
+// Số liệu thật của nền tảng cho trang giới thiệu (chỉ số tổng, không lộ thông tin ai)
+app.get('/api/public/stats', (req, res) => {
+  res.json({
+    shops: db.prepare(`SELECT COUNT(*) n FROM shops WHERE active=1`).get().n,
+    spins: db.prepare(`SELECT COUNT(*) n FROM spins`).get().n,
+    customers: db.prepare(`SELECT COUNT(*) n FROM customers`).get().n,
+  });
+});
+
 // Trang vòng quay của từng cửa hàng: /w/ten-quan
 app.get('/w/:slug', (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'wheel.html'), { headers: { 'Cache-Control': 'no-cache' } }));
