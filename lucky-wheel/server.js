@@ -687,7 +687,15 @@ app.get('/api/admin/export.csv', requireAuth('admin'), (req, res) => {
 app.get('/api/public/shop/:slug', (req, res) => {
   const sh = q.shopBySlug.get(req.params.slug);
   if (!sh || !sh.active) return res.status(404).json({ error: 'Chương trình không tồn tại hoặc đã kết thúc.' });
-  const prizes = q.activePrizes.all(sh.id).map(p => ({ id: p.id, label: p.label, color: p.color }));
+  const activeList = q.activePrizes.all(sh.id);
+  const prizes = activeList.map(p => ({ id: p.id, label: p.label, color: p.color }));
+  // Ô "Chúc bạn may mắn lần sau" = phần trăm KHÔNG trúng, hệ thống tự thêm.
+  // Nếu tổng tỷ lệ = 100% và mọi quà đều không giới hạn số lượng (không thể trượt) → ẩn ô này.
+  const totalRate = activeList.reduce((s, p) => s + p.win_rate, 0);
+  const cannotLose = totalRate >= 99.999 && activeList.every(p => p.quantity === -1);
+  const segments = cannotLose
+    ? prizes
+    : prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]);
   // Không bao giờ trả tỷ lệ trúng / mã giảm giá ra public
   res.json({
     name: sh.name, description: sh.description,
@@ -697,7 +705,7 @@ app.get('/api/public/shop/:slug', (req, res) => {
     zalo_link: sh.zalo_link || '',
     // Quán có nhập mã đơn hàng → chế độ tự do hiện thêm ô "nhập mã đơn để quay thêm"
     order_bonus: db.prepare(`SELECT COUNT(*) n FROM order_codes WHERE shop_id=?`).get(sh.id).n > 0,
-    segments: prizes.concat([{ id: 0, label: 'Chúc bạn may mắn lần sau', color: '#94a3b8' }]),
+    segments,
   });
 });
 
