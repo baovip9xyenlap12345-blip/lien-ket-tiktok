@@ -529,14 +529,34 @@ app.get('/api/export/order-codes.csv', requireAuth('owner'), (req, res) => {
 });
 
 // ---- Xác nhận mã tại quầy: mỗi mã chỉ sử dụng được 1 LẦN ----
+// Chuẩn hóa mã gõ tay: bỏ khoảng trắng, viết hoa, đổi mọi loại gạch ngang lạ
+// (iPhone tự đổi "-" thành "–" khi gõ) về gạch thường
+function normCode(s) {
+  return String(s || '')
+    .replace(/[‐-―−﹘﹣－]/g, '-')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
+// Dạng "lỏng" — chỉ dùng khi tìm chính xác thất bại: bỏ dấu gạch và quy đổi
+// các ký tự hay nhìn nhầm (O↔0, I/L↔1)
+function looseCode(s) {
+  return normCode(s).replace(/[^A-Z0-9]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+}
+
 function findCouponSpin(shopId, rawCode) {
-  const code = String(rawCode || '').trim().toUpperCase();
+  const code = normCode(rawCode);
   if (!code) return { error: 'Vui lòng nhập mã giảm giá.' };
-  const spin = db.prepare(`
+  const SEL = `
     SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email
     FROM spins s LEFT JOIN customers c ON c.id=s.customer_id
-    WHERE s.shop_id=? AND s.coupon_code=? AND s.prize_id IS NOT NULL
-  `).get(shopId, code);
+    WHERE s.shop_id=? AND s.prize_id IS NOT NULL`;
+  let spin = db.prepare(SEL + ` AND s.coupon_code=?`).get(shopId, code);
+  if (!spin) {
+    // Gõ nhầm ký tự dễ lẫn hoặc thiếu dấu gạch → dò lại kiểu "lỏng", chỉ nhận khi khớp DUY NHẤT
+    const want = looseCode(code);
+    const all = db.prepare(SEL).all(shopId).filter(r => looseCode(r.coupon_code) === want);
+    if (all.length === 1) spin = all[0];
+  }
   if (!spin) return { error: 'Không tìm thấy mã này. Kiểm tra lại xem khách nhập đúng chưa.' };
   if (!spin.claimed) return { error: 'Mã này chưa được khách xác nhận nhận thưởng — không hợp lệ.' };
   return { spin };
@@ -721,11 +741,21 @@ app.post('/api/public/spin/:slug', (req, res) => {
   // Chế độ 'order': phải nhập mã quay thưởng theo đơn hàng, mỗi mã quay đúng 1 lần.
   // Chế độ 'free': ai vào cũng quay được, giới hạn lượt/thiết bị/ngày —
   //   NHƯNG khách mua hàng nhập đúng mã đơn thì được QUAY THÊM (mỗi mã 1 lượt, không tính vào lượt miễn phí).
-  const codeIn = String((req.body || {}).code || '').trim().toUpperCase();
+  const codeIn = normCode((req.body || {}).code);
   let orderRow = null;
   let today = 0;
-  const lookupOrder = (c) => db.prepare(`SELECT * FROM order_codes WHERE shop_id=? AND (spin_code=? OR order_code=?)`)
-    .get(sh.id, c, c);
+  const lookupOrder = (c) => {
+    let row = db.prepare(`SELECT * FROM order_codes WHERE shop_id=? AND (spin_code=? OR order_code=?)`)
+      .get(sh.id, c, c);
+    if (!row) {
+      // Gõ nhầm ký tự dễ lẫn / thiếu gạch → dò "lỏng", chỉ nhận khi khớp duy nhất
+      const want = looseCode(c);
+      const hits = db.prepare(`SELECT * FROM order_codes WHERE shop_id=?`).all(sh.id)
+        .filter(r => looseCode(r.spin_code) === want || looseCode(r.order_code) === want);
+      if (hits.length === 1) row = hits[0];
+    }
+    return row;
+  };
 
   if ((sh.spin_mode || 'free') === 'order') {
     if (!codeIn) return res.status(400).json({ error: 'Vui lòng nhập mã quay thưởng in trên đơn hàng của bạn.' });
