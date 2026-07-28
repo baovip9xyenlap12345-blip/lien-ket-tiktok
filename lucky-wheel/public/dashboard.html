@@ -90,6 +90,8 @@
         <video id="scanVideo" playsinline autoplay muted style="width:100%; max-width:360px; border-radius:12px; border:2px solid var(--accent);"></video>
         <p class="muted" style="font-size:.85rem;">Giữ mã QR cách camera 15–25cm, ngay giữa khung.
         Nhờ khách <b>tăng độ sáng màn hình</b> nếu khó bắt.</p>
+        <button class="btn sm" style="background:#0068ff; color:#fff;"
+          onclick="stopScan(); document.getElementById('scanFile').click();">Khó bắt? 🖼 Chụp 1 tấm ảnh để quét</button>
       </div>
       <div class="error" id="rErr" style="font-size:1rem;"></div>
       <div id="rResult" style="display:none; margin-top:14px;">
@@ -501,6 +503,40 @@ function onCodeFound(text) {
   checkCode();
 }
 
+// Đọc QR từ một nguồn ảnh/video: thử NHIỀU cỡ + NHIỀU vùng khác nhau
+// (ảnh chụp màn hình điện thoại hay bị vân sọc/lóa — 1 cỡ trượt thì cỡ khác bắt được)
+const DECODE_TRIES = [
+  { crop: true, S: 720 },   // vùng giữa, nét cao
+  { crop: false, S: 640 },  // cả khung, cỡ vừa
+  { crop: true, S: 480 },   // vùng giữa, cỡ nhỏ (mờ/moiré được làm mịn)
+  { crop: false, S: 1100 }, // cả khung, nét cao (mã nhỏ trong ảnh xa)
+];
+function decodeOneTry(src, sw, sh, t) {
+  const cv = document.createElement('canvas');
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  if (t.crop) {
+    const side = Math.min(sw, sh);
+    const S = Math.min(t.S, side);
+    cv.width = S; cv.height = S;
+    cx.drawImage(src, (sw - side) / 2, (sh - side) / 2, side, side, 0, 0, S, S);
+  } else {
+    const sc = Math.min(1, t.S / Math.max(sw, sh));
+    cv.width = Math.max(1, Math.round(sw * sc));
+    cv.height = Math.max(1, Math.round(sh * sc));
+    cx.drawImage(src, 0, 0, cv.width, cv.height);
+  }
+  const img = cx.getImageData(0, 0, cv.width, cv.height);
+  const f = jsQR(img.data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
+  return f && f.data ? f.data : null;
+}
+function decodeAllTries(src, sw, sh) {
+  for (const t of DECODE_TRIES) {
+    const r = decodeOneTry(src, sw, sh, t);
+    if (r) return r;
+  }
+  return null;
+}
+
 async function toggleScan() {
   if (scanStream) { stopScan(); return; }
   try {
@@ -516,13 +552,21 @@ async function toggleScan() {
     }
     return;
   }
+  // Bật lấy nét liên tục nếu camera hỗ trợ (giúp nét khi soi gần màn hình)
+  try {
+    const track = scanStream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) {
+      await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    }
+  } catch (e) { /* máy không hỗ trợ thì thôi */ }
+
   const v = document.getElementById('scanVideo');
   v.srcObject = scanStream;
   try { await v.play(); } catch (e) { /* autoplay đã lo */ }
   document.getElementById('scanWrap').style.display = 'block';
   document.getElementById('scanBtn').textContent = '✕ Tắt camera';
-  const cv = document.createElement('canvas');
-  const cx = cv.getContext('2d', { willReadFrequently: true });
+  let tick = 0;
   scanTimer = setInterval(async () => {
     if (!v.videoWidth || scanBusy) return;
     scanBusy = true;
@@ -531,14 +575,11 @@ async function toggleScan() {
         const codes = await nativeDetector.detect(v);
         if (codes && codes.length && codes[0].rawValue) { onCodeFound(codes[0].rawValue); return; }
       }
-      // Cắt vùng GIỮA khung hình (nơi để mã) rồi thu về 480px — nhanh và bắt chính xác hơn quét cả khung
-      const side = Math.min(v.videoWidth, v.videoHeight);
-      const S = 480;
-      cv.width = S; cv.height = S;
-      cx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, S, S);
-      const img = cx.getImageData(0, 0, S, S);
-      const found = jsQR(img.data, S, S, { inversionAttempts: 'attemptBoth' });
-      if (found && found.data) onCodeFound(found.data);
+      // Mỗi nhịp thử 1 chiến thuật khác nhau (vùng giữa/cả khung, cỡ to/nhỏ)
+      // → xoay vòng đủ 4 kiểu mỗi giây, kiểu nào hợp điều kiện ánh sáng là bắt được
+      const found = decodeOneTry(v, v.videoWidth, v.videoHeight, DECODE_TRIES[tick % DECODE_TRIES.length]);
+      tick++;
+      if (found) onCodeFound(found);
     } catch (e) { /* khung này lỗi thì thử khung sau */ }
     scanBusy = false;
   }, 250);
@@ -561,18 +602,10 @@ function scanFromFile(input) {
   im.onload = () => {
     URL.revokeObjectURL(url);
     const errEl = document.getElementById('rErr');
-    // Thử đọc ở vài cỡ ảnh khác nhau để bắt được cả mã nhỏ lẫn ảnh chụp xa
-    for (const S of [900, 600, 1400]) {
-      const cv = document.createElement('canvas');
-      const scale = Math.min(1, S / Math.max(im.width, im.height));
-      cv.width = Math.round(im.width * scale);
-      cv.height = Math.round(im.height * scale);
-      const cx = cv.getContext('2d', { willReadFrequently: true });
-      cx.drawImage(im, 0, 0, cv.width, cv.height);
-      const img = cx.getImageData(0, 0, cv.width, cv.height);
-      const found = jsQR(img.data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
-      if (found && found.data) { onCodeFound(found.data); return; }
-    }
+    // Thử đủ mọi chiến thuật: vùng giữa/cả ảnh, cỡ to/nhỏ + thêm cỡ siêu nét cho ảnh chụp xa
+    const found = decodeAllTries(im, im.width, im.height)
+      || decodeOneTry(im, im.width, im.height, { crop: false, S: 1600 });
+    if (found) { onCodeFound(found); return; }
     errEl.textContent = '❌ Không tìm thấy mã QR trong ảnh. Chụp lại gần hơn, mã nằm giữa ảnh, đủ sáng nhé.';
   };
   im.onerror = () => { document.getElementById('rErr').textContent = '❌ Không đọc được file ảnh này.'; };
