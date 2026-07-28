@@ -466,6 +466,9 @@ document.getElementById('spinBtn').addEventListener('click', async () => {
   const btn = document.getElementById('spinBtn');
   btn.disabled = true;
   spinning = true;
+  // Tải bộ quà MỚI NHẤT ngay trước khi quay — chủ quán vừa sửa gì là áp dụng liền,
+  // đảm bảo ô vòng quay luôn khớp với kết quả máy chủ trả về
+  try { await loadShop(); } catch (e) { /* mất mạng thì dùng bản đang có */ }
   try {
     const opts = { method: 'POST' };
     // Gửi mã đơn khi: chế độ theo đơn hàng, hoặc khách đang nhập mã để quay thêm ở chế độ tự do
