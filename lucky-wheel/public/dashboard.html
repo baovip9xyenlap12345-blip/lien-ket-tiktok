@@ -22,6 +22,7 @@
     <div class="row">
       <span class="muted">🔗 Link vòng quay của bạn (gửi cho khách):</span>
       <code class="copy" id="publicLink" title="Bấm để sao chép"></code>
+      <button class="btn sm" id="copyLinkBtn">📋 Sao chép link</button>
       <a class="btn sm ghost" id="openLink" target="_blank" rel="noopener">Mở thử ↗</a>
       <a class="btn sm ghost" id="qrLink" target="_blank" rel="noopener">Tạo mã QR</a>
     </div>
@@ -240,7 +241,15 @@ function renderShop() {
   const link = location.origin + '/w/' + shop.slug;
   const el = document.getElementById('publicLink');
   el.textContent = link;
-  el.onclick = () => { navigator.clipboard.writeText(link); el.textContent = '✓ Đã sao chép!'; setTimeout(() => el.textContent = link, 1200); };
+  const copyLink = () => {
+    navigator.clipboard.writeText(link);
+    el.textContent = '✓ Đã sao chép!';
+    const btn = document.getElementById('copyLinkBtn');
+    btn.textContent = '✓ Đã sao chép!';
+    setTimeout(() => { el.textContent = link; btn.textContent = '📋 Sao chép link'; }, 1500);
+  };
+  el.onclick = copyLink;
+  document.getElementById('copyLinkBtn').onclick = copyLink;
   document.getElementById('openLink').href = link;
   document.getElementById('qrLink').href =
     'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(link);
