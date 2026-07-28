@@ -387,7 +387,7 @@ app.get('/api/shop', requireAuth('owner'), (req, res) => res.json(req.shop));
 
 app.put('/api/shop', requireAuth('owner'), (req, res) => {
   const { name, description, spin_limit_per_day, spin_mode, theme_color, zalo_link } = req.body || {};
-  const mode = ['free', 'order'].includes(spin_mode) ? spin_mode : req.shop.spin_mode;
+  const mode = ['free', 'order', 'first_free'].includes(spin_mode) ? spin_mode : req.shop.spin_mode;
   const color = /^#[0-9a-fA-F]{6}$/.test(String(theme_color || '')) ? theme_color : (req.shop.theme_color || '#f59e0b');
   // Link nhóm Zalo: bắt buộc https:// để an toàn; để trống = tắt tính năng
   let zl = zalo_link === undefined ? (req.shop.zalo_link || '') : String(zalo_link).trim();
@@ -725,10 +725,23 @@ app.post('/api/public/spin/:slug', (req, res) => {
     if (!orderRow) return res.status(400).json({ error: 'Mã quay không đúng. Kiểm tra lại mã trên đơn hàng nhé!' });
     if (orderRow.used) return res.status(400).json({ error: 'Mã quay này đã được sử dụng rồi. Mỗi đơn hàng chỉ được quay 1 lần!' });
   } else if (codeIn) {
-    // Quay thêm bằng mã đơn hàng trong chế độ tự do
+    // Quay thêm bằng mã đơn hàng (chế độ tự do và chế độ 1 lượt đầu miễn phí)
     orderRow = lookupOrder(codeIn);
     if (!orderRow) return res.status(400).json({ error: 'Mã đơn hàng không đúng. Kiểm tra lại mã trên đơn/vận đơn của bạn nhé!' });
     if (orderRow.used) return res.status(400).json({ error: 'Mã đơn này đã được dùng để quay rồi. Mỗi đơn hàng chỉ được quay thêm 1 lần!' });
+  } else if ((sh.spin_mode || 'free') === 'first_free') {
+    // Chế độ 'first_free': 1 lượt miễn phí DUY NHẤT trọn đời — từ lần 2 phải có mã đơn hàng
+    const everFree = db.prepare(`
+      SELECT COUNT(*) n FROM spins WHERE shop_id=? AND device_id=?
+        AND id NOT IN (SELECT spin_id FROM order_codes WHERE shop_id=? AND spin_id IS NOT NULL)
+    `).get(sh.id, dev, sh.id).n;
+    if (everFree >= 1) {
+      const hasCodes = db.prepare(`SELECT COUNT(*) n FROM order_codes WHERE shop_id=?`).get(sh.id).n > 0;
+      return res.status(429).json({
+        error: 'Bạn đã dùng lượt quay miễn phí duy nhất rồi. 🛒 Mua hàng và nhập mã đơn hàng bên dưới để quay tiếp!',
+        orderBonus: hasCodes,
+      });
+    }
   } else {
     today = db.prepare(`
       SELECT COUNT(*) n FROM spins WHERE shop_id=? AND device_id=? AND date(created_at)=date('now','localtime')
@@ -776,7 +789,7 @@ app.post('/api/public/spin/:slug', (req, res) => {
     prize: won ? won.label : 'Chúc bạn may mắn lần sau',
     claimToken,
     segmentIndex: segIdx,
-    spinsLeftToday: orderRow ? null : sh.spin_limit_per_day - today - 1,
+    spinsLeftToday: (orderRow || (sh.spin_mode || 'free') === 'first_free') ? null : sh.spin_limit_per_day - today - 1,
   });
 });
 
@@ -802,10 +815,21 @@ app.post('/api/public/claim/:slug', (req, res) => {
   `).get(token, sh.id);
   if (!token || !spin) return res.status(400).json({ error: 'Lượt trúng thưởng không hợp lệ, đã nhận rồi hoặc đã hết hạn. Hãy quay lại nhé!' });
 
-  // Chống lạm dụng (chỉ áp dụng chế độ quay tự do): mỗi SĐT/email nhận tối đa số mã bằng số lượt quay/ngày.
+  // Chống lạm dụng: giới hạn nhận mã từ lượt quay MIỄN PHÍ theo SĐT/email.
   // Không tính các lượt quay bằng MÃ ĐƠN HÀNG — khách mua nhiều đơn được nhận nhiều quà.
   const isOrderSpin = !!db.prepare(`SELECT id FROM order_codes WHERE shop_id=? AND spin_id=?`).get(sh.id, spin.id);
-  if ((sh.spin_mode || 'free') !== 'order' && !isOrderSpin) {
+  const shopMode = sh.spin_mode || 'free';
+  if (shopMode === 'first_free' && !isOrderSpin) {
+    // 1 lượt miễn phí duy nhất → mỗi SĐT/email cũng chỉ nhận 1 mã miễn phí TRỌN ĐỜI
+    const claimedEver = db.prepare(`
+      SELECT COUNT(*) n FROM spins s JOIN customers c ON c.id=s.customer_id
+      WHERE s.shop_id=? AND s.claimed=1
+        AND ((?<>'' AND c.phone=?) OR (?<>'' AND c.email=?))
+        AND s.id NOT IN (SELECT spin_id FROM order_codes WHERE shop_id=? AND spin_id IS NOT NULL)
+    `).get(sh.id, phone, phone, email, email, sh.id).n;
+    if (claimedEver >= 1)
+      return res.status(429).json({ error: 'Số điện thoại/email này đã nhận mã cho lượt quay miễn phí rồi. Mua hàng và nhập mã đơn để quay tiếp nhé!' });
+  } else if (shopMode !== 'order' && !isOrderSpin) {
     const claimedToday = db.prepare(`
       SELECT COUNT(*) n FROM spins s JOIN customers c ON c.id=s.customer_id
       WHERE s.shop_id=? AND s.claimed=1 AND date(s.created_at)=date('now','localtime')

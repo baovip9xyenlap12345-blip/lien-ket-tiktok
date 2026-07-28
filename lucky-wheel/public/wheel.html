@@ -423,6 +423,10 @@ async function loadShop() {
     document.getElementById('orderCodeField').style.display = 'block';
     document.getElementById('limitNote').textContent =
       'Mỗi đơn hàng được tặng 1 mã quay thưởng — nhập mã để quay nhé!';
+  } else if (spinMode === 'first_free') {
+    document.getElementById('limitNote').textContent =
+      '🎁 Bạn có 1 lượt quay MIỄN PHÍ duy nhất — mua hàng để được quay thêm!';
+    if (data.order_bonus) document.getElementById('bonusToggle').style.display = 'inline-block';
   } else {
     document.getElementById('limitNote').textContent =
       'Bạn có ' + data.spin_limit_per_day + ' lượt quay miễn phí mỗi ngày.';

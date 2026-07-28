@@ -191,7 +191,8 @@
         <div class="grow">
           <label>Chế độ quay</label>
           <select id="sMode">
-            <option value="free">🆓 Quay tự do — ai vào cũng quay được (giới hạn lượt/ngày)</option>
+            <option value="free">🆓 Quay tự do — mỗi khách được quay lại mỗi ngày (giới hạn lượt/ngày)</option>
+            <option value="first_free">🎁 1 lượt miễn phí DUY NHẤT — lần 2 trở đi phải có mã đơn hàng</option>
             <option value="order">📦 Quay theo mã đơn hàng — khách mua hàng mới được quay</option>
           </select>
         </div>
@@ -205,9 +206,10 @@
         </div>
       </div>
       <p class="muted" style="font-size:.85rem; margin-top:8px;">
-        <b>Quay tự do:</b> phù hợp quán cà phê, sự kiện — khách quét QR là quay ngay.
-        <b>Quay theo mã đơn hàng:</b> nhập danh sách mã đơn ở tab "📦 Mã đơn hàng", mỗi đơn 1 lượt quay.
-        Khi trúng, khách phải nhập <b>họ tên + SĐT hoặc email</b> mới nhận được mã giảm giá.
+        <b>🆓 Quay tự do:</b> hợp quán cà phê, sự kiện — khách quét QR là quay, mỗi ngày lại có lượt mới.
+        <b>🎁 1 lượt miễn phí duy nhất:</b> khách mới được quay thử ĐÚNG 1 LẦN cho biết — muốn quay tiếp phải mua hàng và nhập mã đơn (nhập danh sách mã ở tab "📦 Mã đơn hàng"). Hợp shop muốn ép chuyển đổi mua hàng mạnh.
+        <b>📦 Theo mã đơn hàng:</b> phải có mã đơn mới được quay, kể cả lần đầu.
+        Khi trúng, khách luôn phải nhập <b>họ tên + SĐT hoặc email</b> mới nhận được mã giảm giá.
       </p>
       <div class="success" id="sMsg"></div>
       <button class="btn" style="margin-top:14px;" onclick="saveShop()">💾 Lưu cài đặt</button>
