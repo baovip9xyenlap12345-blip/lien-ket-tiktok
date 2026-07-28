@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản lý cửa hàng - Vòng Quay May Mắn</title>
 <link rel="stylesheet" href="/style.css">
+<script src="/jsqr.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -76,6 +77,15 @@
       <div class="row">
         <input id="rCode" class="grow" placeholder="VD: GIAM10-X7K2P" style="text-transform:uppercase; font-size:1.2rem; letter-spacing:2px;">
         <button class="btn" onclick="checkCode()">🔍 Kiểm tra</button>
+        <button class="btn ghost" id="scanBtn" onclick="toggleScan()">📷 Quét QR</button>
+      </div>
+      <p class="muted" style="font-size:.82rem; margin-top:8px;">
+        📷 <b>Quét QR</b>: dùng camera điện thoại/máy tính quét mã trên màn hình khách — tự điền và kiểm tra ngay.
+        🔫 <b>Máy quét mã vạch</b>: bấm vào ô nhập rồi quét — mã tự nhảy vào và tự kiểm tra.
+      </p>
+      <div id="scanWrap" style="display:none; margin-top:10px; text-align:center;">
+        <video id="scanVideo" playsinline muted style="width:100%; max-width:360px; border-radius:12px; border:2px solid var(--accent);"></video>
+        <p class="muted" style="font-size:.85rem;">Đưa mã QR của khách vào giữa khung hình...</p>
       </div>
       <div class="error" id="rErr" style="font-size:1rem;"></div>
       <div id="rResult" style="display:none; margin-top:14px;">
@@ -471,6 +481,44 @@ async function confirmCode() {
   loadSpins();
 }
 document.getElementById('rCode').addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+
+// ---- Quét QR bằng camera (điện thoại/webcam) — máy quét mã vạch thì bắn thẳng vào ô nhập ----
+let scanStream = null, scanTimer = null;
+async function toggleScan() {
+  if (scanStream) { stopScan(); return; }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (e) {
+    alert('Không mở được camera. Hãy cho phép quyền camera trong trình duyệt, hoặc dùng máy quét mã vạch / nhập tay.');
+    return;
+  }
+  const v = document.getElementById('scanVideo');
+  v.srcObject = scanStream;
+  await v.play();
+  document.getElementById('scanWrap').style.display = 'block';
+  document.getElementById('scanBtn').textContent = '✕ Tắt camera';
+  const cv = document.createElement('canvas');
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  scanTimer = setInterval(() => {
+    if (!v.videoWidth) return;
+    cv.width = v.videoWidth; cv.height = v.videoHeight;
+    cx.drawImage(v, 0, 0);
+    const img = cx.getImageData(0, 0, cv.width, cv.height);
+    const found = jsQR(img.data, img.width, img.height);
+    if (found && found.data) {
+      document.getElementById('rCode').value = found.data.trim();
+      stopScan();
+      if (navigator.vibrate) navigator.vibrate(120);
+      checkCode();
+    }
+  }, 350);
+}
+function stopScan() {
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  document.getElementById('scanWrap').style.display = 'none';
+  document.getElementById('scanBtn').textContent = '📷 Quét QR';
+}
 
 // -------- Cài đặt --------
 async function saveShop() {

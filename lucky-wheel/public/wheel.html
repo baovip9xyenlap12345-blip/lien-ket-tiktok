@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vòng Quay May Mắn</title>
 <link rel="stylesheet" href="/style.css">
+<script src="/qrcode.js"></script>
 <style>
   body {
     background: linear-gradient(-45deg, #0f172a, #312e81, #1e3a5f, #4c1d95, #0f172a);
@@ -171,6 +172,10 @@
         <div class="c-shop" id="ccShop"></div>
         <div class="c-prize" id="ccPrize"></div>
         <div class="c-code" id="ccCode"></div>
+        <div id="ccQrWrap" style="margin:10px 0 4px;">
+          <canvas id="ccQr" style="background:#fff; border-radius:10px;"></canvas>
+          <div class="c-name" style="margin-top:4px;">Nhân viên quét mã QR này khi bạn dùng ưu đãi</div>
+        </div>
         <div class="c-name" id="ccName"></div>
         <div class="c-name"><a style="cursor:pointer; text-decoration:underline;" onclick="try{localStorage.removeItem('vq_info');}catch(e){} this.textContent='✓ Lần sau sẽ hỏi lại thông tin';">Không phải bạn? Bấm vào đây</a></div>
       </div>
@@ -573,12 +578,39 @@ document.getElementById('submitClaim').addEventListener('click', async () => {
   btn.disabled = false;
 });
 
+// Vẽ mã QR (nội dung = mã giảm giá) lên canvas — nhân viên quét bằng điện thoại/máy quét
+function drawQR(canvas, text, size) {
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(String(text));
+    qr.make();
+    const n = qr.getModuleCount();
+    canvas.width = size; canvas.height = size;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, size, size);
+    const cell = size / (n + 4); // chừa viền trắng 2 ô để máy quét dễ đọc
+    g.fillStyle = '#000';
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (qr.isDark(r, c)) g.fillRect((c + 2) * cell, (r + 2) * cell, Math.ceil(cell), Math.ceil(cell));
+    return true;
+  } catch (e) { return false; }
+}
+
 // ---- Bước 3: hiển thị mã ----
 function showCoupon(data) {
   showStep('stepCoupon');
   document.getElementById('ccShop').textContent = data.shopName;
   document.getElementById('ccPrize').textContent = '🎁 ' + data.prize;
   document.getElementById('ccCode').textContent = data.coupon_code || '(Nhận quà trực tiếp tại quán)';
+  // Mã QR đi kèm để nhân viên quét thay vì gõ tay
+  const qrWrap = document.getElementById('ccQrWrap');
+  if (data.coupon_code) {
+    const okQr = drawQR(document.getElementById('ccQr'), data.coupon_code, 150);
+    document.getElementById('ccQr').style.width = '150px';
+    qrWrap.style.display = okQr ? 'block' : 'none';
+  } else qrWrap.style.display = 'none';
   document.getElementById('ccName').textContent = 'Khách hàng: ' + data.customerName + ' • ' + new Date().toLocaleDateString('vi-VN');
   document.getElementById('emailNote').style.display = data.emailed ? 'block' : 'none';
   // Nút vào nhóm Zalo của quán (nếu quán có cài link)
@@ -591,16 +623,16 @@ function showCoupon(data) {
 // Vẽ mã giảm giá thành ảnh PNG để tải về / chia sẻ
 function couponToCanvas() {
   const c = document.createElement('canvas');
-  c.width = 700; c.height = 420;
+  c.width = 700; c.height = 620;
   const g = c.getContext('2d');
-  const grad = g.createLinearGradient(0, 0, 700, 420);
+  const grad = g.createLinearGradient(0, 0, 700, 620);
   grad.addColorStop(0, '#1e293b'); grad.addColorStop(1, '#0f172a');
   g.fillStyle = grad;
-  g.fillRect(0, 0, 700, 420);
+  g.fillRect(0, 0, 700, 620);
   g.strokeStyle = '#f59e0b';
   g.setLineDash([12, 8]);
   g.lineWidth = 4;
-  g.strokeRect(14, 14, 672, 392);
+  g.strokeRect(14, 14, 672, 592);
   g.setLineDash([]);
   g.textAlign = 'center';
   g.fillStyle = '#94a3b8';
@@ -619,10 +651,20 @@ function couponToCanvas() {
   g.fillStyle = '#fbbf24';
   g.font = 'bold 44px monospace';
   g.fillText(coupon.coupon_code || 'NHẬN TẠI QUÁN', 350, 264);
+  // Mã QR trong ảnh để nhân viên quét bằng điện thoại/máy quét
+  if (coupon.coupon_code) {
+    const qcv = document.createElement('canvas');
+    if (drawQR(qcv, coupon.coupon_code, 180)) {
+      g.drawImage(qcv, 260, 315, 180, 180);
+      g.fillStyle = '#94a3b8';
+      g.font = '18px system-ui';
+      g.fillText('Nhân viên quét mã QR hoặc nhập mã chữ ở trên', 350, 525);
+    }
+  }
   g.fillStyle = '#94a3b8';
   g.font = '20px system-ui';
-  g.fillText('Khách hàng: ' + coupon.customerName + ' • ' + new Date().toLocaleDateString('vi-VN'), 350, 330);
-  g.fillText('Đưa mã này cho nhân viên khi thanh toán', 350, 365);
+  g.fillText('Khách hàng: ' + coupon.customerName + ' • ' + new Date().toLocaleDateString('vi-VN'), 350, 560);
+  g.fillText('Đưa mã này cho nhân viên khi thanh toán • Mã dùng 1 lần', 350, 590);
   return c;
 }
 
