@@ -886,6 +886,10 @@ app.get('/api/public/stats', (req, res) => {
   });
 });
 
+// Trang dạy tạo app bằng AI: /hoc-tao-app (link gọn không cần .html)
+app.get('/hoc-tao-app', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'hoc-tao-app.html'), { headers: { 'Cache-Control': 'no-cache' } }));
+
 // Trang vòng quay của từng cửa hàng: /w/ten-quan
 app.get('/w/:slug', (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'wheel.html'), { headers: { 'Cache-Control': 'no-cache' } }));
