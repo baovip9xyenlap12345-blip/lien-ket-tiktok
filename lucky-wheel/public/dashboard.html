@@ -78,14 +78,18 @@
         <input id="rCode" class="grow" placeholder="VD: GIAM10-X7K2P" style="text-transform:uppercase; font-size:1.2rem; letter-spacing:2px;">
         <button class="btn" onclick="checkCode()">🔍 Kiểm tra</button>
         <button class="btn ghost" id="scanBtn" onclick="toggleScan()">📷 Quét QR</button>
+        <button class="btn ghost" onclick="document.getElementById('scanFile').click()">🖼 Quét từ ảnh chụp</button>
+        <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none;" onchange="scanFromFile(this)">
       </div>
       <p class="muted" style="font-size:.82rem; margin-top:8px;">
-        📷 <b>Quét QR</b>: dùng camera điện thoại/máy tính quét mã trên màn hình khách — tự điền và kiểm tra ngay.
-        🔫 <b>Máy quét mã vạch</b>: bấm vào ô nhập rồi quét — mã tự nhảy vào và tự kiểm tra.
+        📷 <b>Quét QR</b>: camera soi trực tiếp mã trên màn hình khách.
+        🖼 <b>Quét từ ảnh chụp</b>: chụp 1 tấm ảnh mã — luôn chạy được trên mọi điện thoại.
+        🔫 <b>Máy quét mã vạch</b>: bấm vào ô nhập rồi quét.
       </p>
       <div id="scanWrap" style="display:none; margin-top:10px; text-align:center;">
-        <video id="scanVideo" playsinline muted style="width:100%; max-width:360px; border-radius:12px; border:2px solid var(--accent);"></video>
-        <p class="muted" style="font-size:.85rem;">Đưa mã QR của khách vào giữa khung hình...</p>
+        <video id="scanVideo" playsinline autoplay muted style="width:100%; max-width:360px; border-radius:12px; border:2px solid var(--accent);"></video>
+        <p class="muted" style="font-size:.85rem;">Giữ mã QR cách camera 15–25cm, ngay giữa khung.
+        Nhờ khách <b>tăng độ sáng màn hình</b> nếu khó bắt.</p>
       </div>
       <div class="error" id="rErr" style="font-size:1rem;"></div>
       <div id="rResult" style="display:none; margin-top:14px;">
@@ -485,41 +489,94 @@ async function confirmCode() {
 document.getElementById('rCode').addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
 
 // ---- Quét QR bằng camera (điện thoại/webcam) — máy quét mã vạch thì bắn thẳng vào ô nhập ----
-let scanStream = null, scanTimer = null;
+let scanStream = null, scanTimer = null, scanBusy = false;
+// Ưu tiên bộ quét QR CÓ SẴN của điện thoại (nhanh, bắt màn hình tốt) — không có mới dùng thư viện
+let nativeDetector = null;
+try { if ('BarcodeDetector' in window) nativeDetector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { /* máy không hỗ trợ */ }
+
+function onCodeFound(text) {
+  document.getElementById('rCode').value = String(text || '').trim();
+  stopScan();
+  if (navigator.vibrate) navigator.vibrate(120);
+  checkCode();
+}
+
 async function toggleScan() {
   if (scanStream) { stopScan(); return; }
   try {
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    // Xin camera sau độ phân giải cao để mã QR trên màn hình khách nét hơn
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
   } catch (e) {
-    alert('Không mở được camera. Hãy cho phép quyền camera trong trình duyệt, hoặc dùng máy quét mã vạch / nhập tay.');
+    if (e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')) {
+      alert('Camera đang bị CHẶN quyền.\n\nCách mở lại: bấm vào biểu tượng ổ khóa 🔒 cạnh địa chỉ trang → Quyền/Permissions → Camera → Cho phép, rồi tải lại trang.\n\nHoặc dùng nút "🖼 Quét từ ảnh chụp" — luôn chạy được.');
+    } else {
+      alert('Không mở được camera trực tiếp trên máy này.\nHãy dùng nút "🖼 Quét từ ảnh chụp" (chụp 1 tấm là app tự đọc mã), hoặc máy quét mã vạch / nhập tay.');
+    }
     return;
   }
   const v = document.getElementById('scanVideo');
   v.srcObject = scanStream;
-  await v.play();
+  try { await v.play(); } catch (e) { /* autoplay đã lo */ }
   document.getElementById('scanWrap').style.display = 'block';
   document.getElementById('scanBtn').textContent = '✕ Tắt camera';
   const cv = document.createElement('canvas');
   const cx = cv.getContext('2d', { willReadFrequently: true });
-  scanTimer = setInterval(() => {
-    if (!v.videoWidth) return;
-    cv.width = v.videoWidth; cv.height = v.videoHeight;
-    cx.drawImage(v, 0, 0);
-    const img = cx.getImageData(0, 0, cv.width, cv.height);
-    const found = jsQR(img.data, img.width, img.height);
-    if (found && found.data) {
-      document.getElementById('rCode').value = found.data.trim();
-      stopScan();
-      if (navigator.vibrate) navigator.vibrate(120);
-      checkCode();
-    }
-  }, 350);
+  scanTimer = setInterval(async () => {
+    if (!v.videoWidth || scanBusy) return;
+    scanBusy = true;
+    try {
+      if (nativeDetector) {
+        const codes = await nativeDetector.detect(v);
+        if (codes && codes.length && codes[0].rawValue) { onCodeFound(codes[0].rawValue); return; }
+      }
+      // Cắt vùng GIỮA khung hình (nơi để mã) rồi thu về 480px — nhanh và bắt chính xác hơn quét cả khung
+      const side = Math.min(v.videoWidth, v.videoHeight);
+      const S = 480;
+      cv.width = S; cv.height = S;
+      cx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, S, S);
+      const img = cx.getImageData(0, 0, S, S);
+      const found = jsQR(img.data, S, S, { inversionAttempts: 'attemptBoth' });
+      if (found && found.data) onCodeFound(found.data);
+    } catch (e) { /* khung này lỗi thì thử khung sau */ }
+    scanBusy = false;
+  }, 250);
 }
 function stopScan() {
   if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
   if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  scanBusy = false;
   document.getElementById('scanWrap').style.display = 'none';
   document.getElementById('scanBtn').textContent = '📷 Quét QR';
+}
+
+// ---- Quét từ ẢNH CHỤP: chạy được trên mọi điện thoại, kể cả khi camera trực tiếp trục trặc ----
+function scanFromFile(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const im = new Image();
+  im.onload = () => {
+    URL.revokeObjectURL(url);
+    const errEl = document.getElementById('rErr');
+    // Thử đọc ở vài cỡ ảnh khác nhau để bắt được cả mã nhỏ lẫn ảnh chụp xa
+    for (const S of [900, 600, 1400]) {
+      const cv = document.createElement('canvas');
+      const scale = Math.min(1, S / Math.max(im.width, im.height));
+      cv.width = Math.round(im.width * scale);
+      cv.height = Math.round(im.height * scale);
+      const cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(im, 0, 0, cv.width, cv.height);
+      const img = cx.getImageData(0, 0, cv.width, cv.height);
+      const found = jsQR(img.data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
+      if (found && found.data) { onCodeFound(found.data); return; }
+    }
+    errEl.textContent = '❌ Không tìm thấy mã QR trong ảnh. Chụp lại gần hơn, mã nằm giữa ảnh, đủ sáng nhé.';
+  };
+  im.onerror = () => { document.getElementById('rErr').textContent = '❌ Không đọc được file ảnh này.'; };
+  im.src = url;
 }
 
 // -------- Cài đặt --------

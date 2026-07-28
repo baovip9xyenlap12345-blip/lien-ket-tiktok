@@ -614,8 +614,9 @@ function showCoupon(data) {
   // Mã QR đi kèm để nhân viên quét thay vì gõ tay
   const qrWrap = document.getElementById('ccQrWrap');
   if (data.coupon_code) {
-    const okQr = drawQR(document.getElementById('ccQr'), data.coupon_code, 150);
-    document.getElementById('ccQr').style.width = '150px';
+    // Vẽ QR nét cao (400px) hiển thị 200px — nhân viên quét màn hình dễ bắt hơn hẳn
+    const okQr = drawQR(document.getElementById('ccQr'), data.coupon_code, 400);
+    document.getElementById('ccQr').style.width = '200px';
     qrWrap.style.display = okQr ? 'block' : 'none';
   } else qrWrap.style.display = 'none';
   document.getElementById('ccName').textContent = 'Khách hàng: ' + data.customerName + ' • ' + new Date().toLocaleDateString('vi-VN');
@@ -661,7 +662,7 @@ function couponToCanvas() {
   // Mã QR trong ảnh để nhân viên quét bằng điện thoại/máy quét
   if (coupon.coupon_code) {
     const qcv = document.createElement('canvas');
-    if (drawQR(qcv, coupon.coupon_code, 180)) {
+    if (drawQR(qcv, coupon.coupon_code, 400)) {
       g.drawImage(qcv, 260, 315, 180, 180);
       g.fillStyle = '#94a3b8';
       g.font = '18px system-ui';
