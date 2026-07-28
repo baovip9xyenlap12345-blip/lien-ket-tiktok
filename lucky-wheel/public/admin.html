@@ -62,7 +62,7 @@
     </div>
     <div id="dtab-dcust" class="table-wrap">
       <table>
-        <thead><tr><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th></tr></thead>
+        <thead><tr><th>Họ tên</th><th>SĐT</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th><th>🎁 Giải thưởng đã trúng</th></tr></thead>
         <tbody id="dCustRows"></tbody>
       </table>
     </div>
@@ -128,9 +128,10 @@ async function viewShop(id, name) {
     api('/api/admin/shops/' + id + '/spins'),
   ]);
   document.getElementById('dCustRows').innerHTML = cust.data.map(c => `
-    <tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.email) || '—'}</td>
-    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="muted">Chưa có khách hàng.</td></tr>';
+    <tr><td>${esc(c.name)}</td><td>${esc(c.phone) || '—'}</td><td>${esc(c.email) || '—'}</td>
+    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td>
+    <td style="max-width:240px;">${c.prizes_won ? '🎉 ' + esc(c.prizes_won) : '<span class="muted">Chưa trúng</span>'}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">Chưa có khách hàng.</td></tr>';
   document.getElementById('dSpinRows').innerHTML = spins.data.map(s => `
     <tr><td class="muted">${s.created_at}</td>
     <td>${s.customer_name ? esc(s.customer_name) : '<span class="muted">Chưa nhận</span>'}</td>

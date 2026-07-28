@@ -172,6 +172,7 @@
         <div class="c-prize" id="ccPrize"></div>
         <div class="c-code" id="ccCode"></div>
         <div class="c-name" id="ccName"></div>
+        <div class="c-name"><a style="cursor:pointer; text-decoration:underline;" onclick="try{localStorage.removeItem('vq_info');}catch(e){} this.textContent='✓ Lần sau sẽ hỏi lại thông tin';">Không phải bạn? Bấm vào đây</a></div>
       </div>
       <p class="success" id="emailNote" style="display:none;">📧 Mã cũng đã được gửi vào email của bạn!</p>
       <a class="btn full" id="zaloBtnWin" style="display:none; background:#0068ff; color:#fff; margin-bottom:4px; animation:btnPulse 1.6s infinite;" target="_blank" rel="noopener">💬 Vào nhóm Zalo nhận thêm quà tặng!</a>
@@ -511,30 +512,64 @@ function showResult(data) {
 }
 
 // ---- Bước 2: nhập thông tin ----
-document.getElementById('claimBtn').addEventListener('click', () => showStep('stepForm'));
+// Trình duyệt nhớ thông tin sau lần nhận mã đầu tiên — lần sau trúng là nhận ngay, khỏi nhập lại
+function savedInfo() {
+  try {
+    const s = JSON.parse(localStorage.getItem('vq_info') || 'null');
+    if (s && s.name && (s.phone || s.email)) return s;
+  } catch (e) { /* bỏ qua */ }
+  return null;
+}
+
+document.getElementById('claimBtn').addEventListener('click', async () => {
+  const saved = savedInfo();
+  if (saved) {
+    // Khách quen: tự nhận mã bằng thông tin đã lưu, không bắt nhập lại
+    const ok = await doClaim(saved.name, saved.phone || '', saved.email || '', null);
+    if (ok) return;
+  }
+  // Khách mới (hoặc nhận tự động thất bại): hiện form, điền sẵn nếu có
+  if (saved) {
+    document.getElementById('cName').value = saved.name || '';
+    document.getElementById('cPhone').value = saved.phone || '';
+    document.getElementById('cEmail').value = saved.email || '';
+  }
+  showStep('stepForm');
+});
+
+async function doClaim(name, phone, email, errEl) {
+  try {
+    const res = await fetch('/api/public/claim/' + encodeURIComponent(slug), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claimToken, name, phone, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (errEl) errEl.textContent = data.error || 'Có lỗi xảy ra.';
+      return false;
+    }
+    // Lưu lại để lần sau trúng không phải nhập nữa
+    try { localStorage.setItem('vq_info', JSON.stringify({ name, phone, email })); } catch (e) { /* bỏ qua */ }
+    coupon = data;
+    showCoupon(data);
+    return true;
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Mất kết nối, vui lòng thử lại.';
+    return false;
+  }
+}
 
 document.getElementById('submitClaim').addEventListener('click', async () => {
   const errEl = document.getElementById('claimErr');
   errEl.textContent = '';
   const btn = document.getElementById('submitClaim');
   btn.disabled = true;
-  try {
-    const res = await fetch('/api/public/claim/' + encodeURIComponent(slug), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        claimToken,
-        name: document.getElementById('cName').value,
-        phone: document.getElementById('cPhone').value,
-        email: document.getElementById('cEmail').value,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Có lỗi xảy ra.'; btn.disabled = false; return; }
-    coupon = data;
-    showCoupon(data);
-  } catch (e) {
-    errEl.textContent = 'Mất kết nối, vui lòng thử lại.';
-  }
+  await doClaim(
+    document.getElementById('cName').value,
+    document.getElementById('cPhone').value,
+    document.getElementById('cEmail').value,
+    errEl
+  );
   btn.disabled = false;
 });
 

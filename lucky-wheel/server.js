@@ -458,7 +458,9 @@ app.delete('/api/prizes/:id', requireAuth('owner'), (req, res) => {
 
 app.get('/api/customers', requireAuth('owner'), (req, res) => {
   res.json(db.prepare(`
-    SELECT c.*, COUNT(s.id) AS spin_count, COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0) AS win_count
+    SELECT c.*, COUNT(s.id) AS spin_count,
+      COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0) AS win_count,
+      COALESCE(GROUP_CONCAT(CASE WHEN s.prize_id IS NOT NULL THEN s.prize_label END, ' • '),'') AS prizes_won
     FROM customers c LEFT JOIN spins s ON s.customer_id=c.id
     WHERE c.shop_id=? GROUP BY c.id ORDER BY c.created_at DESC
   `).all(req.shop.id));
@@ -562,12 +564,13 @@ app.post('/api/redeem/confirm', requireAuth('owner'), (req, res) => {
 
 app.get('/api/export/customers.csv', requireAuth('owner'), (req, res) => {
   const rows = db.prepare(`
-    SELECT c.name, c.phone, c.email, c.created_at, COUNT(s.id),
-           COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0)
+    SELECT c.name, c.phone, c.email, c.created_at, COUNT(s.id) AS spin_count,
+           COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0) AS win_count,
+           COALESCE(GROUP_CONCAT(CASE WHEN s.prize_id IS NOT NULL THEN s.prize_label END, ' | '),'') AS prizes_won
     FROM customers c LEFT JOIN spins s ON s.customer_id=c.id
     WHERE c.shop_id=? GROUP BY c.id ORDER BY c.created_at DESC
   `).all(req.shop.id).map(r => Object.values(r));
-  sendCsv(res, 'khach-hang.csv', ['Họ tên', 'Số điện thoại', 'Email', 'Ngày đăng ký', 'Số lượt quay', 'Số lần trúng'], rows);
+  sendCsv(res, 'khach-hang.csv', ['Họ tên', 'Số điện thoại', 'Email', 'Ngày đăng ký', 'Số lượt quay', 'Số lần trúng', 'Giải thưởng đã trúng'], rows);
 });
 
 // ------------------------------------------------------------------ Quản trị viên
@@ -601,7 +604,9 @@ app.put('/api/admin/shops/:id', requireAuth('admin'), (req, res) => {
 
 app.get('/api/admin/shops/:id/customers', requireAuth('admin'), (req, res) => {
   res.json(db.prepare(`
-    SELECT c.*, COUNT(s.id) AS spin_count, COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0) AS win_count
+    SELECT c.*, COUNT(s.id) AS spin_count,
+      COALESCE(SUM(CASE WHEN s.prize_id IS NOT NULL THEN 1 ELSE 0 END),0) AS win_count,
+      COALESCE(GROUP_CONCAT(CASE WHEN s.prize_id IS NOT NULL THEN s.prize_label END, ' • '),'') AS prizes_won
     FROM customers c LEFT JOIN spins s ON s.customer_id=c.id
     WHERE c.shop_id=? GROUP BY c.id ORDER BY c.created_at DESC
   `).all(req.params.id));
@@ -665,11 +670,12 @@ app.get('/api/admin/export.csv', requireAuth('admin'), (req, res) => {
   const rows = db.prepare(`
     SELECT sh.name AS shop_name, c.name AS customer_name, c.phone, c.email, c.created_at,
            (SELECT COUNT(*) FROM spins s WHERE s.customer_id=c.id) AS spin_count,
-           (SELECT COUNT(*) FROM spins s WHERE s.customer_id=c.id AND s.prize_id IS NOT NULL) AS win_count
+           (SELECT COUNT(*) FROM spins s WHERE s.customer_id=c.id AND s.prize_id IS NOT NULL) AS win_count,
+           (SELECT COALESCE(GROUP_CONCAT(s.prize_label,' | '),'') FROM spins s WHERE s.customer_id=c.id AND s.prize_id IS NOT NULL) AS prizes_won
     FROM customers c JOIN shops sh ON sh.id=c.shop_id ORDER BY sh.id, c.created_at DESC
   `).all().map(r => Object.values(r));
   sendCsv(res, 'toan-bo-khach-hang.csv',
-    ['Cửa hàng', 'Họ tên', 'Số điện thoại', 'Email', 'Ngày đăng ký', 'Số lượt quay', 'Số lần trúng'], rows);
+    ['Cửa hàng', 'Họ tên', 'Số điện thoại', 'Email', 'Ngày đăng ký', 'Số lượt quay', 'Số lần trúng', 'Giải thưởng đã trúng'], rows);
 });
 
 // ------------------------------------------------------------------ Trang public: khách hàng quay

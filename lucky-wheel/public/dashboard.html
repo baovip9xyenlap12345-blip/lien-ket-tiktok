@@ -53,6 +53,7 @@
         <h2 style="margin:0;">Danh sách mã (<span id="ocCount">0</span>)</h2>
         <div class="row">
           <input id="ocSearch" placeholder="🔍 Tìm mã..." style="width:180px;" oninput="renderOrderCodes()">
+          <button class="btn sm ghost" id="ocUsedBtn" onclick="toggleUsedCodes()">👁 Xem mã đã dùng</button>
           <a class="btn sm" href="/api/export/order-codes.csv">⬇️ Xuất Excel/CSV</a>
         </div>
       </div>
@@ -134,11 +135,14 @@
     <div class="card">
       <div class="row" style="justify-content:space-between;">
         <h2 style="margin:0;">Khách hàng đã tham gia (<span id="custCount">0</span>)</h2>
-        <a class="btn sm" href="/api/export/customers.csv">⬇️ Xuất Excel/CSV</a>
+        <div class="row">
+          <input id="custSearch" placeholder="🔍 Tìm tên / SĐT / email..." style="width:200px;" oninput="renderCustomers()">
+          <a class="btn sm" href="/api/export/customers.csv">⬇️ Xuất Excel/CSV</a>
+        </div>
       </div>
       <div class="table-wrap" style="margin-top:12px;">
         <table>
-          <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th></tr></thead>
+          <thead><tr><th>Họ tên</th><th>Số điện thoại</th><th>Email</th><th>Ngày tham gia</th><th>Lượt quay</th><th>Lần trúng</th><th>🎁 Giải thưởng đã trúng</th></tr></thead>
           <tbody id="custRows"></tbody>
         </table>
       </div>
@@ -338,13 +342,23 @@ async function delPrize(id) {
 }
 
 // -------- Khách hàng & lịch sử --------
+let _customers = [];
 async function loadCustomers() {
   const { data } = await api('/api/customers');
-  document.getElementById('custCount').textContent = data.length;
-  document.getElementById('custRows').innerHTML = data.map(c => `
-    <tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.email) || '<span class="muted">—</span>'}</td>
-    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="muted">Chưa có khách hàng nào. Hãy chia sẻ link vòng quay!</td></tr>';
+  _customers = data;
+  renderCustomers();
+}
+function renderCustomers() {
+  const kw = (document.getElementById('custSearch').value || '').trim().toLowerCase();
+  const list = kw ? _customers.filter(c =>
+    (c.name || '').toLowerCase().includes(kw) || (c.phone || '').includes(kw) || (c.email || '').toLowerCase().includes(kw)
+  ) : _customers;
+  document.getElementById('custCount').textContent = _customers.length;
+  document.getElementById('custRows').innerHTML = list.map(c => `
+    <tr><td>${esc(c.name)}</td><td>${esc(c.phone) || '<span class="muted">—</span>'}</td><td>${esc(c.email) || '<span class="muted">—</span>'}</td>
+    <td class="muted">${c.created_at}</td><td>${c.spin_count}</td><td>${c.win_count}</td>
+    <td style="max-width:260px;">${c.prizes_won ? '🎉 ' + esc(c.prizes_won) : '<span class="muted">Chưa trúng</span>'}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">' + (kw ? 'Không tìm thấy khách nào khớp.' : 'Chưa có khách hàng nào. Hãy chia sẻ link vòng quay!') + '</td></tr>';
 }
 async function loadSpins() {
   const { data } = await api('/api/spins');
@@ -365,15 +379,26 @@ async function loadSpins() {
 
 // -------- Mã đơn hàng → mã quay --------
 let _orderCodes = [];
+let _showUsedCodes = false; // mặc định ẨN mã đã dùng cho gọn — bấm nút mới hiện
 async function loadOrderCodes() {
   const { data } = await api('/api/order-codes');
   _orderCodes = data;
   renderOrderCodes();
 }
+function toggleUsedCodes() {
+  _showUsedCodes = !_showUsedCodes;
+  renderOrderCodes();
+}
 function renderOrderCodes() {
   const kw = (document.getElementById('ocSearch').value || '').trim().toUpperCase();
-  const list = kw ? _orderCodes.filter(o => o.order_code.includes(kw) || o.spin_code.includes(kw)) : _orderCodes;
-  document.getElementById('ocCount').textContent = _orderCodes.length;
+  const usedCount = _orderCodes.filter(o => o.used).length;
+  const btn = document.getElementById('ocUsedBtn');
+  btn.textContent = _showUsedCodes ? ('🙈 Ẩn mã đã dùng (' + usedCount + ')') : ('👁 Xem mã đã dùng (' + usedCount + ')');
+  let list = _orderCodes;
+  // Tìm kiếm thì tra được cả mã đã dùng; còn lại chỉ hiện mã chưa dùng trừ khi bật nút
+  if (kw) list = list.filter(o => o.order_code.includes(kw) || o.spin_code.includes(kw));
+  else if (!_showUsedCodes) list = list.filter(o => !o.used);
+  document.getElementById('ocCount').textContent = _orderCodes.length - usedCount + ' chưa dùng / ' + _orderCodes.length;
   document.getElementById('ocRows').innerHTML = list.map(o => `
     <tr><td><b>${esc(o.order_code)}</b></td>
     <td style="color:var(--accent2); font-weight:700; letter-spacing:1px;">${esc(o.spin_code)}</td>
