@@ -266,7 +266,12 @@ app.use(cookieSession({
   sameSite: 'lax',
   maxAge: 30 * 24 * 3600 * 1000,
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Không cho trình duyệt lưu tạm dữ liệu API — sửa phần quà là trang khách thấy ngay
+app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+// Trang HTML/CSS luôn kiểm tra bản mới (dùng ETag nên vẫn nhanh) — hết cảnh phải Ctrl+F5
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => res.set('Cache-Control', 'no-cache'),
+}));
 
 // ------------------------------------------------------------------ Helpers
 const q = {
@@ -849,6 +854,7 @@ app.post('/api/public/claim/:slug', (req, res) => {
 });
 
 // Trang vòng quay của từng cửa hàng: /w/ten-quan
-app.get('/w/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'wheel.html')));
+app.get('/w/:slug', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'wheel.html'), { headers: { 'Cache-Control': 'no-cache' } }));
 
 app.listen(PORT, () => console.log(`Vòng Quay May Mắn chạy tại http://localhost:${PORT}`));

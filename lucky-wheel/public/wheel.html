@@ -673,6 +673,13 @@ function showStep(id) {
 function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
 
 loadShop();
+
+// ---- Tự cập nhật phần quà mới nhất, không cần khách bấm tải lại trang ----
+// 1. Mở lại tab / quay lại từ trang khác → tải lại cấu hình
+window.addEventListener('pageshow', (e) => { if (e.persisted && !spinning) loadShop(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !spinning) loadShop(); });
+// 2. Đang mở trang → tự làm mới mỗi 45 giây (bỏ qua lúc đang quay)
+setInterval(() => { if (!document.hidden && !spinning) loadShop(); }, 45000);
 </script>
 </body>
 </html>
