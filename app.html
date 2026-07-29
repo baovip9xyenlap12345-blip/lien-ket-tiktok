@@ -245,51 +245,69 @@ let transcriber = null, loadedModel = null, lib = null, usingGPU = false;
 const onDl = p => self.postMessage({ type: 'download',
   p: { status: p.status, file: p.file, loaded: p.loaded, total: p.total, progress: p.progress } });
 
+// Thử lần lượt nhiều CDN — mạng Việt Nam đôi khi chặn/chậm một CDN
+const V3_URLS = [
+  'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2',
+  'https://unpkg.com/@huggingface/transformers@3.5.2/dist/transformers.min.js'
+];
+const V2_URLS = [
+  'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2',
+  'https://unpkg.com/@xenova/transformers@2.17.2/dist/transformers.min.js'
+];
+async function impAny(urls) {
+  let err;
+  for (const u of urls) { try { return await import(u); } catch (e) { err = e; } }
+  throw err || new Error('Khong tai duoc thu vien AI');
+}
 // Ưu tiên chạy bằng GPU (nhanh gấp nhiều lần); máy không hỗ trợ thì dùng WASM/CPU
 async function getLib() {
   if (lib) return lib;
   if (self.navigator && self.navigator.gpu) {
     try {
-      const m = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2');
+      const m = await impAny(V3_URLS);
       m.env.allowLocalModels = false;
       lib = m; usingGPU = true;
       return lib;
     } catch (e) {}
   }
-  const m = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+  const m = await impAny(V2_URLS);
   m.env.allowLocalModels = false;
   lib = m; usingGPU = false;
   return lib;
 }
-async function loadWasmFallback(model) {
-  const m = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+async function switchToWasm() {
+  const m = await impAny(V2_URLS);
   m.env.allowLocalModels = false;
   lib = m; usingGPU = false;
-  transcriber = await m.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: onDl });
-  loadedModel = model;
   self.postMessage({ type: 'device', gpu: false });
-  return transcriber;
+  return m;
+}
+async function loadOne(model) {
+  let m = await getLib();
+  if (usingGPU) {
+    try {
+      return await m.pipeline('automatic-speech-recognition', model, {
+        device: 'webgpu',
+        dtype: { encoder_model: 'fp32', decoder_model_merged: 'q8' },
+        progress_callback: onDl
+      });
+    } catch (e) { m = await switchToWasm(); } // GPU lỗi -> quay về CPU
+  }
+  return await m.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: onDl });
 }
 async function loadModel(model) {
-  const m = await getLib();
-  if (!transcriber || loadedModel !== model) {
-    try {
-      if (usingGPU) {
-        transcriber = await m.pipeline('automatic-speech-recognition', model, {
-          device: 'webgpu',
-          dtype: { encoder_model: 'fp32', decoder_model_merged: 'q8' },
-          progress_callback: onDl
-        });
-      } else {
-        transcriber = await m.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: onDl });
-      }
-      loadedModel = model;
-      self.postMessage({ type: 'device', gpu: usingGPU });
-    } catch (e) {
-      if (usingGPU) return await loadWasmFallback(model); // GPU lỗi -> quay về CPU
-      throw e;
-    }
+  if (transcriber && loadedModel === model) return transcriber;
+  try {
+    transcriber = await loadOne(model);
+  } catch (e) {
+    // Model tiếng Việt (PhoWhisper) không tải được -> tự động dùng Whisper gốc
+    if (model.indexOf('huuquyet/PhoWhisper-') === 0) {
+      self.postMessage({ type: 'notice', msg: 'Model chuyên tiếng Việt chưa tải được, chuyển sang model dự phòng...' });
+      transcriber = await loadOne(model.replace('huuquyet/PhoWhisper-', 'Xenova/whisper-'));
+    } else throw e;
   }
+  loadedModel = model;
+  self.postMessage({ type: 'device', gpu: usingGPU });
   return transcriber;
 }
 self.onmessage = async (e) => {
@@ -315,8 +333,9 @@ self.onmessage = async (e) => {
     } catch (e) {
       if (!usingGPU) throw e;
       // GPU lỗi giữa chừng -> thử lại bằng CPU
-      transcriber = null; doneSec = 0;
-      t = await loadWasmFallback(d.model);
+      await switchToWasm();
+      transcriber = null; loadedModel = null; doneSec = 0;
+      t = await loadModel(d.model);
       out = await t(d.audio, opts);
     }
     self.postMessage({ type: 'result', text: out.text || '', chunks: out.chunks || null });
@@ -350,6 +369,8 @@ function getWorker() {
       showProgress(`Đang nghe và chuyển thành văn bản... (${m.pct}%)`, m.pct);
     } else if (m.type === 'device') {
       aiOnGPU = m.gpu;
+    } else if (m.type === 'notice') {
+      setStatus('⚠️ ' + m.msg);
     } else if (m.type === 'ready') {
       if (!pendingJob) {
         hideProgress();
@@ -393,8 +414,25 @@ async function keepAwake(on) {
 }
 
 // ====== Dự phòng cho trình duyệt cũ: AI chạy trên luồng chính ======
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
-env.allowLocalModels = false;
+// Tải thư viện KHI CẦN (không tải lúc mở trang — nếu CDN lỗi thì app vẫn sống)
+let mainLib = null;
+async function loadMainLib() {
+  if (mainLib) return mainLib;
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2',
+    'https://unpkg.com/@xenova/transformers@2.17.2/dist/transformers.min.js'
+  ];
+  let err;
+  for (const u of urls) {
+    try {
+      const m = await import(u);
+      m.env.allowLocalModels = false;
+      mainLib = m;
+      return m;
+    } catch (e) { err = e; }
+  }
+  throw new Error('Không tải được thư viện AI — hãy kiểm tra kết nối mạng rồi thử lại (hoặc đổi mạng WiFi/4G).');
+}
 
 // ====== Trạng thái chung ======
 let currentFile = null;      // File hoặc Blob đang chọn
@@ -658,14 +696,20 @@ transcribeBtn.addEventListener('click', async () => {
       // Trình duyệt cũ: chạy trên luồng chính
       if (!transcriber || loadedModel !== model) {
         showProgress('Đang tải model AI (chỉ lần đầu)...', 0);
-        transcriber = await pipeline('automatic-speech-recognition', model, {
-          quantized: true,
-          progress_callback: p => {
-            if (p.status === 'progress' && p.total) {
-              showProgress(`Đang tải model AI: ${p.file} (${fmtSize(p.loaded)} / ${fmtSize(p.total)})`, p.progress);
-            }
+        const mlib = await loadMainLib();
+        const dlCb = p => {
+          if (p.status === 'progress' && p.total) {
+            showProgress(`Đang tải model AI: ${p.file} (${fmtSize(p.loaded)} / ${fmtSize(p.total)})`, p.progress);
           }
-        });
+        };
+        try {
+          transcriber = await mlib.pipeline('automatic-speech-recognition', model, { quantized: true, progress_callback: dlCb });
+        } catch (e) {
+          // PhoWhisper lỗi -> tự dùng Whisper gốc
+          if (!model.startsWith('huuquyet/PhoWhisper-')) throw e;
+          setStatus('⚠️ Model chuyên tiếng Việt chưa tải được, dùng model dự phòng...');
+          transcriber = await mlib.pipeline('automatic-speech-recognition', model.replace('huuquyet/PhoWhisper-', 'Xenova/whisper-'), { quantized: true, progress_callback: dlCb });
+        }
         loadedModel = model;
       }
       const totalSec = feedAudio.length / 16000;
@@ -704,7 +748,12 @@ transcribeBtn.addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
     hideProgress();
-    setStatus('❌ Lỗi khi xử lý: ' + (err.message || err), 'err');
+    const msg = String(err && err.message || err);
+    if (/import|fetch|network|Failed to/i.test(msg)) {
+      setStatus('❌ Không tải được AI — mạng của bạn có thể đang chặn hoặc chập chờn. Hãy thử lại, đổi WiFi/4G, hoặc tắt VPN/chặn quảng cáo rồi bấm lại.', 'err');
+    } else {
+      setStatus('❌ Lỗi khi xử lý: ' + msg, 'err');
+    }
   } finally {
     keepAwake(false);
     busy = false;
