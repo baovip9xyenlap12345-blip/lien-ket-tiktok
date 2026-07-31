@@ -63,6 +63,78 @@ docker run -d --name bao-stt --env-file .env -p 80:3000 -v $(pwd)/data:/app/data
 3. Bạn đăng nhập bằng email admin (`ADMIN_EMAIL`) → thấy khung **👑 Quản trị**
 4. Điền email khách + chọn gói → bấm **Kích hoạt** — xong, gói có hiệu lực 31 ngày
 
+## 🔌 Kết nối tài khoản WordPress
+
+Máy chủ có thể kết nối thẳng vào site WordPress của bạn để **sửa tài khoản** và **cấu hình site**
+mà không cần mở trang quản trị WordPress.
+
+### Bước 1 — Tạo "Mật khẩu ứng dụng" trong WordPress
+
+Đăng nhập WordPress → **Người dùng (Users) → Hồ sơ (Profile)** → kéo xuống mục
+**Application Passwords** → đặt tên (ví dụ `may-chu-app`) → **Add New Application Password**.
+WordPress hiện một chuỗi 24 ký tự dạng `abcd efgh ijkl ...` — **chỉ hiện đúng một lần**, hãy chép lại ngay.
+
+> Đây KHÔNG phải mật khẩu đăng nhập. Nếu không thấy mục này: site phải chạy **HTTPS** và WordPress từ **5.6** trở lên.
+
+### Bước 2 — Điền vào biến môi trường
+
+```
+WP_URL=https://ten-mien-cua-ban        # có https://, KHÔNG có dấu / ở cuối
+WP_USERNAME=ten_dang_nhap_wordpress
+WP_APP_PASSWORD=abcd efgh ijkl mnop qrst uvwx
+```
+
+Chạy trên máy: chép `.env.example` thành `.env` rồi điền. Chạy trên Railway: điền vào tab **Variables**.
+
+### Bước 3 — Kiểm tra kết nối
+
+```bash
+cd server
+npm run wp:check
+```
+
+Lệnh này báo từng bước một (tìm thấy REST API → đăng nhập được → có quyền cấu hình) nên hỏng ở đâu biết ngay ở đó.
+
+### Bước 4 — Dùng trang quản lý
+
+Mở `https://<địa-chỉ-máy-chủ>/wordpress.html`, đăng nhập bằng email quản trị (`ADMIN_EMAIL`). Tại đây có thể:
+
+- Xem trạng thái kết nối và vai trò của tài khoản WordPress
+- Sửa **tài khoản**: tên hiển thị, biệt danh, họ tên, email, website, giới thiệu
+- Sửa **cấu hình site**: tên site, khẩu hiệu, email quản trị, múi giờ, ngôn ngữ, định dạng ngày/giờ, số bài mỗi trang
+- Đổi mật khẩu đăng nhập WordPress
+- Xem và **thu hồi** mật khẩu ứng dụng (dùng khi bị lộ)
+- Xem danh sách thành viên của site
+
+### Các đường dẫn API (đều yêu cầu đăng nhập bằng tài khoản `ADMIN_EMAIL`)
+
+| Đường dẫn | Việc |
+|---|---|
+| `GET /api/wp/status` | Đã cấu hình đủ chưa (không trả về mật khẩu) |
+| `GET /api/wp/test` | Kiểm tra kết nối từng bước |
+| `GET/POST /api/wp/account` | Xem / sửa tài khoản WordPress |
+| `POST /api/wp/password` | Đổi mật khẩu đăng nhập WordPress |
+| `GET/POST /api/wp/settings` | Xem / sửa cấu hình site |
+| `GET /api/wp/app-passwords` | Danh sách mật khẩu ứng dụng |
+| `DELETE /api/wp/app-passwords/:uuid` | Thu hồi một mật khẩu ứng dụng |
+| `GET /api/wp/users` | Danh sách thành viên của site |
+
+### Khi gặp lỗi
+
+| Báo lỗi | Cách xử lý |
+|---|---|
+| Sai tên đăng nhập hoặc mật khẩu ứng dụng | Tạo lại mật khẩu ứng dụng, chép đủ 24 ký tự |
+| Không tìm thấy REST API | Kiểm tra `WP_URL`; vào **Cài đặt → Đường dẫn tĩnh** bấm Lưu |
+| Bị từ chối (403) | Plugin bảo mật (Wordfence, iThemes…) hoặc tường lửa/CDN đang chặn REST API |
+| Không đủ quyền | Tài khoản cần vai trò **Administrator** mới sửa được cấu hình site |
+
+### ⚠️ An toàn
+
+- **Không** đặt mật khẩu vào mã nguồn hay đưa lên Git. File `.env` đã nằm trong `.gitignore` và `.dockerignore`.
+- Nếu mật khẩu ứng dụng từng gửi qua chat/tin nhắn/email thì coi như **đã lộ**: vào trang
+  `/wordpress.html` bấm **Thu hồi**, tạo cái mới rồi cập nhật lại `WP_APP_PASSWORD`.
+- Mật khẩu ứng dụng có **toàn quyền như tài khoản đó** qua REST API, hãy giữ như mật khẩu thật.
+
 ## Ghi chú kỹ thuật
 
 - Dữ liệu (tài khoản, log sử dụng) lưu SQLite tại `server/data/app.db` — nhớ backup/volume

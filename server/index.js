@@ -1,5 +1,6 @@
 // May chu "App Cua Bao Gau Bong" - chuyen video/ghi am thanh van ban bang OpenAI API
 // Tinh phi theo GOI (so video), moi video toi da MAX_VIDEO_MINUTES phut
+import './load-env.js';
 import express from 'express';
 import multer from 'multer';
 import Database from 'better-sqlite3';
@@ -11,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as wp from './wordpress.js';
 
 const run = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,7 +88,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -210,6 +212,52 @@ app.post('/api/admin/set-plan', auth, adminOnly, (req, res) => {
   db.prepare('UPDATE users SET plan=?, plan_expires=?, used_videos=0 WHERE id=?').run(plan, expires, u.id);
   res.json({ ok: true, email, plan, expires });
 });
+
+// ---- Ket noi WordPress (chi admin) ----
+// Bat loi cua WordPress va tra ve JSON de hieu thay vi lam sap may chu
+function wpRoute(handler) {
+  return async (req, res) => {
+    try {
+      res.json(await handler(req));
+    } catch (err) {
+      if (err instanceof wp.WpError) {
+        // 5xx cua WordPress khong phai loi cua may chu nay -> tra 502 cho ro rang
+        const status = err.status >= 400 && err.status < 500 ? err.status : 502;
+        return res.status(status).json({ error: err.message, code: err.code });
+      }
+      console.error('Loi WordPress:', err);
+      res.status(500).json({ error: 'Loi khi goi WordPress, vui long thu lai' });
+    }
+  };
+}
+const wpGuard = [auth, adminOnly, rateLimit(120, 10 * 60 * 1000)];
+
+// Da cau hinh chua (khong lo mat khau ra ngoai)
+app.get('/api/wp/status', ...wpGuard, wpRoute(async () => ({ ...wp.wpStatus(), fields: wp.wpFields })));
+
+// Kiem tra ket noi tung buoc: REST API -> dang nhap -> quyen cau hinh
+app.get('/api/wp/test', ...wpGuard, wpRoute(async () => wp.testConnection()));
+
+// Tai khoan WordPress dang ket noi
+app.get('/api/wp/account', ...wpGuard, wpRoute(async () => ({ account: await wp.getAccount() })));
+app.post('/api/wp/account', ...wpGuard, wpRoute(async req => ({ ok: true, account: await wp.updateAccount(req.body) })));
+
+// Doi mat khau dang nhap WordPress (khac mat khau ung dung)
+app.post('/api/wp/password', ...wpGuard, wpRoute(async req => wp.changePassword(req.body?.password)));
+
+// Cau hinh site: ten site, mo ta, email quan tri, mui gio, ngon ngu...
+app.get('/api/wp/settings', ...wpGuard, wpRoute(async () => ({ settings: await wp.getSettings() })));
+app.post('/api/wp/settings', ...wpGuard, wpRoute(async req => ({ ok: true, settings: await wp.updateSettings(req.body) })));
+
+// Mat khau ung dung dang hoat dong + thu hoi khi bi lo
+app.get('/api/wp/app-passwords', ...wpGuard, wpRoute(async () => ({ items: await wp.listAppPasswords() })));
+app.delete('/api/wp/app-passwords/:uuid', ...wpGuard, wpRoute(async req => {
+  await wp.revokeAppPassword(req.params.uuid);
+  return { ok: true };
+}));
+
+// Danh sach thanh vien cua site WordPress
+app.get('/api/wp/users', ...wpGuard, wpRoute(async req => ({ users: await wp.listUsers(req.query.per_page) })));
 
 // ---- Chuyen doi ----
 async function ffprobeDuration(file) {
