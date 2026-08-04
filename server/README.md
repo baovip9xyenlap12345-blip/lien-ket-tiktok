@@ -128,6 +128,45 @@ Mở `https://<địa-chỉ-máy-chủ>/wordpress.html`, đăng nhập bằng em
 | Bị từ chối (403) | Plugin bảo mật (Wordfence, iThemes…) hoặc tường lửa/CDN đang chặn REST API |
 | Không đủ quyền | Tài khoản cần vai trò **Administrator** mới sửa được cấu hình site |
 
+### Đăng trang giới thiệu + ảnh cá nhân
+
+Tải cả một thư mục ảnh trên máy lên WordPress rồi tạo trang "Tôi là ai", chỉ bằng một lệnh:
+
+```bash
+cd server
+node wp-dang-gioi-thieu.js --anh "F:\Ảnh của tôi"
+```
+
+Nội dung bài lấy từ file `server/gioi-thieu.md` — mở ra sửa cho đúng giọng của bạn trước khi chạy.
+
+| Tuỳ chọn | Việc |
+|---|---|
+| `--anh <thư-mục>` | Thư mục ảnh trên máy. Bỏ qua nếu chỉ muốn đăng chữ |
+| `--bai <file>` | File nội dung khác, mặc định `gioi-thieu.md` |
+| `--slug <tên>` | Đường dẫn trang, mặc định `toi-la-ai` |
+| `--tieu-de <chữ>` | Tiêu đề trang, mặc định lấy dòng `# ` đầu tiên trong file |
+| `--thu` | Chỉ xem sẽ làm gì, **không** động đến website |
+| `--dang` | Đăng công khai luôn. Không có thì **lưu nháp** để bạn xem trước |
+
+Cách viết trong file nội dung:
+
+| Viết | Ra trang web |
+|---|---|
+| `# Tôi là ai` | Tiêu đề trang (dòng đầu tiên) |
+| `## Vì sao tôi làm nghề này` | Tiêu đề mục |
+| `**chữ đậm**` | **chữ đậm** |
+| `> câu trích` | Khối trích dẫn |
+| `[ANH]` | Chèn ảnh tiếp theo vào đúng chỗ đó |
+| `{{...}}` | Chỗ trống chưa điền — lệnh sẽ **từ chối chạy** cho đến khi bạn điền xong |
+
+Ảnh nào không được `[ANH]` gọi tới thì gom thành thư viện ảnh ở cuối trang.
+Tên file tiếng Việt tự động bỏ dấu (`Ảnh chân dung.png` → `anh-chan-dung.png`) vì tiêu chuẩn HTTP
+không cho ký tự có dấu trong tên file tải lên. Nhận `.jpg .jpeg .png .webp .gif .avif .heic .heif`.
+
+Chạy lại lệnh **không** tạo trang trùng — nó cập nhật đúng trang cũ theo `slug`.
+
+Sau khi đăng, nhớ thêm trang vào menu: **Giao diện → Menu**.
+
 ### ⚠️ An toàn
 
 - **Không** đặt mật khẩu vào mã nguồn hay đưa lên Git. File `.env` đã nằm trong `.gitignore` và `.dockerignore`.

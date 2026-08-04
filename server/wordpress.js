@@ -274,4 +274,101 @@ export async function testConnection() {
   return { ok: true, status, steps, site, account, settings };
 }
 
+// ---- Tai anh len Thu vien (Media) ----
+const MIME = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+  '.gif': 'image/gif', '.avif': 'image/avif', '.heic': 'image/heic', '.heif': 'image/heif',
+};
+export const ANH_HOP_LE = Object.keys(MIME);
+
+// WordPress doc ten file tu header Content-Disposition, header HTTP chi cho ky tu ASCII
+// -> bo dau tieng Viet, giu duoi file
+export function tenFileAscii(ten) {
+  const duoi = (ten.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+  const goc = ten.slice(0, ten.length - duoi.length);
+  const ascii = goc
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // bo dau
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  return (ascii || 'anh') + duoi;
+}
+
+// Tai 1 file anh len. buffer = noi dung file, tenGoc = ten file goc (co the co dau)
+export async function uploadMedia(buffer, tenGoc, { title, alt, caption } = {}) {
+  if (!wpConfigured()) throw new WpError('Chua cau hinh ket noi WordPress.', 500, 'wp_not_configured');
+  const duoi = (tenGoc.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+  const mime = MIME[duoi];
+  if (!mime) throw new WpError(`Khong ho tro duoi file "${duoi}". Chi nhan: ${ANH_HOP_LE.join(', ')}`, 400, 'wp_bad_mime');
+
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), Math.max(WP_TIMEOUT_MS, 120000)); // anh nang -> cho lau hon
+  let resp;
+  try {
+    resp = await fetch(new URL(WP_URL + '/wp-json/wp/v2/media'), {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader(),
+        Accept: 'application/json',
+        'Content-Type': mime,
+        'Content-Disposition': `attachment; filename="${tenFileAscii(tenGoc)}"`,
+      },
+      body: buffer,
+      signal: ac.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new WpError(`Tai "${tenGoc}" qua lau khong xong.`, 504, 'wp_timeout');
+    throw new WpError(`Khong tai duoc "${tenGoc}" (${err.cause?.code || err.message}).`, 502, 'wp_unreachable');
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const text = await resp.text();
+  let d = null;
+  try { d = text ? JSON.parse(text) : null; } catch {}
+  if (!resp.ok) {
+    const code = d?.code || '';
+    if (code === 'rest_upload_unknown_error' || resp.status === 413) {
+      throw new WpError(`File "${tenGoc}" bi may chu tu choi, thuong do anh nang qua gioi han upload cua hosting.`, 413, code);
+    }
+    throw new WpError(friendlyError(resp.status, code, d?.message), resp.status, code);
+  }
+
+  // Dat tieu de / mo ta anh (alt) sau khi tai xong
+  if (title || alt || caption) {
+    try {
+      await wpFetch(`/wp/v2/media/${d.id}`, {
+        method: 'POST',
+        body: { ...(title ? { title } : {}), ...(alt ? { alt_text: alt } : {}), ...(caption ? { caption } : {}) },
+      });
+    } catch { /* tai duoc anh la chinh, dat ten hong thi bo qua */ }
+  }
+
+  return { id: d.id, url: d.source_url, link: d.link, ten: d.slug };
+}
+
+// ---- Trang (Page) ----
+export async function timTrang(slug) {
+  const rows = await wpFetch('/wp/v2/pages', { query: { slug, status: 'publish,draft,pending,private', context: 'edit', per_page: 1 } });
+  return rows?.[0] || null;
+}
+
+// Tao trang moi, hoac ghi de trang cu neu da co slug do
+export async function taoHoacSuaTrang({ slug, title, content, status = 'draft' }) {
+  const cu = await timTrang(slug);
+  const body = { title, content, status, ...(cu ? {} : { slug }) };
+  const t = cu
+    ? await wpFetch(`/wp/v2/pages/${cu.id}`, { method: 'POST', body })
+    : await wpFetch('/wp/v2/pages', { method: 'POST', body });
+  return {
+    id: t.id,
+    daCo: !!cu,
+    status: t.status,
+    link: t.link,
+    linkSua: `${WP_URL}/wp-admin/post.php?post=${t.id}&action=edit`,
+    linkXem: t.status === 'publish' ? t.link : `${t.link}${t.link.includes('?') ? '&' : '?'}preview=true`,
+  };
+}
+
 export const wpFields = { account: ACCOUNT_FIELDS, settings: SETTINGS_FIELDS };
