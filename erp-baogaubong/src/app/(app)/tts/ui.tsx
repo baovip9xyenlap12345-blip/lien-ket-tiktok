@@ -16,9 +16,17 @@ export default function TtsClient() {
   const [voice, setVoice] = useState<string>(VI_VOICES[0].id);
   const [rate, setRate] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [secs, setSecs] = useState(0);
   const [err, setErr] = useState('');
   const [clips, setClips] = useState<Clip[]>([]);
   const nextId = useRef(1);
+
+  // Dong ho dem giay khi dang tao — de biet dang chay, khong phai treo.
+  useEffect(() => {
+    if (!busy) { setSecs(0); return; }
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
 
   // Don blob URL khi roi trang (tranh giu bo nho trinh duyet).
   useEffect(() => () => { clips.forEach((c) => URL.revokeObjectURL(c.url)); },
@@ -87,11 +95,11 @@ export default function TtsClient() {
           </div>
           <button onClick={generate} disabled={busy || !text.trim()}
             className="ml-auto rounded-xl bg-pink-700 px-6 py-2.5 font-bold text-white disabled:opacity-50">
-            {busy ? '⏳ Đang tạo giọng đọc…' : '🔊 Tạo audio'}
+            {busy ? `⏳ Đang tạo… ${secs}s` : '🔊 Tạo audio'}
           </button>
         </div>
         {err && <p className="mt-2 text-sm font-semibold text-red-600">{err}</p>}
-        <p className="mt-2 text-xs text-slate-400">💡 Mẹo: viết có dấu chấm/phẩy đầy đủ thì AI đọc ngắt nghỉ tự nhiên hơn. Văn bản dài nên chia thành từng đoạn.</p>
+        <p className="mt-2 text-xs text-slate-400">💡 Viết có dấu chấm/phẩy đầy đủ thì AI đọc ngắt nghỉ tự nhiên hơn. Bài dài được tự động tách đoạn và đọc <b>song song</b> cho nhanh — 1.000 ký tự thường xong trong ~10–20 giây.</p>
       </div>
 
       {/* Danh sach audio da tao */}
