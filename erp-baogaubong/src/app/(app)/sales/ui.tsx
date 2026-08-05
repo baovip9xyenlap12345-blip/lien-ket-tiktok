@@ -35,10 +35,11 @@ const psTone = (s: string) => s === 'PAID' ? 'green' : s === 'PARTIAL' ? 'amber'
 export default function SalesClient({ canManage, canApprove, vatDefault }: {
   canManage: boolean; canApprove: boolean; vatDefault: number;
 }) {
-  const [tab, setTab] = useState<'dash' | 'quotes' | 'orders' | 'carts' | 'pos'>('dash');
+  const [tab, setTab] = useState<'dash' | 'quotes' | 'orders' | 'carts' | 'pos' | 'pancake'>('dash');
   const tabs: [typeof tab, string][] = [['dash', '📊 Tổng quan'], ['quotes', '📄 Báo giá'],
     ['orders', '🧾 Đơn hàng'], ['carts', '🛒 Giỏ chưa mua'],
-    ...(canManage ? [['pos', '🛒 Bán nhanh POS'] as [typeof tab, string]] : [])];
+    ...(canManage ? [['pos', '🛒 Bán nhanh POS'] as [typeof tab, string],
+      ['pancake', '🥞 Pancake'] as [typeof tab, string]] : [])];
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -54,6 +55,91 @@ export default function SalesClient({ canManage, canApprove, vatDefault }: {
       {tab === 'orders' && <OrdersTab canManage={canManage} />}
       {tab === 'carts' && <AbandonedCartsTab />}
       {tab === 'pos' && canManage && <PosTab />}
+      {tab === 'pancake' && canManage && <PancakeTab />}
+    </div>
+  );
+}
+
+/* ============================ PANCAKE POS (KEO DON VE APP) ============================ */
+type PancakeState = { connected: boolean; shopId: number | null; shopName: string | null; apiKeyMasked: string | null };
+
+function PancakeTab() {
+  const [st, setSt] = useState<PancakeState | null>(null);
+  const [key, setKey] = useState('');
+  const [shops, setShops] = useState<{ id: number; name: string }[]>([]);
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState(''); const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    const j = await fetch('/api/integrations/pancake').then((r) => r.json()).catch(() => null);
+    if (j?.ok) setSt(j);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function saveKey() {
+    setErr(''); setMsg(''); setBusy('key');
+    const j = await fetch('/api/integrations/pancake', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key.trim() }) }).then((r) => r.json()).catch(() => ({ ok: false, error: 'Lỗi mạng' }));
+    setBusy('');
+    if (j.ok) { setShops(j.shops ?? []); setKey(''); setMsg(`✅ Kết nối được! Tìm thấy ${j.shops?.length ?? 0} shop.`); load(); }
+    else setErr(j.error || 'Kết nối lỗi');
+  }
+  async function pickShop(id: number, name: string) {
+    setErr(''); setBusy('shop');
+    const j = await fetch('/api/integrations/pancake', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId: id, shopName: name }) }).then((r) => r.json()).catch(() => ({ ok: false }));
+    setBusy('');
+    if (j.ok) { setMsg(`✅ Đã chọn shop "${name}".`); setShops([]); load(); }
+    else setErr(j.error || 'Lỗi chọn shop');
+  }
+  async function sync() {
+    setErr(''); setMsg(''); setBusy('sync');
+    const j = await fetch('/api/integrations/pancake/sync', { method: 'POST' }).then((r) => r.json()).catch(() => ({ ok: false, error: 'Lỗi mạng' }));
+    setBusy('');
+    if (j.ok) setMsg(`✅ Xong: ${j.created} đơn mới kéo về, ${j.skipped} đơn đã có từ trước${j.failed ? `, ${j.failed} đơn lỗi` : ''}. Xem ở tab 🧾 Đơn hàng (mã PCK-…).`);
+    else setErr(j.error || 'Đồng bộ lỗi');
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <p className="mb-3 text-sm text-slate-500">Kéo đơn hàng từ <b>Pancake POS</b> (chốt đơn Facebook/TikTok) về app — đơn nhập về có mã <b>PCK-…</b> trong tab Đơn hàng, không bao giờ bị trùng.</p>
+
+      {/* Buoc 1: ma API */}
+      <div className="card p-4">
+        <h3 className="font-bold">Bước 1 — Mã API Pancake</h3>
+        {st?.connected
+          ? <p className="mt-1 text-sm text-green-700">✅ Đã lưu mã: <b>{st.apiKeyMasked}</b> <span className="text-slate-400">(dán mã mới bên dưới nếu muốn thay)</span></p>
+          : <p className="mt-1 text-sm text-slate-500">Lấy trong <b>Pancake POS → Cài đặt → API</b>, dán vào đây:</p>}
+        <div className="mt-2 flex gap-2">
+          <input className="inp flex-1" placeholder="Dán mã API…" value={key} onChange={(e) => setKey(e.target.value)} />
+          <button className="btn" disabled={busy !== '' || key.trim().length < 10} onClick={saveKey}>
+            {busy === 'key' ? 'Đang kiểm tra…' : '🔌 Kiểm tra & lưu'}</button>
+        </div>
+        {shops.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1 text-sm font-bold">Chọn shop để kéo đơn:</div>
+            <div className="flex flex-wrap gap-2">
+              {shops.map((s) => (
+                <button key={s.id} className="rounded-lg border-2 border-pink-300 px-3 py-1.5 text-sm font-semibold hover:bg-pink-50"
+                  disabled={busy !== ''} onClick={() => pickShop(s.id, s.name)}>{s.name}</button>))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Buoc 2: dong bo */}
+      <div className="card mt-3 p-4">
+        <h3 className="font-bold">Bước 2 — Kéo đơn về</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          {st?.shopName ? <>Shop đang nối: <b className="text-pink-700">{st.shopName}</b></> : 'Chưa chọn shop (làm Bước 1 trước).'}
+        </p>
+        <button className="btn mt-2" disabled={busy !== '' || !st?.shopId} onClick={sync}>
+          {busy === 'sync' ? '⏳ Đang kéo đơn…' : '⬇️ Kéo đơn từ Pancake'}</button>
+        <p className="mt-2 text-xs text-slate-400">Mỗi lần bấm kéo tối đa ~150 đơn gần nhất. Đơn đã kéo rồi tự bỏ qua. Đơn về ở trạng thái khớp với Pancake (mới/đã gửi/đã nhận/hủy); tiền thu (COD) anh xác nhận trong app khi đối soát.</p>
+      </div>
+
+      {msg && <p className="mt-3 text-sm font-semibold text-green-700">{msg}</p>}
+      {err && <p className="mt-3 text-sm font-semibold text-red-600">{err}</p>}
     </div>
   );
 }
