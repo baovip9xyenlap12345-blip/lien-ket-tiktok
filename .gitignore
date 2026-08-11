@@ -4,9 +4,18 @@
 .claude/skills/bo-nao-edit-video/chia-khoa.txt
 .claude/skills/bo-nao-edit-video/api-bonaothu2.txt
 
-# Thu muc du an tam khi dung video (bo boc loi, hinh minh hoa da tai, video thanh pham)
-.claude/skills/bo-nao-edit-video/video-tho/_du-an/
-.claude/skills/bo-nao-edit-video/video-ra/*/
+# Video tho va video thanh pham — TUYET DOI KHONG DAY LEN GITHUB CONG KHAI.
+# Video quay man hinh rat de lot ten that, so dien thoai, ma tai khoan, tin nhan rieng
+# cua khach. Day len repo cong khai la lo sach, dung Dieu cam so 5 cua bo nao.
+# Chi giu lai may file 00-doc-truoc de nguoi moi biet bo video vao dau.
+.claude/skills/bo-nao-edit-video/video-tho/**
+!.claude/skills/bo-nao-edit-video/video-tho/*/
+!.claude/skills/bo-nao-edit-video/video-tho/00-doc-truoc.md
+!.claude/skills/bo-nao-edit-video/video-tho/*/00-doc-truoc.txt
+.claude/skills/bo-nao-edit-video/video-ra/**
+!.claude/skills/bo-nao-edit-video/video-ra/00-doc-truoc.txt
+
+# So ghi hinh minh hoa da tai — moi may mot khac, khong can chia se
 .claude/skills/bo-nao-edit-video/cong-cu/assets/broll-da-dung.json
 
 # File cau hinh co chua chia khoa
