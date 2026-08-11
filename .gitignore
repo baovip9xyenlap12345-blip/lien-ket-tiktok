@@ -1,0 +1,19 @@
+# Chia khoa kho anh/video — TUYET DOI KHONG DAY LEN GITHUB.
+# Repo nay dang de CONG KHAI, ai cung doc duoc. Lo chia la nguoi khac dung het suat mien phi.
+# Muon lay mau trong thi chep tu chia-khoa.mau.txt ra.
+.claude/skills/bo-nao-edit-video/chia-khoa.txt
+.claude/skills/bo-nao-edit-video/api-bonaothu2.txt
+
+# Thu muc du an tam khi dung video (bo boc loi, hinh minh hoa da tai, video thanh pham)
+.claude/skills/bo-nao-edit-video/video-tho/_du-an/
+.claude/skills/bo-nao-edit-video/video-ra/*/
+.claude/skills/bo-nao-edit-video/cong-cu/assets/broll-da-dung.json
+
+# File cau hinh co chua chia khoa
+.env
+*.env
+!.env.example
+
+# Rac Python sinh ra khi chay cong cu
+__pycache__/
+*.pyc

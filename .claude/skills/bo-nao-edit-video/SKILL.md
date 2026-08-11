@@ -37,6 +37,23 @@ python cong-cu\edit_video_giaoduc.py dung       video-tho\video-ngan-9-16\ten.mp
 Giữa bước `dexuat` và bước `dung` là **phần việc trí óc**, máy không làm thay được: đọc
 `work/transcript-doc.txt` rồi điền `lap_y`, `broll`, `sua_chu`, `lam_mo` vào `work/de-xuat-cat.json`.
 
+## Chìa khoá kho ảnh nằm ở đâu
+
+⚠️ **Repo này đang để CÔNG KHAI** nên `chia-khoa.txt` đã bị chặn khỏi git (xem `.gitignore` ở gốc repo).
+Chìa thật chỉ nằm trên máy anh Hoàn, không bao giờ đẩy lên GitHub.
+
+| File | Vai trò |
+|---|---|
+| `chia-khoa.mau.txt` | Bản mẫu trống, có trong git. Máy mới thì **chép file này thành `chia-khoa.txt`** rồi dán chìa vào |
+| `chia-khoa.txt` | Chìa thật. **Git không đụng đến** — nằm ngoài repo về mặt theo dõi |
+
+Công cụ tìm chìa theo thứ tự: **biến môi trường trước, file sau**. Nên cách an toàn nhất là đặt
+biến môi trường `PEXELS_KEY`, khỏi cần file nào cả:
+```
+setx PEXELS_KEY dãy-chìa-của-anh
+```
+(đặt xong phải **mở lại cửa sổ đen** thì máy mới nhận)
+
 ## Ba điều nhớ nhất
 
 1. **Chữ hook và câu chốt cuối là NỘI DUNG** — lấy từ anh Hoàn, cấm tự bịa.
