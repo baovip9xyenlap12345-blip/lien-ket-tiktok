@@ -1,0 +1,19 @@
+# Video thô, video thành phẩm và thư mục làm việc — KHÔNG đưa lên kho mã
+video-tho/**/*.mp4
+video-tho/**/*.mov
+video-tho/**/*.MP4
+video-tho/**/*.MOV
+video-tho/_du-an/
+video-ra/*/
+
+# Sổ ghi hình minh hoạ đã dùng — máy tự sinh, mỗi người một khác
+cong-cu/assets/broll-da-dung.json
+
+# ⚠️ CHÌA KHOÁ: file chia-khoa.txt trong kho này là BẢN MẪU TRỐNG.
+# Dán chìa khoá thật của bạn vào rồi thì ĐỪNG ghi lại (commit) file đó lên kho mã.
+# Muốn chắc chắn thì để chìa ở biến môi trường PEXELS_KEY / PIXABAY_KEY / UNSPLASH_ACCESS_KEY —
+# script ưu tiên đọc biến môi trường trước, rồi mới đọc tới file.
+
+# Rác Python tự sinh
+__pycache__/
+*.pyc

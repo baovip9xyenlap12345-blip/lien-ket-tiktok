@@ -1,0 +1,36 @@
+==============================================================================
+ CHÌA KHOÁ KHO ẢNH / VIDEO MINH HOẠ
+==============================================================================
+
+ File này ĐANG TRỐNG. Bạn phải tự lấy chìa khoá của riêng mình.
+ Cách lấy: mở huong-dan/02-lay-chia-khoa.md — mất khoảng 10 phút, cả ba kho MIỄN PHÍ.
+
+ Dán vào bên dưới, thay cả phần <...>.
+ ⚠️ KHÔNG để khoảng trắng quanh dấu "=".
+    ĐÚNG:  PEXELS_KEY=abc123
+    SAI :  PEXELS_KEY = abc123
+
+------------------------------------------------------------------------------
+
+ PEXELS — có CẢ ẢNH LẪN VIDEO. Ưu tiên số 1. Không bắt ghi tên tác giả.
+ PEXELS_KEY=<dán chìa Pexels vào đây>
+
+ PIXABAY — cũng có cả ảnh lẫn video. Dùng dự phòng khi Pexels không ra hình hợp.
+ PIXABAY_KEY=<dán chìa Pixabay vào đây>
+
+ UNSPLASH — CHỈ CÓ ẢNH, không có video. Xếp cuối vì điều khoản đòi ghi tên tác giả.
+ ⚠️ Lấy dòng "Access Key", KHÔNG phải "Secret key" — lấy nhầm là báo lỗi 401.
+ UNSPLASH_ACCESS_KEY=<dán chìa Unsplash vào đây>
+
+------------------------------------------------------------------------------
+
+ GIỮ CHO AN TOÀN:
+ - Chìa là của riêng bạn. Đừng gửi file này cho ai, đừng đăng lên mạng.
+ - Muốn tặng lại bộ não này cho người khác thì XOÁ chìa đi, trả file về như lúc đầu.
+ - Lỡ lộ thì vào lại trang đó, xoá chìa cũ tạo chìa mới.
+
+ KHÔNG CÓ CHÌA THÌ SAO?
+ - Video vẫn dựng ra bình thường, chỉ là không có ảnh/video minh hoạ chèn vào.
+ - Mọi thứ khác (cắt, phụ đề, hook, câu chốt, nhạc, làm sáng) vẫn chạy đủ.
+
+==============================================================================
