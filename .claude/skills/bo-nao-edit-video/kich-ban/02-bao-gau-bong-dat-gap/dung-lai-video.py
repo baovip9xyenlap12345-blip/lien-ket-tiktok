@@ -27,23 +27,28 @@ TRANG     = (255, 255, 255)
 VANG      = (255, 193, 7)
 XAM       = (150, 168, 158)
 
+# Bảng phân cảnh — bám hồ sơ khách hàng chuyên sâu (bản 11/08/2026).
+# Nỗi đau lấy từ mục 5.4 "Nỗi đau về tiến độ" và 5.6 "sợ bị quy trách nhiệm cá nhân".
+# Câu chữ lấy từ mục 13.1 "cụm từ đã có giá trị" và 13.2 "hướng content đánh trúng".
+# Số liệu lấy từ mục 14.1 và 14.3. KHÔNG dùng cam kết "đơn gấp 24-72 giờ" vì hồ sơ
+# ghi rõ: "không nên dùng như lời hứa vô điều kiện".
 CANH = [
- (0.0,  3.0,  "",                    "TUẦN SAU SỰ KIỆN\nQUÀ VẪN CHƯA CÓ MẪU", "", "hook"),
- (3.0,  5.8,  "NỖI LO THỨ NHẤT",     "BÁO GIÁ CAO",            "Gọi mấy nơi thì nơi báo giá cao,",        "dau"),
- (5.8,  8.6,  "NỖI LO THỨ HAI",      "HẸN TỚI HẸN LUI",        "nơi thì hẹn tới hẹn lui.",                "dau"),
- (8.6,  11.4, "NỖI LO LỚN NHẤT",     "HÀNG VỀ SÁT NGÀY",       "Sợ nhất là hàng về sát ngày.",            "dau"),
- (11.4, 14.2, "",                    "LOGO IN LỆCH MÀU",       "Mở thùng ra thì logo in lệch màu.",       "dau"),
- (14.2, 17.0, "",                    "KHÔNG KỊP LÀM LẠI",      "Lúc đó không kịp làm lại nữa.",           "dau"),
- (17.0, 19.8, "",                    "NGƯỜI CHỊU LÀ MÌNH",     "Người đứng ra chịu là mình.",             "dau"),
- (19.8, 23.0, "XƯỞNG SẢN XUẤT TRỰC TIẾP", "BẢO GẤU BÔNG",      "Bảo Gấu Bông là xưởng sản xuất trực tiếp.", "hieu"),
- (23.0, 25.8, "GIÁ TẬN XƯỞNG",       "KHÔNG QUA TRUNG GIAN",   "Không qua trung gian nên giá tận xưởng.",  "giai"),
- (25.8, 28.6, "MIỄN PHÍ",            "THIẾT KẾ MẪU",           "Bên em thiết kế mẫu miễn phí,",           "giai"),
- (28.6, 31.4, "",                    "DUYỆT RỒI MỚI MAY",      "gửi anh chị duyệt trước khi may.",        "giai"),
- (31.4, 34.2, "SỐ LƯỢNG LỚN",        "IN VÀ THÊU LOGO",        "Nhận in, thêu logo, làm số lượng lớn.",   "giai"),
- (34.2, 37.0, "",                    "NHẬN ĐƠN GẤP",           "Đơn gấp bên em nhận riêng.",              "giai"),
- (37.0, 39.8, "",                    "GIAO TOÀN QUỐC",         "Giao hàng toàn quốc.",                    "giai"),
- (39.8, 42.2, "",                    "NHẮN TIN\nGỬI LOGO",     "Nhắn tin gửi logo và ngày cần hàng,",     "cta"),
- (42.2, 44.6, "",                    "NHẬN MẪU\nVÀ BÁO GIÁ",   "bên em lên mẫu và báo giá ngay.",         "cta"),
+ (0.0,  3.0,  "",                        "TUẦN SAU SỰ KIỆN\nQUÀ VẪN CHƯA CÓ MẪU", "", "hook"),
+ (3.0,  5.8,  "NỖI LO THỨ NHẤT",         "MỖI NƠI BÁO MỘT KIỂU",  "Gọi mấy nơi thì mỗi nơi báo một kiểu.",       "dau"),
+ (5.8,  8.6,  "",                        "KHÔNG BIẾT SO THẾ NÀO", "Nơi tính gấu riêng, nơi tính áo riêng.",      "dau"),
+ (8.6,  11.4, "NỖI LO LỚN NHẤT",         "BA THÁNG CHUẨN BỊ",     "Ba tháng trời chuẩn bị sự kiện.",             "dau"),
+ (11.4, 14.2, "",                        "ĐỔ BỂ VÌ MUỘN MỘT NGÀY","Đổ bể chỉ vì quà đến sau một ngày.",          "dau"),
+ (14.2, 17.0, "",                        "NGƯỜI CHỊU LÀ MÌNH",    "Và người đứng ra chịu là mình.",              "dau"),
+ (17.0, 20.2, "XƯỞNG TRỰC TIẾP",         "BẢO GẤU BÔNG",          "Bảo Gấu Bông là xưởng trực tiếp.",            "hieu"),
+ (20.2, 23.0, "KHÔNG QUA TRUNG GIAN",    "GIÁ TẬN XƯỞNG",         "Không qua trung gian, giá tận xưởng.",        "giai"),
+ (23.0, 25.8, "CÔNG SUẤT XƯỞNG",         "5.000 SẢN PHẨM/NGÀY",   "Công suất gấu bông năm nghìn sản phẩm mỗi ngày.", "giai"),
+ (25.8, 28.6, "ĐÃ LÀM THẬT",             "ĐƠN 7.000 GẤU",         "Đơn bảy nghìn gấu bên em đã làm.",            "giai"),
+ (28.6, 31.4, "MIỄN PHÍ",                "GỬI LOGO, CÓ DEMO",     "Gửi logo, bên em lên demo miễn phí.",         "giai"),
+ (31.4, 34.2, "",                        "DUYỆT RỒI MỚI CHẠY",    "Anh chị duyệt đúng mẫu rồi mới chạy hàng loạt.", "giai"),
+ (34.2, 37.0, "ĐỦ HỒ SƠ DOANH NGHIỆP",   "HỢP ĐỒNG VÀ VAT",       "Có hợp đồng, hoá đơn VAT, giao toàn quốc.",   "giai"),
+ (37.0, 40.2, "",                        "MỘT ĐÊM NGỦ NGON",      "Xưởng tốt trả lại cho anh chị một đêm ngủ ngon trước sự kiện.", "giai"),
+ (40.2, 42.6, "",                        "NHẮN TIN\nGỬI LOGO",    "Nhắn tin gửi logo và ngày cần hàng,",         "cta"),
+ (42.6, 45.0, "",                        "NHẬN DEMO\nVÀ BÁO GIÁ", "bên em lên demo và báo giá ngay.",            "cta"),
 ]
 DAI = CANH[-1][1]
 
