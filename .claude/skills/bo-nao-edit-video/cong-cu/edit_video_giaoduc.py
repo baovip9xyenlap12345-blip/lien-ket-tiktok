@@ -449,7 +449,20 @@ def so_broll_da_dung(goc_kho):
     """Sổ ghi hình minh hoạ ĐÃ DÙNG — thêm 2026-08-09 (chiều).
     Vì sao cần: tra cùng một từ khoá thì kho ảnh trả về đúng cái hình cũ. Vài video là
     khách nhận ra dùng đi dùng lại. Sổ này giúp lần sau tự bỏ qua hình đã dùng, lấy hình khác."""
-    p = os.path.join(goc_kho, ".claude", "skills", "dat", "assets", "broll-da-dung.json")
+    # SỬA 2026-08-11: trước đây trỏ tới <gốc kho>/.claude/skills/dat/assets/ — đường dẫn còn
+    # sót lại từ máy người viết đầu tiên, hồi bộ này còn tên là "Đạt". Tài liệu
+    # 04-chon-hinh-minh-hoa.md lại ghi sổ nằm ở cong-cu/assets/, nên câu "muốn lấy lại hình cũ
+    # thì xoá file đó đi" không có tác dụng gì. Nay để đúng chỗ tài liệu đã ghi.
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "broll-da-dung.json")
+    if not os.path.exists(p):
+        # Máy nào đã lỡ ghi sổ ở chỗ cũ thì đọc lại, không để mất lịch sử hình đã dùng.
+        cu = os.path.join(goc_kho, ".claude", "skills", "dat", "assets", "broll-da-dung.json")
+        if os.path.exists(cu):
+            print("   (i) Thấy sổ ghi hình ở chỗ cũ (%s) — đọc lại rồi từ nay ghi sang %s" % (cu, p))
+            try:
+                return p, json.load(open(cu, encoding="utf-8"))
+            except Exception:
+                pass
     try:
         return p, json.load(open(p, encoding="utf-8"))
     except Exception:
@@ -533,6 +546,10 @@ def tao_whoosh(duong_dan):
     vào nhanh ra chậm. CỐ Ý ĐỂ RẤT NHẸ — tài liệu cảnh báo lạm dụng tiếng động thành rẻ tiền."""
     if os.path.exists(duong_dan):
         return duong_dan
+    # Bài học 17: hàm bỏ qua cái gì thì PHẢI in ra dòng báo. Im lặng thay đồ là loại lỗi
+    # tệ nhất — chính chỗ này đã âm thầm thay tiếng động thật suốt một thời gian dài.
+    print("   (!) Không thấy tiếng động sẵn ở %s — tự tổng hợp một tiếng khác để thay."
+          % duong_dan)
     os.makedirs(os.path.dirname(duong_dan), exist_ok=True)
     subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anoisesrc=d=0.42:c=pink:a=0.6",
                     "-af", "highpass=f=420,lowpass=f=5200,"
@@ -1088,8 +1105,11 @@ def buoc_dung(video, nhac, toc_do, hook=None, hook_badge=None, cta=None,
     # Nay đặt đúng lúc hình minh hoạ hiện lên, tai và mắt cùng báo "cảnh đổi".
     moc_tieng = broll_moc if broll_moc else [s for s, _e in nhan_manh_that]
     if tieng_dong and moc_tieng:
+        # SỬA 2026-08-11: bỏ ".." — trước đây tìm ở <gốc bộ não>/assets/ nên KHÔNG BAO GIỜ
+        # thấy file tiếng động thật (nó nằm ở cong-cu/assets/). Không thấy thì tao_whoosh()
+        # lặng lẽ tổng hợp một tiếng khác rồi dùng thay, không ai biết.
         wh = tao_whoosh(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     "..", "assets", "whoosh-nhe.wav"))
+                                     "assets", "whoosh-nhe.wav"))
         sfx_track = tao_track_sfx(wh, moc_tieng, do_dai_cuoi, os.path.join(work, "sfx-track.wav"))
         if sfx_track:
             print(">> Chèn tiếng động nhẹ ở %d chỗ đổi sang hình minh hoạ." % len(moc_tieng))

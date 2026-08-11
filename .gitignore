@@ -27,8 +27,6 @@
 __pycache__/
 *.pyc
 
-# Tieng dong chuyen canh do may tu che ra khi khong tim thay file goc.
-# Day la HAU QUA cua mot loi duong dan trong edit_video_giaoduc.py (dong 1091):
-# ma tim whoosh o <goc>/assets/ trong khi file that nam o cong-cu/assets/.
-# Khong tim thay thi ham tao_whoosh() im lang che ra mot file khac roi dung luon.
+# DA VA loi duong dan tieng dong (bo ".." o dong 1091) nen thu muc nay khong con
+# sinh ra nua. Giu lai chan de phong, va de nho la tung co loi o day.
 .claude/skills/bo-nao-edit-video/assets/
