@@ -28,6 +28,9 @@ const CONTACT_INFO = process.env.CONTACT_INFO || '';
 const MAX_VIDEO_MINUTES = parseInt(process.env.MAX_VIDEO_MINUTES || '5', 10);
 // Link ban mien phi chay tren trinh duyet (GitHub Pages)
 const FREE_APP_URL = process.env.FREE_APP_URL || 'https://baovip9xyenlap12345-blip.github.io/lien-ket-tiktok/app.html';
+// API key Pexels (kho anh & video mien phi) - lay tai https://www.pexels.com/api/
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY || '';
+const PEXELS_BASE_URL = process.env.PEXELS_BASE_URL || 'https://api.pexels.com';
 
 if (JWT_SECRET === 'doi-chuoi-nay-khi-trien-khai') {
   console.warn('CANH BAO: JWT_SECRET dang dung gia tri mac dinh — hay dat chuoi bi mat rieng khi trien khai that!');
@@ -166,6 +169,7 @@ app.get('/api/me', auth, (req, res) => {
     maxVideoMinutes: MAX_VIDEO_MINUTES,
     freeAppUrl: FREE_APP_URL,
     isAdmin: !!(ADMIN_EMAIL && u.email === ADMIN_EMAIL),
+    mediaEnabled: !!PEXELS_API_KEY,
   });
 });
 
@@ -209,6 +213,84 @@ app.post('/api/admin/set-plan', auth, adminOnly, (req, res) => {
   // kich hoat goi moi: dat lai so video da dung trong ky
   db.prepare('UPDATE users SET plan=?, plan_expires=?, used_videos=0 WHERE id=?').run(plan, expires, u.id);
   res.json({ ok: true, email, plan, expires });
+});
+
+// ---- Kho anh & video (Pexels) ----
+// Proxy qua may chu de khong lo API key ra trinh duyet; yeu cau dang nhap de tranh bi loi dung
+app.get('/api/media/search', auth, rateLimit(120, 10 * 60 * 1000), async (req, res) => {
+  try {
+    if (!PEXELS_API_KEY) return res.status(500).json({ error: 'May chu chua cau hinh PEXELS_API_KEY' });
+    const type = req.query.type === 'videos' ? 'videos' : 'photos';
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    const page = Math.min(Math.max(parseInt(req.query.page || '1', 10) || 1, 1), 50);
+    const perPage = 12;
+
+    // Co tu khoa -> tim kiem; khong co -> anh tuyen chon / video pho bien
+    let url;
+    if (type === 'photos') {
+      url = q
+        ? `${PEXELS_BASE_URL}/v1/search?query=${encodeURIComponent(q)}&page=${page}&per_page=${perPage}`
+        : `${PEXELS_BASE_URL}/v1/curated?page=${page}&per_page=${perPage}`;
+    } else {
+      url = q
+        ? `${PEXELS_BASE_URL}/videos/search?query=${encodeURIComponent(q)}&page=${page}&per_page=${perPage}`
+        : `${PEXELS_BASE_URL}/videos/popular?page=${page}&per_page=${perPage}`;
+    }
+
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 30 * 1000);
+    let resp;
+    try {
+      resp = await fetch(url, { headers: { Authorization: PEXELS_API_KEY }, signal: ac.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error('Pexels loi:', resp.status, errText.slice(0, 300));
+      if (resp.status === 401) return res.status(502).json({ error: 'API key Pexels khong hop le — kiem tra lai bien PEXELS_API_KEY' });
+      if (resp.status === 429) return res.status(502).json({ error: 'Kho anh dang gioi han luot truy cap, vui long thu lai sau it phut' });
+      return res.status(502).json({ error: 'Kho anh/video dang ban, vui long thu lai sau' });
+    }
+    const data = await resp.json();
+
+    let items;
+    if (type === 'photos') {
+      items = (data.photos || []).map(p => ({
+        id: p.id,
+        thumb: p.src?.medium,        // anh nho de hien luoi
+        full: p.src?.original,       // anh goc de tai ve
+        width: p.width, height: p.height,
+        author: p.photographer,
+        pageUrl: p.url,              // trang anh tren Pexels (ghi nguon)
+      }));
+    } else {
+      items = (data.videos || []).map(v => {
+        // chon file mp4 chat luong tot nhat nhung khong qua nang (uu tien HD ~1080p)
+        const files = (v.video_files || []).filter(f => f.file_type === 'video/mp4' && f.width);
+        files.sort((a, b) => b.width - a.width);
+        const best = files.find(f => f.width <= 1920) || files[files.length - 1];
+        return {
+          id: v.id,
+          thumb: v.image,
+          full: best?.link,
+          width: best?.width, height: best?.height,
+          duration: v.duration,
+          author: v.user?.name,
+          pageUrl: v.url,
+        };
+      });
+    }
+    res.json({
+      type, page,
+      totalResults: data.total_results ?? null,
+      hasMore: !!data.next_page,
+      items: items.filter(i => i.thumb && i.full),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Loi tim kho anh/video, vui long thu lai' });
+  }
 });
 
 // ---- Chuyen doi ----

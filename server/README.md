@@ -19,6 +19,8 @@ Nhanh và chuẩn tiếng Việt hơn hẳn bản chạy trên trình duyệt.
   đã dùng/còn lại bao nhiêu video, ngày hết hạn, tổng lượt dùng, ngày đăng ký; tìm theo email;
   kích hoạt gói Tuần/Tháng/Pro chỉ với 1 nút bấm
 - Văn bản thuần dùng `gpt-4o-mini-transcribe` (rẻ ~$0.003/phút), phụ đề dùng `whisper-1` (~$0.006/phút)
+- **Kho ảnh & video miễn phí (Pexels)**: khách đăng nhập có thể tìm và tải ảnh/video chất lượng cao
+  làm tư liệu dựng clip — bật bằng cách điền biến `PEXELS_API_KEY` (miễn phí, xem hướng dẫn bên dưới)
 
 ## Chi phí vận hành (ước tính 2.000 video ~5 phút/video)
 
@@ -55,6 +57,17 @@ docker run -d --name bao-stt --env-file .env -p 80:3000 -v $(pwd)/data:/app/data
 2. Nạp tiền (Billing → Add credit, tối thiểu $5 — dùng thẻ Visa/Mastercard)
 3. Vào https://platform.openai.com/api-keys → **Create new secret key** → sao chép chuỗi `sk-...`
 4. Dán vào biến `OPENAI_API_KEY`
+
+## Lấy Pexels API key (kho ảnh & video — miễn phí)
+
+1. Tạo tài khoản tại https://www.pexels.com rồi vào https://www.pexels.com/api/
+2. Bấm **Get Started** → nhận API key (chuỗi ~56 ký tự chữ và số)
+3. Dán vào biến `PEXELS_API_KEY` (trong `.env` hoặc tab Variables trên Railway)
+4. Khởi động lại máy chủ — mục **🖼️ Kho ảnh & video** sẽ tự hiện cho khách đã đăng nhập
+
+Lưu ý: gói miễn phí của Pexels cho 200 lượt gọi/giờ và 20.000 lượt/tháng — quá đủ cho quy mô nhỏ.
+Key được giữ kín trên máy chủ (trình duyệt của khách không nhìn thấy), và **tuyệt đối không dán
+key thẳng vào code** vì repo này công khai, ai cũng đọc được.
 
 ## Quy trình bán gói cho khách
 

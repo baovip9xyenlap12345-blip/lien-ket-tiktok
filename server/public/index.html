@@ -55,6 +55,18 @@
   .tblwrap { overflow-x:auto; }
   .tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.75rem; background:var(--card2); border:1px solid #3d4780; }
   .tag.pro { border-color:var(--accent2); color:var(--accent2); }
+  /* Kho ảnh & video */
+  .media-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-top:14px; }
+  .media-item { background:var(--card2); border:1px solid #3d4780; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .media-item .thumbwrap { position:relative; aspect-ratio:16/10; background:#10142a; }
+  .media-item img { width:100%; height:100%; object-fit:cover; display:block; }
+  .media-item .dur { position:absolute; right:6px; bottom:6px; background:rgba(0,0,0,.65); color:#fff;
+                     font-size:.72rem; padding:2px 6px; border-radius:6px; }
+  .media-item .meta { padding:8px 10px; font-size:.78rem; color:var(--muted); display:flex; flex-direction:column; gap:6px; }
+  .media-item .meta .acts { display:flex; gap:6px; }
+  .media-item .meta a.btn { flex:1; justify-content:center; text-decoration:none; }
+  .media-empty { color:var(--muted); font-size:.9rem; margin-top:12px; }
+  .media-pager { display:flex; justify-content:center; align-items:center; gap:12px; margin-top:14px; color:var(--muted); font-size:.9rem; }
 </style>
 </head>
 <body>
@@ -118,6 +130,29 @@
       </div>
     </div>
 
+    <!-- Kho ảnh & video miễn phí (Pexels) -->
+    <div class="card hidden" id="mediaCard">
+      <h2>🖼️ Kho ảnh &amp; video miễn phí — làm tư liệu dựng clip</h2>
+      <div class="row">
+        <input type="text" id="mediaQuery" placeholder="Tìm bằng tiếng Anh, vd: coffee, city night, teddy bear...">
+        <div style="flex:0;min-width:150px">
+          <select id="mediaType">
+            <option value="photos" selected>🖼️ Ảnh</option>
+            <option value="videos">🎬 Video</option>
+          </select>
+        </div>
+        <button class="btn btn-teal" id="mediaSearchBtn" style="flex:0">🔍 Tìm</button>
+      </div>
+      <div class="status" id="mediaStatus"></div>
+      <div class="media-grid" id="mediaGrid"></div>
+      <div class="media-pager hidden" id="mediaPager">
+        <button class="btn btn-ghost btn-sm" id="mediaPrev">◀ Trang trước</button>
+        <span id="mediaPageInfo"></span>
+        <button class="btn btn-ghost btn-sm" id="mediaNext">Trang sau ▶</button>
+      </div>
+      <div class="note">Ảnh/video lấy từ <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a> — miễn phí cho mục đích thương mại, không cần ghi nguồn (nhưng ghi tên tác giả thì càng tốt).</div>
+    </div>
+
     <div class="card">
       <h2>Bảng giá</h2>
       <div class="plans" id="plansBox"></div>
@@ -177,6 +212,7 @@ async function refreshMe() {
       ? `🎬 Bạn còn <b>${me.remainingVideos}</b> / ${me.quotaVideos} video` +
         (me.planExpires ? ` — gói hết hạn <b>${fmtDate(me.planExpires)}</b>` : (me.plan === 'trial' ? ' (lượt dùng thử miễn phí)' : ''))
       : `⚠️ Bạn đã hết lượt. Nâng gói để tiếp tục, hoặc dùng <a href="${freeAppUrl}" target="_blank">bản miễn phí trên web</a> (chậm hơn, video ngắn).`;
+    if (me.mediaEnabled) $('mediaCard').classList.remove('hidden');
     if (me.isAdmin) { $('adminCard').classList.remove('hidden'); loadAdmin(); }
   } catch {
     token = ''; localStorage.removeItem('token');
@@ -251,6 +287,51 @@ $('dlBtn').onclick = () => {
   a.download = lastFormat === 'srt' ? 'phu-de.srt' : 'van-ban.txt';
   a.click(); URL.revokeObjectURL(a.href);
 };
+
+// ====== Kho ảnh & video (Pexels) ======
+let mediaPage = 1, mediaHasMore = false;
+
+async function loadMedia() {
+  const q = $('mediaQuery').value.trim();
+  const type = $('mediaType').value;
+  $('mediaSearchBtn').disabled = true;
+  setS($('mediaStatus'), '⏳ Đang tìm...');
+  try {
+    const d = await api(`/api/media/search?type=${type}&q=${encodeURIComponent(q)}&page=${mediaPage}`);
+    mediaHasMore = d.hasMore;
+    if (!d.items.length) {
+      $('mediaGrid').innerHTML = '';
+      $('mediaPager').classList.add('hidden');
+      setS($('mediaStatus'), '😕 Không tìm thấy kết quả — thử từ khoá tiếng Anh khác xem sao', 'err');
+    } else {
+      $('mediaGrid').innerHTML = d.items.map(it => `
+        <div class="media-item">
+          <div class="thumbwrap">
+            <img src="${esc(it.thumb)}" alt="${esc(it.author || '')}" loading="lazy">
+            ${it.duration ? `<span class="dur">${Math.floor(it.duration/60)}:${String(it.duration%60).padStart(2,'0')}</span>` : ''}
+          </div>
+          <div class="meta">
+            <span>👤 ${esc(it.author || 'Không rõ')}</span>
+            <div class="acts">
+              <a class="btn btn-ghost btn-sm" href="${esc(it.full)}" target="_blank" rel="noopener">⬇️ Tải</a>
+              <a class="btn btn-ghost btn-sm" href="${esc(it.pageUrl)}" target="_blank" rel="noopener">🔗 Nguồn</a>
+            </div>
+          </div>
+        </div>`).join('');
+      $('mediaPager').classList.remove('hidden');
+      $('mediaPageInfo').textContent = 'Trang ' + d.page;
+      $('mediaPrev').disabled = d.page <= 1;
+      $('mediaNext').disabled = !mediaHasMore;
+      setS($('mediaStatus'), q ? `✅ Kết quả cho "${q}"` : '✅ ' + (type === 'videos' ? 'Video phổ biến' : 'Ảnh tuyển chọn hôm nay'), 'ok');
+    }
+  } catch (e) { setS($('mediaStatus'), '❌ ' + e.message, 'err'); }
+  $('mediaSearchBtn').disabled = false;
+}
+$('mediaSearchBtn').onclick = () => { mediaPage = 1; loadMedia(); };
+$('mediaQuery').addEventListener('keydown', e => { if (e.key === 'Enter') { mediaPage = 1; loadMedia(); } });
+$('mediaType').addEventListener('change', () => { mediaPage = 1; loadMedia(); });
+$('mediaPrev').onclick = () => { if (mediaPage > 1) { mediaPage--; loadMedia(); } };
+$('mediaNext').onclick = () => { if (mediaHasMore) { mediaPage++; loadMedia(); } };
 
 // ====== Quản trị ======
 async function loadAdmin() {
