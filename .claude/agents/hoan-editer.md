@@ -123,6 +123,12 @@ Ra ba file trong `work/`:
 
 ⏱ Video 2 phút mất khoảng 1–3 phút. Lần chạy đầu tiên trong đời máy sẽ lâu hơn nhiều (tải bộ nghe 1,5 GB).
 
+**Máy nào không tải được bộ nghe** thì bước này **tự quay sang máy bóc lời của Cartesia** — cùng chìa khoá
+`CARTESIA_API_KEY` với giọng đọc, cũng cho mốc giây từng chữ. Ép chọn bằng `--may-boc-loi whisper` hoặc
+`--may-boc-loi cartesia`.
+> *Đã dính thật 2026-08-13:* faster-whisper tải bộ nghe từ `huggingface.co`, môi trường chạy trên mây chặn
+> thẳng host đó (403), tắc ngay bước 1. Đường dự phòng sinh ra từ đó.
+
 ### BƯỚC 2 — `dexuat` · máy tự dò chỗ cắt
 ```
 python cong-cu\edit_video_giaoduc.py dexuat video-tho\video-ngan-9-16\ten-video.mp4

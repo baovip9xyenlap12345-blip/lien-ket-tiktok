@@ -95,13 +95,121 @@ def du_an_dir(video):
 
 # ---------- BƯỚC 1: transcribe ----------
 
-def buoc_transcribe(video):
+def gom_cau(words, nghi=0.8, max_tu=14):
+    """Gom danh sách chữ thành từng câu để ghi ra .srt và bản bóc lời dễ đọc.
+    Ngắt câu khi: gặp dấu chấm/chấm hỏi/chấm than · nghỉ hơn 0,8 giây · quá 14 chữ."""
+    cues, cur = [], []
+    for i, w in enumerate(words):
+        cur.append(w)
+        het_cau = w["w"].rstrip().endswith((".", "?", "!"))
+        nghi_lau = (i + 1 < len(words)) and (words[i + 1]["s"] - w["e"] > nghi)
+        if het_cau or nghi_lau or len(cur) >= max_tu:
+            cues.append({"s": cur[0]["s"], "e": cur[-1]["e"],
+                         "text": " ".join(x["w"] for x in cur).strip()})
+            cur = []
+    if cur:
+        cues.append({"s": cur[0]["s"], "e": cur[-1]["e"],
+                     "text": " ".join(x["w"] for x in cur).strip()})
+    return cues
+
+
+def boc_loi_cartesia(wav):
+    """ĐƯỜNG DỰ PHÒNG bóc lời — thêm 2026-08-13.
+    VÌ SAO CÓ: faster-whisper tải bộ nghe từ huggingface.co. Có máy/mạng chặn thẳng host đó
+    (đã dính thật: môi trường chạy trên mây trả về 403, không tải nổi bộ nghe, cả dây chuyền tắc).
+    Đường này gọi máy bóc lời của Cartesia — cùng chìa khoá với giọng đọc, cùng cho mốc giây
+    TỪNG CHỮ MỘT nên hợp khít với phần còn lại của bộ dựng.
+    Cần chìa CARTESIA_API_KEY. Không có chìa thì hàm này chịu, quay về báo lỗi."""
+    import urllib.request, uuid
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from doc_giong import doc_chia as _doc_chia
+    chia = _doc_chia()
+
+    dur = ffprobe_dur(wav)
+    KHUC = 480.0            # cắt thành khúc 8 phút cho khỏi vượt giới hạn tải lên
+    words = []
+    so_khuc = max(1, int(dur // KHUC) + (1 if dur % KHUC else 0))
+    for k in range(so_khuc):
+        bat_dau = k * KHUC
+        if so_khuc == 1:
+            manh = wav
+        else:
+            manh = os.path.join(os.path.dirname(wav), "khuc-%02d.wav" % k)
+            sh(["ffmpeg", "-y", "-ss", "%.3f" % bat_dau, "-t", "%.3f" % KHUC,
+                "-i", wav, "-ar", "16000", "-ac", "1", manh])
+        print(">> Gửi khúc %d/%d đi bóc lời..." % (k + 1, so_khuc))
+
+        ranh = "----%s" % uuid.uuid4().hex
+        than = b""
+        for ten, gia in (("model", "ink-whisper"), ("language", "vi"),
+                         ("timestamp_granularities[]", "word")):
+            than += ("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
+                     % (ranh, ten, gia)).encode("utf-8")
+        than += ("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"tieng.wav\"\r\n"
+                 "Content-Type: audio/wav\r\n\r\n" % ranh).encode("utf-8")
+        than += open(manh, "rb").read() + ("\r\n--%s--\r\n" % ranh).encode("utf-8")
+
+        rq = urllib.request.Request(
+            "https://api.cartesia.ai/stt", data=than, method="POST",
+            headers={"X-API-Key": chia, "Cartesia-Version": "2024-11-13",
+                     "Content-Type": "multipart/form-data; boundary=%s" % ranh})
+        with urllib.request.urlopen(rq, timeout=600) as r:
+            kq = json.loads(r.read().decode("utf-8", "replace"))
+        for w in kq.get("words", []):
+            t = w.get("word", "").strip()
+            if t:
+                words.append({"w": t, "s": round(w["start"] + bat_dau, 3),
+                              "e": round(w["end"] + bat_dau, 3)})
+        if manh != wav:
+            os.remove(manh)
+
+    print(">> Bóc lời bằng Cartesia xong: %d chữ." % len(words))
+    print(">> ⚠️ Máy này nghe nhầm tên riêng và tên thương hiệu y như mọi máy khác —")
+    print("   ĐỌC LẠI transcript-doc.txt rồi điền 'sua_chu' trước khi dựng.")
+    return words, gom_cau(words)
+
+
+def buoc_transcribe(video, may="tu-dong"):
     root, _ = du_an_dir(video)
     work = os.path.join(root, "work")
     wav = os.path.join(work, "goc.wav")
     print(">> Tách tiếng...")
     subprocess.run(["ffmpeg", "-y", "-i", video, "-ar", "16000", "-ac", "1", wav], check=True, capture_output=True)
 
+    if may == "cartesia":
+        words, cues = boc_loi_cartesia(wav)
+        return ghi_ban_boc_loi(video, work, words, cues)
+    try:
+        words, cues = boc_loi_whisper(wav)
+    except Exception as e:
+        if may == "whisper":
+            raise
+        print("!! Không dùng được faster-whisper: %s" % str(e)[:200])
+        print(">> Chuyển sang đường dự phòng: máy bóc lời của Cartesia.")
+        words, cues = boc_loi_cartesia(wav)
+    return ghi_ban_boc_loi(video, work, words, cues)
+
+
+def ghi_ban_boc_loi(video, work, words, cues):
+    json.dump(words, open(os.path.join(work, "words.json"), "w", encoding="utf-8"),
+              ensure_ascii=False, indent=1)
+
+    with open(os.path.join(work, "goc.srt"), "w", encoding="utf-8") as f:
+        for i, c in enumerate(cues, 1):
+            f.write("%d\n%s --> %s\n%s\n\n" % (i, srt_time(c["s"]), srt_time(c["e"]), c["text"]))
+
+    with open(os.path.join(work, "transcript-doc.txt"), "w", encoding="utf-8") as f:
+        f.write("TRANSCRIPT ĐỂ ĐẠT ĐỌC VÀ DÒ Ý LẶP — %s\n" % os.path.basename(video))
+        f.write("Mỗi dòng: [giây bắt đầu - giây kết thúc] câu nói.\n")
+        f.write("Đọc xong thấy câu/đoạn nào LẶP Ý đã nói trước đó (nói lại cùng 1 ý, không phải nhấn mạnh có chủ đích),\n")
+        f.write("thì ghi khoảng thời gian đó vào mảng \"lap_y\" trong de-xuat-cat.json (chạy bước 'dexuat' trước để có file này).\n\n")
+        for c in cues:
+            f.write("[%.1f - %.1f] %s\n" % (c["s"], c["e"], c["text"]))
+
+    print(">> XONG bước 1. %d từ, %d câu — xem work/transcript-doc.txt" % (len(words), len(cues)))
+
+
+def boc_loi_whisper(wav):
     from faster_whisper import WhisperModel
     # Sửa 2026-08-13: bản cũ bắt buộc `import torch` ở đầu, thiếu là sập ngay — trong khi
     # huong-dan/01-cai-dat-may.md KHÔNG hề bảo cài torch, và faster-whisper cũng không cần torch
@@ -130,19 +238,7 @@ def buoc_transcribe(video):
         words.extend(ws)
         cues.append({"s": round(s.start, 3), "e": round(s.end, 3), "text": s.text.strip()})
 
-    json.dump(words, open(os.path.join(work, "words.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-
-    with open(os.path.join(work, "goc.srt"), "w", encoding="utf-8") as f:
-        for i, c in enumerate(cues, 1):
-            f.write("%d\n%s --> %s\n%s\n\n" % (i, srt_time(c["s"]), srt_time(c["e"]), c["text"]))
-
-    with open(os.path.join(work, "transcript-doc.txt"), "w", encoding="utf-8") as f:
-        f.write("TRANSCRIPT ĐỂ ĐẠT ĐỌC VÀ DÒ Ý LẶP — %s\n" % os.path.basename(video))
-        f.write("Mỗi dòng: [giây bắt đầu - giây kết thúc] câu nói.\n")
-        f.write("Đọc xong thấy câu/đoạn nào LẶP Ý đã nói trước đó (nói lại cùng 1 ý, không phải nhấn mạnh có chủ đích),\n")
-        f.write("thì ghi khoảng thời gian đó vào mảng \"lap_y\" trong de-xuat-cat.json (chạy bước 'dexuat' trước để có file này).\n\n")
-        for c in cues:
-            f.write("[%.1f - %.1f] %s\n" % (c["s"], c["e"], c["text"]))
+    return words, cues
 
     print(">> XONG bước 1. %d từ, %d câu — xem work/transcript-doc.txt" % (len(words), len(cues)))
 
@@ -1188,6 +1284,8 @@ def buoc_dung(video, nhac, toc_do, hook=None, hook_badge=None, cta=None,
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("buoc", choices=["soi", "transcribe", "dexuat", "dung"])
+    ap.add_argument("--may-boc-loi", choices=["tu-dong", "whisper", "cartesia"], default="tu-dong",
+                    help="Máy bóc lời. tu-dong = thử faster-whisper trước, hỏng thì quay sang Cartesia")
     ap.add_argument("video")
     ap.add_argument("--nhac", default=None)
     ap.add_argument("--toc-do", type=float, default=TOC_DO_MAC_DINH)
@@ -1220,7 +1318,7 @@ def main():
     if a.buoc == "soi":
         buoc_soi(a.video)
     elif a.buoc == "transcribe":
-        buoc_transcribe(a.video)
+        buoc_transcribe(a.video, a.may_boc_loi)
     elif a.buoc == "dexuat":
         buoc_dexuat(a.video)
     elif a.buoc == "dung":

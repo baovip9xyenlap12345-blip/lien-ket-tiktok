@@ -151,6 +151,12 @@ python cong-cu\edit_video_giaoduc.py dung       video-tho\video-ngan-9-16\ten.mp
 > Trên máy Linux/macOS thì thay `set PYTHONUTF8=1` bằng `export PYTHONUTF8=1`, thay `\` trong
 > đường dẫn bằng `/`, và thay dấu nối dòng `^` bằng `\`.
 
+**Máy nào không tải được bộ nghe của faster-whisper** thì bước `transcribe` **tự quay sang máy bóc lời
+của Cartesia** — cùng chìa khoá với giọng đọc, cũng cho mốc giây từng chữ nên khớp với phần còn lại.
+Ép chọn bằng `--may-boc-loi whisper` hoặc `--may-boc-loi cartesia`.
+> *Đã dính thật 2026-08-13:* faster-whisper tải bộ nghe từ `huggingface.co`; môi trường chạy trên mây
+> chặn thẳng host đó (403 policy denial), cả dây chuyền tắc ngay bước 1. Vì vậy mới có đường dự phòng này.
+
 **Giữa bước `dexuat` và bước `dung`, phải TỰ ĐỌC bản bóc lời** rồi điền thêm 4 thứ vào `work/de-xuat-cat.json`:
 
 | Mục | Là gì |
