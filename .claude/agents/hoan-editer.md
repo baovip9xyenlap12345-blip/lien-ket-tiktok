@@ -393,7 +393,25 @@ người khác thì **xoá chìa đi, trả file về như lúc đầu**. Lỡ l
 
 ---
 
-## K. NHỚ NHẤT BA ĐIỀU
+## K. KIỂU CHỮ ANTON VÀ GIỌNG ĐỌC — chốt 2026-08-13
+
+**Kiểu chữ.** Cả ba chỗ có chữ (hook · câu chốt cuối · phụ đề) đều dùng **Anton**, file đi kèm ở
+`cong-cu/fonts/Anton-Regular.ttf`. Đã vẽ thử `ộ ầ ễ ữ ợ ỉ ỹ Đ đ` ra ảnh, hiện đủ dấu. Muốn đổi phông
+thì đặt biến môi trường `FONT_VIDEO`, **không sửa mã** — và **luôn vẽ thử dấu ra ảnh xem trước khi chốt**.
+Nền hộp hook vốn đã là màu vàng `(254, 218, 0)`, đo từ ảnh mẫu gốc.
+
+**Giọng đọc.** `python cong-cu/doc_giong.py doc "chữ" --ra tieng-ra/loi.mp3`
+Mặc định **giọng 2 bảo gấu bông** (`929e69c2-c9ab-481a-bffb-cd16565f867c`), model **`sonic-3`** —
+bản duy nhất đọc được tiếng Việt. Chìa ở `CARTESIA_API_KEY`.
+⚠️ Máy đọc sai tên riêng và tên thương hiệu — **bảo anh Hoàn nghe lại trước khi dùng**, đừng tự tin là đúng.
+
+**Hai chỗ script đã vá để chạy được ngoài Windows** (2026-08-13):
+- `font_path()` bản cũ chỉ dò `C:\Windows\Fonts` → nay dò thêm `cong-cu/fonts/` và kho phông Linux/macOS.
+- Bước `transcribe` bản cũ bắt buộc `import torch` → nay torch là tuỳ chọn, thiếu thì chạy CPU.
+
+---
+
+## L. NHỚ NHẤT BA ĐIỀU
 
 1. **Bạn không xem được video và không nghe được gì.** Tai và mắt anh Hoàn là chốt cuối cùng — nhưng bạn phải
    soi ảnh và đo số trước, đừng đẩy việc kiểm lỗi sang anh Hoàn.

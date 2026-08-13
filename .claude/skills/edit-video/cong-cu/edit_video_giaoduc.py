@@ -102,13 +102,22 @@ def buoc_transcribe(video):
     print(">> Tách tiếng...")
     subprocess.run(["ffmpeg", "-y", "-i", video, "-ar", "16000", "-ac", "1", wav], check=True, capture_output=True)
 
-    import torch
     from faster_whisper import WhisperModel
+    # Sửa 2026-08-13: bản cũ bắt buộc `import torch` ở đầu, thiếu là sập ngay — trong khi
+    # huong-dan/01-cai-dat-may.md KHÔNG hề bảo cài torch, và faster-whisper cũng không cần torch
+    # (nó chạy trên CTranslate2). Nay torch chỉ dùng để hỏi xem máy có card đồ hoạ không;
+    # không có torch thì coi như không có card, chạy CPU — đúng ý "chậm mà chắc" của bộ này.
     try:
-        os.add_dll_directory(os.path.join(os.path.dirname(torch.__file__), "lib"))
+        import torch
+        try:
+            os.add_dll_directory(os.path.join(os.path.dirname(torch.__file__), "lib"))
+        except Exception:
+            pass
+        co_card = torch.cuda.is_available()
     except Exception:
-        pass
-    dev = "cuda" if torch.cuda.is_available() else "cpu"
+        co_card = False
+        print(">> Không có torch — coi như máy không có card đồ hoạ, chạy bằng CPU.")
+    dev = "cuda" if co_card else "cpu"
     ct = "float16" if dev == "cuda" else "int8"
     print(">> Bóc lời bằng faster-whisper (%s)..." % dev)
     wm = WhisperModel("large-v3" if dev == "cuda" else "small", device=dev, compute_type=ct)
@@ -325,7 +334,7 @@ def render_phu_de_overlay(words_final, vid_w, vid_h, thoi_luong, duong_dan_mov, 
     from PIL import Image, ImageDraw, ImageFont
     # LƯU Ý: Arial Black (ariblk.ttf) thiếu vài dấu tiếng Việt (ộ, ầ ra ô vuông) — đã test dính lỗi
     # 2026-08-08, đổi sang Arial Bold (đủ dấu, đang dùng cho hook luôn để đồng bộ kiểu chữ).
-    fo = ImageFont.truetype(font_path(["arialbd.ttf", "DejaVuSans-Bold.ttf"]),
+    fo = ImageFont.truetype(font_path(FONT_CHU),
                              max(34, int(vid_w * 0.058)))
     do_render = ImageDraw.Draw(Image.new("RGB", (10, 10)))
     max_w = int(vid_w * 0.82)
@@ -576,11 +585,42 @@ def esc_ffmpeg_path(p):
     return p.replace(":", "\\:")
 
 
+# KIỂU CHỮ DÙNG XUYÊN SUỐT VIDEO — anh Bảo chốt dùng Anton (2026-08-13).
+# Anton là phông chữ hoa nét đậm, thân hẹp — chữ to mà vẫn gọn trong khung dọc 9:16.
+# ĐÃ KIỂM DẤU trước khi chốt: vẽ thử "ộ ầ ễ ữ ợ ỉ ỹ Đ đ" ra ảnh, hiện đủ, không ra ô vuông
+# (đây đúng là lỗi số 6 trong huong-dan/05-loi-thuong-gap.md — Arial Black từng dính).
+# Phông nằm sẵn ở cong-cu/fonts/Anton-Regular.ttf, đi kèm bộ này, máy nào cũng chạy.
+# Hai tên sau là phương án dự phòng nếu thiếu file Anton.
+FONT_CHU = ["Anton-Regular.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"]
+
+
 def font_path(names):
+    """Tìm file phông chữ. Sửa 2026-08-13: bản cũ CHỈ dò trong C:\\Windows\\Fonts nên chạy trên
+    máy Linux/macOS là trả về tên trơ trọi rồi PIL sập. Nay dò theo thứ tự:
+    1) biến môi trường FONT_VIDEO (đường dẫn đầy đủ, muốn ép phông khác thì đặt biến này)
+    2) thư mục cong-cu/fonts/ đi kèm bộ này  3) C:\\Windows\\Fonts  4) kho phông của Linux/macOS."""
+    ep = os.environ.get("FONT_VIDEO")
+    if ep and os.path.exists(ep):
+        return ep
+    kho = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts"),
+           r"C:\Windows\Fonts",
+           "/usr/share/fonts", "/usr/local/share/fonts",
+           os.path.expanduser("~/.fonts"), os.path.expanduser("~/.local/share/fonts"),
+           "/System/Library/Fonts", "/Library/Fonts"]
     for n in names:
-        p = os.path.join(r"C:\Windows\Fonts", n)
-        if os.path.exists(p):
-            return p
+        for goc in kho:
+            p = os.path.join(goc, n)
+            if os.path.exists(p):
+                return p
+    # chưa thấy thì lục sâu vào trong các kho phông (Linux xếp phông theo nhiều thư mục con)
+    for n in names:
+        for goc in kho:
+            if not os.path.isdir(goc):
+                continue
+            for thu_muc, _, tep in os.walk(goc):
+                if n in tep:
+                    return os.path.join(thu_muc, n)
+    print("!! KHÔNG TÌM THẤY phông nào trong %s — chữ sẽ vẽ sai hoặc sập." % (names,))
     return names[0]
 
 
@@ -636,7 +676,7 @@ def ve_hook(vid_w, vid_h, badge, tieu_de, duong_dan_png, nghieng=GOC_NGHIENG_MAC
     """3 giây đầu: hộp vàng bo góc THẲNG, chữ đen đậm căn giữa — đúng theo mẫu
     `1-NGUON-GOC/anh/hook 3s.png` anh Hoàn đưa (không phải kiểu badge đỏ của agentx-video-ai nữa)."""
     from PIL import Image, ImageDraw, ImageFont
-    FB = font_path(["arialbd.ttf", "DejaVuSans-Bold.ttf"])
+    FB = font_path(FONT_CHU)
 
     text_full = tieu_de.replace("\\n", "\n")
     if badge:
@@ -676,7 +716,7 @@ def ve_cta(vid_w, vid_h, chu, duong_dan_png, nghieng=GOC_NGHIENG_MAC_DINH):
       người xem nhìn phát nhận ra ngay là video của mình.
     - CHỈ MỘT câu kêu gọi cho cả video (tài liệu 2026: nhiều lời kêu gọi thì không ai làm cái nào)."""
     from PIL import Image, ImageDraw, ImageFont
-    FB = font_path(["arialbd.ttf", "DejaVuSans-Bold.ttf"])
+    FB = font_path(FONT_CHU)
 
     img = Image.new("RGBA", (vid_w, vid_h), (0, 0, 0, 0))
     # Nền tối ĐẬM (alpha 150 → 215, sửa 2026-08-09 sau khi Đạt tự soi): alpha nhạt làm thẻ chốt

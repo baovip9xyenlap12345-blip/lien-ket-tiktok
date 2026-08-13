@@ -117,7 +117,9 @@ Nên quy trình **bắt buộc** có hai chốt tự kiểm:
 │   ├─ 05-loi-thuong-gap.md   ← các lỗi đã dính thật + cách chữa
 │   └─ 06-vi-du-mau.md        ← một video thật từ đầu đến cuối, số liệu thật
 ├─ cong-cu/
-│   ├─ edit_video_giaoduc.py  ← toàn bộ máy móc nằm ở đây
+│   ├─ edit_video_giaoduc.py  ← toàn bộ máy móc dựng video nằm ở đây
+│   ├─ doc_giong.py           ← biến chữ thành tiếng bằng giọng nhân bản của anh Bảo
+│   ├─ fonts/                 ← Anton-Regular.ttf, kiểu chữ dùng xuyên suốt video
 │   └─ assets/                ← nhạc nền + tiếng động
 ├─ video-tho/                 ← BỎ VIDEO CẦN EDIT VÀO ĐÂY
 │   ├─ video-ngan-9-16/       ← video quay dọc
@@ -204,7 +206,46 @@ Vì bài học này mà **phóng to bị tắt hẳn**, việc giữ nhịp chuy
 
 ---
 
-## 12. ĐỌC THÊM KHI CẦN
+## 12. KIỂU CHỮ VÀ GIỌNG ĐỌC — chốt 2026-08-13
+
+### Kiểu chữ: Anton, dùng xuyên suốt
+
+Cả ba chỗ có chữ — hook, câu chốt cuối, phụ đề — đều dùng **Anton**, phông chữ hoa nét đậm thân hẹp.
+File đi kèm bộ này ở `cong-cu/fonts/Anton-Regular.ttf`, không phải cài gì thêm.
+
+✔ **Đã kiểm dấu trước khi chốt:** vẽ thử `ộ ầ ễ ữ ợ ỉ ỹ Đ đ` ra ảnh, hiện đủ, không ra ô vuông —
+đúng cái lỗi số 6 trong `huong-dan/05-loi-thuong-gap.md` mà Arial Black từng dính.
+
+Muốn ép phông khác thì đặt biến môi trường `FONT_VIDEO` trỏ tới file `.ttf`, **không sửa mã**.
+⚠️ Đổi phông nào cũng phải vẽ thử dấu tiếng Việt ra ảnh xem trước.
+
+Nền hộp hook vốn đã là **màu vàng** `(254, 218, 0)` — đo trực tiếp từ ảnh mẫu gốc, không phải tự chọn.
+
+### Giọng đọc: `doc_giong.py`
+
+```
+python cong-cu/doc_giong.py giong                                   # xem có những giọng nào
+python cong-cu/doc_giong.py thu                                     # đọc thử một câu
+python cong-cu/doc_giong.py doc "chữ cần đọc" --ra tieng-ra/loi.mp3
+python cong-cu/doc_giong.py doc --tep kich-ban.txt --ra tieng-ra/loi.mp3 --toc-do slow
+```
+
+| Thứ | Giá trị đang chốt |
+|---|---|
+| Giọng mặc định | **giọng 2 bảo gấu bông** (`929e69c2-c9ab-481a-bffb-cd16565f867c`) |
+| Giọng dự phòng | giọng của bùi hữu bảo (`b8385199-ee1a-4c65-a48a-4724194c2b2e`) |
+| Model | **`sonic-3`** — bản DUY NHẤT đọc được tiếng Việt. sonic-2, sonic-turbo, sonic đều báo lỗi |
+| Chìa khoá | `CARTESIA_API_KEY` ở biến môi trường, hoặc một dòng trong `chia-khoa.txt` |
+
+⚠️ **Máy đọc vẫn đọc sai** tên riêng, tên thương hiệu, số điện thoại, chữ viết tắt.
+**Nghe lại trước khi dùng.** Sai chỗ nào thì viết lại chữ đó theo cách đọc rồi chạy lại.
+
+⚠️ Giọng nhân bản là **giọng thật của anh Bảo**. Chìa khoá lộ ra là người khác đọc được bất cứ nội dung
+gì bằng giọng anh. Giữ chìa như giữ chìa nhà.
+
+---
+
+## 13. ĐỌC THÊM KHI CẦN
 
 | Lúc nào | Mở file nào |
 |---|---|

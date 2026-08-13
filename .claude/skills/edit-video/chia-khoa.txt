@@ -24,6 +24,14 @@
 
 ------------------------------------------------------------------------------
 
+ GIỌNG ĐỌC — CARTESIA (thêm 2026-08-13)
+ Dùng để biến chữ thành tiếng bằng giọng nhân bản của chính anh Bảo.
+ Lấy chìa: play.cartesia.ai -> Settings -> API Keys.
+ Giọng đang dùng mặc định: "giọng 2 bảo gấu bông".
+ CARTESIA_API_KEY=<dán chìa Cartesia vào đây>
+
+------------------------------------------------------------------------------
+
  GIỮ CHO AN TOÀN:
  - Chìa là của riêng bạn. Đừng gửi file này cho ai, đừng đăng lên mạng.
  - Muốn tặng lại bộ não này cho người khác thì XOÁ chìa đi, trả file về như lúc đầu.
