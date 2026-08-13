@@ -32,23 +32,28 @@ XAM       = (150, 168, 158)
 # Câu chữ lấy từ mục 13.1 "cụm từ đã có giá trị" và 13.2 "hướng content đánh trúng".
 # Số liệu lấy từ mục 14.1 và 14.3. KHÔNG dùng cam kết "đơn gấp 24-72 giờ" vì hồ sơ
 # ghi rõ: "không nên dùng như lời hứa vô điều kiện".
+# MỐC GIÂY BÁM THEO GIỌNG ĐỌC THẬT (Cartesia, giọng "Bảo Gấu Bông", mẫu sonic-3).
+# Trước đây mốc là lưới cố định 2,8 giây/cảnh rồi ép giọng vào. Nay làm ngược lại:
+# đọc trước, cắt khoảng lặng thừa, đo từng câu, rồi cắt cảnh theo đúng câu nói.
+# Đây mới đúng tinh thần bộ não — hình chạy theo lời, không phải lời chạy theo hình.
+# Cảnh ngắn nhất ép tối thiểu 2,0 giây để không loé lên khó chịu.
 CANH = [
- (0.0,  3.0,  "",                        "TUẦN SAU SỰ KIỆN\nQUÀ VẪN CHƯA CÓ MẪU", "", "hook"),
- (3.0,  5.8,  "NỖI LO THỨ NHẤT",         "MỖI NƠI BÁO MỘT KIỂU",  "Gọi mấy nơi thì mỗi nơi báo một kiểu.",       "dau"),
- (5.8,  8.6,  "",                        "KHÔNG BIẾT SO THẾ NÀO", "Nơi tính gấu riêng, nơi tính áo riêng.",      "dau"),
- (8.6,  11.4, "NỖI LO LỚN NHẤT",         "BA THÁNG CHUẨN BỊ",     "Ba tháng trời chuẩn bị sự kiện.",             "dau"),
- (11.4, 14.2, "",                        "ĐỔ BỂ VÌ MUỘN MỘT NGÀY","Đổ bể chỉ vì quà đến sau một ngày.",          "dau"),
- (14.2, 17.0, "",                        "NGƯỜI CHỊU LÀ MÌNH",    "Và người đứng ra chịu là mình.",              "dau"),
- (17.0, 20.2, "XƯỞNG TRỰC TIẾP",         "BẢO GẤU BÔNG",          "Bảo Gấu Bông là xưởng trực tiếp.",            "hieu"),
- (20.2, 23.0, "KHÔNG QUA TRUNG GIAN",    "GIÁ TẬN XƯỞNG",         "Không qua trung gian, giá tận xưởng.",        "giai"),
- (23.0, 25.8, "CÔNG SUẤT XƯỞNG",         "5.000 SẢN PHẨM/NGÀY",   "Công suất gấu bông năm nghìn sản phẩm mỗi ngày.", "giai"),
- (25.8, 28.6, "ĐÃ LÀM THẬT",             "ĐƠN 7.000 GẤU",         "Đơn bảy nghìn gấu bên em đã làm.",            "giai"),
- (28.6, 31.4, "MIỄN PHÍ",                "GỬI LOGO, CÓ DEMO",     "Gửi logo, bên em lên demo miễn phí.",         "giai"),
- (31.4, 34.2, "",                        "DUYỆT RỒI MỚI CHẠY",    "Anh chị duyệt đúng mẫu rồi mới chạy hàng loạt.", "giai"),
- (34.2, 37.0, "ĐỦ HỒ SƠ DOANH NGHIỆP",   "HỢP ĐỒNG VÀ VAT",       "Có hợp đồng, hoá đơn VAT, giao toàn quốc.",   "giai"),
- (37.0, 40.2, "",                        "MỘT ĐÊM NGỦ NGON",      "Xưởng tốt trả lại cho anh chị một đêm ngủ ngon trước sự kiện.", "giai"),
- (40.2, 42.6, "",                        "NHẮN TIN\nGỬI LOGO",    "Nhắn tin gửi logo và ngày cần hàng,",         "cta"),
- (42.6, 45.0, "",                        "NHẬN DEMO\nVÀ BÁO GIÁ", "bên em lên demo và báo giá ngay.",            "cta"),
+ (0.00,  3.48, "",                        "TUẦN SAU SỰ KIỆN\nQUÀ VẪN CHƯA CÓ MẪU", "", "hook"),
+ (3.48,  5.80, "NỖI LO THỨ NHẤT",         "MỖI NƠI BÁO MỘT KIỂU",  "Gọi mấy nơi thì mỗi nơi báo một kiểu.",       "dau"),
+ (5.80,  8.40, "",                        "KHÔNG BIẾT SO THẾ NÀO", "Nơi tính gấu riêng, nơi tính áo riêng.",      "dau"),
+ (8.40, 10.40, "NỖI LO LỚN NHẤT",         "BA THÁNG CHUẨN BỊ",     "Ba tháng trời chuẩn bị sự kiện.",             "dau"),
+ (10.40,13.10, "",                        "ĐỔ BỂ VÌ MUỘN MỘT NGÀY","Đổ bể chỉ vì quà đến sau một ngày.",          "dau"),
+ (13.10,15.10, "",                        "NGƯỜI CHỊU LÀ MÌNH",    "Và người đứng ra chịu là mình.",              "dau"),
+ (15.10,17.10, "XƯỞNG TRỰC TIẾP",         "BẢO GẤU BÔNG",          "Bảo Gấu Bông là xưởng trực tiếp.",            "hieu"),
+ (17.10,19.11, "KHÔNG QUA TRUNG GIAN",    "GIÁ TẬN XƯỞNG",         "Không qua trung gian, giá tận xưởng.",        "giai"),
+ (19.11,21.22, "CÔNG SUẤT XƯỞNG",         "5.000 SẢN PHẨM/NGÀY",   "Công suất gấu bông năm nghìn sản phẩm mỗi ngày.", "giai"),
+ (21.22,23.22, "ĐÃ LÀM THẬT",             "ĐƠN 7.000 GẤU",         "Đơn bảy nghìn gấu bên em đã làm.",            "giai"),
+ (23.22,26.33, "MIỄN PHÍ",                "GỬI LOGO, CÓ DEMO",     "Gửi logo, bên em lên demo miễn phí.",         "giai"),
+ (26.33,28.95, "",                        "DUYỆT RỒI MỚI CHẠY",    "Anh chị duyệt đúng mẫu rồi mới chạy hàng loạt.", "giai"),
+ (28.95,32.48, "ĐỦ HỒ SƠ DOANH NGHIỆP",   "HỢP ĐỒNG VÀ VAT",       "Có hợp đồng, hoá đơn VAT, giao toàn quốc.",   "giai"),
+ (32.48,35.85, "",                        "MỘT ĐÊM NGỦ NGON",      "Xưởng tốt trả lại cho anh chị một đêm ngủ ngon trước sự kiện.", "giai"),
+ (35.85,39.31, "",                        "NHẮN TIN\nGỬI LOGO",    "Nhắn tin gửi logo và ngày cần hàng,",         "cta"),
+ (39.31,42.40, "",                        "NHẬN DEMO\nVÀ BÁO GIÁ", "bên em lên demo và báo giá ngay.",            "cta"),
 ]
 DAI = CANH[-1][1]
 
