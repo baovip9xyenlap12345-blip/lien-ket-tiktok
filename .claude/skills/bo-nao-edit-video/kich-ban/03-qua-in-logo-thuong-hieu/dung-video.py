@@ -19,6 +19,8 @@ W, H, FPS = 1080, 1920, 30
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 RA = sys.argv[1] if len(sys.argv) > 1 else "video-ra.mp4"
 THU_MUC_CANH = sys.argv[2] if len(sys.argv) > 2 else None
+# Thêm chữ "mo" ở cuối lệnh -> làm nhoè cảnh quay thật (giấu khẩu hình khi lồng giọng khác)
+MO_NEN = "mo" in sys.argv[3:]
 
 XANH      = (25, 135, 84)      # #198754 màu chủ đạo
 XANH_SAU  = (11, 61, 38)
@@ -121,6 +123,10 @@ def nap_nen_canh(duong_dan, so_khung):
     loc = ("scale=%d:%d:force_original_aspect_ratio=increase,"
            "crop=%d:%d:(iw-%d)/2:(ih-%d)*0.35,"
            "eq=brightness=-0.06" % (W, H, W, H, W, H))   # tối nhẹ để chữ nổi lên trên
+    # Chế độ "mo": làm nhoè cảnh quay thật. Dùng khi giọng đọc KHÔNG phải giọng thu cùng lúc
+    # với hình — nhoè đi thì không còn thấy môi, hết cảnh miệng nói một đằng tiếng một nẻo.
+    if MO_NEN:
+        loc += ",gblur=sigma=14,eq=brightness=-0.10"
 
     # ⚠️ ẢNH TĨNH VÀ VIDEO PHẢI LẶP BẰNG HAI CÁCH KHÁC NHAU — đã treo máy thật vì chỗ này.
     # `-stream_loop -1` dùng cho video. Đem áp cho ảnh tĩnh thì mốc thời gian không tiến,
