@@ -554,7 +554,11 @@ def so_broll_da_dung(goc_kho):
     """Sổ ghi hình minh hoạ ĐÃ DÙNG — thêm 2026-08-09 (chiều).
     Vì sao cần: tra cùng một từ khoá thì kho ảnh trả về đúng cái hình cũ. Vài video là
     khách nhận ra dùng đi dùng lại. Sổ này giúp lần sau tự bỏ qua hình đã dùng, lấy hình khác."""
-    p = os.path.join(goc_kho, ".claude", "skills", "dat", "assets", "broll-da-dung.json")
+    # Sửa 2026-08-13: bản cũ ghi sổ vào <gốc kho>/.claude/skills/dat/assets/ — đường dẫn còn sót
+    # lại từ cách xếp thư mục của chủ cũ. Tài liệu 04-chon-hinh-minh-hoa.md lại ghi sổ nằm ở
+    # cong-cu/assets/broll-da-dung.json, nên ai làm theo tài liệu mà xoá sổ thì xoá nhầm file
+    # không tồn tại, tưởng đã cho phép lấy lại hình cũ nhưng thật ra không. Nay ghi đúng chỗ tài liệu nói.
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "broll-da-dung.json")
     try:
         return p, json.load(open(p, encoding="utf-8"))
     except Exception:
@@ -1224,8 +1228,11 @@ def buoc_dung(video, nhac, toc_do, hook=None, hook_badge=None, cta=None,
     # Nay đặt đúng lúc hình minh hoạ hiện lên, tai và mắt cùng báo "cảnh đổi".
     moc_tieng = broll_moc if broll_moc else [s for s, _e in nhan_manh_that]
     if tieng_dong and moc_tieng:
+        # Sửa 2026-08-13: bản cũ trỏ ra "../assets/" (ngoài thư mục cong-cu) nên nó KHÔNG thấy
+        # file tiếng động đi kèm bộ, tự sinh lại một file mới ở chỗ khác. Tiếng động thật nằm ở
+        # cong-cu/assets/whoosh-nhe.wav — đúng như bản đồ thư mục trong SKILL.md.
         wh = tao_whoosh(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     "..", "assets", "whoosh-nhe.wav"))
+                                     "assets", "whoosh-nhe.wav"))
         sfx_track = tao_track_sfx(wh, moc_tieng, do_dai_cuoi, os.path.join(work, "sfx-track.wav"))
         if sfx_track:
             print(">> Chèn tiếng động nhẹ ở %d chỗ đổi sang hình minh hoạ." % len(moc_tieng))
