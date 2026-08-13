@@ -13,6 +13,8 @@ description: Bộ não edit video ngắn của anh Hoàn — nạp một video t
 | Cần gì | Mở file |
 |---|---|
 | **Luật bắt buộc — đọc đầu tiên** | `CLAUDE.md` |
+| **Quy trình tối ưu — hai đường A/B, thời gian thật, bẫy đã dính** | `QUY-TRINH-TOI-UU.md` |
+| Chọn nỗi đau, câu chữ, số liệu được phép nói | `.claude/skills/ho-so-khach-hang/` |
 | Người mới, chưa biết bộ này là gì | `BAT-DAU-TU-DAY.md` |
 | Cài Python, ffmpeg, máy bóc lời | `huong-dan/01-cai-dat-may.md` |
 | Lấy chìa khoá 3 kho ảnh miễn phí | `huong-dan/02-lay-chia-khoa.md` |
