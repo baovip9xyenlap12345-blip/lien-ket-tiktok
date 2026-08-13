@@ -14,6 +14,22 @@ Bộ não nằm ở `.claude/skills/bo-nao-edit-video/`.
 
 ---
 
+## 0. TRƯỚC KHI VIẾT BẤT KỲ CHỮ NÀO ⭐
+
+Chữ hook, câu chốt cuối, lời thoại — đều là **nội dung bán hàng**, không phải trang trí.
+**Đọc skill `ho-so-khach-hang` trước**, ở `.claude/skills/ho-so-khach-hang/`:
+
+- Chọn nỗi đau nào để đánh (bảy nhóm, xếp sẵn theo mức nguy hiểm)
+- Câu chữ nào đã chứng minh có sức nặng với khách
+- Con số nào được phép nói ra, con số nào kèm điều kiện, con số nào cấm dùng
+- Câu chốt chuẩn cho từng tình huống
+
+⚠️ **Cấm bịa số.** Không có trong hồ sơ thì gắn `NEEDS_DATA`, đừng nói như thật.
+⚠️ Riêng **tên khách hàng thật** và **cam kết đơn gấp 24–72 giờ**: hồ sơ ghi rõ là phải hỏi
+chủ doanh nghiệp trước, không tự đưa vào nội dung công khai.
+
+---
+
 ## 1. BỘ NÃO NÀY LÀM ĐƯỢC GÌ
 
 Nạp **một video thô đã quay sẵn** (người thật nói, quay điện thoại/máy tính) → ra **một video ngắn sẵn đăng**:
