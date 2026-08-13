@@ -262,3 +262,4 @@ gì bằng giọng anh. Giữ chìa như giữ chìa nhà.
 | Máy treo, sập, hình xấu, tiếng lệch | `huong-dan/05-loi-thuong-gap.md` |
 | Muốn xem một ca thật từ đầu đến cuối | `huong-dan/06-vi-du-mau.md` |
 | Người mới lần đầu mở bộ này | `BAT-DAU-TU-DAY.md` |
+| **Muốn chạy bộ này trên máy Windows của mình** | `huong-dan/07-chay-tren-may-windows.md` |
