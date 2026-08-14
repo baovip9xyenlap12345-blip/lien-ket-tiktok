@@ -40,19 +40,19 @@ XAM       = (150, 168, 158)
 # Đây mới đúng tinh thần bộ não — hình chạy theo lời, không phải lời chạy theo hình.
 # Cảnh ngắn nhất ép tối thiểu 2,0 giây để không loé lên khó chịu.
 CANH = [
- (0.00,  3.86, "",                       "BANNER GỠ XUỐNG\nLÀ HẾT NGƯỜI NHỚ", "", "hook"),
- (3.86,  6.18, "QUẢNG CÁO NGẮN HẠN",     "HẾT TIỀN LÀ HẾT",       "Tháo banner xuống, không ai nhớ mình là ai nữa.", "dau"),
- (6.18,  8.48, "",                       "CON GẤU THÌ KHÁC",      "Nhưng con gấu mang logo thì khác.",              "hieu"),
- (8.48, 12.27, "KHÁCH GIỮ LẠI",          "ĐỂ BÀN · ÔM NGỦ",       "Khách để trên bàn làm việc. Ôm đi ngủ. Mang đi khắp nơi.", "giai"),
- (12.27,15.11, "",                       "MỖI LẦN NHÌN\nLÀ MỘT LẦN NHỚ", "Mỗi lần nhìn thấy là một lần nhớ tới thương hiệu của mình.", "giai"),
- (15.11,17.42, "",                       "KHÔNG PHẢI QUẢNG CÁO",  "Nó không phải quảng cáo. Nó là món quà.",        "hieu"),
- (17.42,20.09, "ĐẸP VÀ DÙNG ĐƯỢC",       "KHÁCH THẤY ĐƯỢC TRỌNG", "Quà đẹp, dùng được, khách thấy mình được trân trọng.", "giai"),
- (20.09,22.09, "",                       "THIỆN CẢM GIỮ KHÁCH",   "Thiện cảm đó mới là thứ giữ khách ở lại.",       "giai"),
- (22.09,24.62, "IN MỘT LẦN",             "THEO KHÁCH NHIỀU NĂM",  "Một lần in logo, thương hiệu theo khách nhiều năm.", "giai"),
- (24.62,27.58, "SO VỚI CHẠY QUẢNG CÁO",  "CHI PHÍ RẺ HƠN HẲN",    "Chi phí lại rẻ hơn hẳn chạy quảng cáo dài ngày.", "giai"),
- (27.58,32.62, "XƯỞNG TRỰC TIẾP",        "BẢO GẤU BÔNG",          "Bảo Gấu Bông là xưởng trực tiếp, in thêu logo theo yêu cầu.", "hieu"),
- (32.62,36.25, "MIỄN PHÍ",               "GỬI LOGO, CÓ DEMO",     "Gửi logo, bên em lên demo miễn phí.",            "giai"),
- (36.25,39.54, "",                       "NHẮN TIN\nGỬI LOGO",   "Nhắn tin gửi logo, bên em lên demo và báo giá ngay.", "cta"),
+ (0.00, 3.12, "", "BANNER GỠ XUỐNG\nLÀ HẾT NGƯỜI NHỚ", "", "hook"),
+ (3.12, 5.75, "QUẢNG CÁO NGẮN HẠN", "HẾT TIỀN LÀ HẾT", "Tháo banner xuống, không ai nhớ mình là ai nữa.", "dau"),
+ (5.75, 7.78, "", "CON GẤU THÌ KHÁC", "Nhưng con gấu mang logo thì khác.", "hieu"),
+ (7.78, 10.69, "KHÁCH GIỮ LẠI", "ĐỂ BÀN · ÔM NGỦ", "Khách để trên bàn làm việc. Ôm đi ngủ. Mang đi khắp nơi.", "giai"),
+ (10.69, 13.71, "", "MỖI LẦN NHÌN\nLÀ MỘT LẦN NHỚ", "Mỗi lần nhìn thấy là một lần nhớ tới thương hiệu của mình.", "giai"),
+ (13.71, 16.00, "", "KHÔNG PHẢI QUẢNG CÁO", "Nó không phải quảng cáo. Nó là món quà.", "hieu"),
+ (16.00, 18.58, "ĐẸP VÀ DÙNG ĐƯỢC", "KHÁCH THẤY ĐƯỢC TRỌNG", "Quà đẹp, dùng được, khách thấy mình được trân trọng.", "giai"),
+ (18.58, 21.30, "", "THIỆN CẢM GIỮ KHÁCH", "Thiện cảm đó mới là thứ giữ khách ở lại.", "giai"),
+ (21.30, 23.72, "IN MỘT LẦN", "THEO KHÁCH NHIỀU NĂM", "Một lần in logo, thương hiệu theo khách nhiều năm.", "giai"),
+ (23.72, 26.33, "SO VỚI CHẠY QUẢNG CÁO", "CHI PHÍ RẺ HƠN HẲN", "Chi phí lại rẻ hơn hẳn chạy quảng cáo dài ngày.", "giai"),
+ (26.33, 29.77, "XƯỞNG TRỰC TIẾP", "BẢO GẤU BÔNG", "Bảo Gấu Bông là xưởng trực tiếp, in thêu logo theo yêu cầu.", "hieu"),
+ (29.77, 32.66, "MIỄN PHÍ", "GỬI LOGO, CÓ DEMO", "Gửi logo, bên em lên demo miễn phí.", "giai"),
+ (32.66, 36.09, "", "NHẮN TIN\nGỬI LOGO", "Nhắn tin gửi logo, bên em lên demo và báo giá ngay.", "cta"),
 ]
 DAI = CANH[-1][1]
 
