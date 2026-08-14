@@ -30,6 +30,9 @@ if not _os.path.exists(FONT_BIA):
 HIEN_CHU_TO  = 0.22   # chữ to + nhãn nhỏ, trước để 0,35
 HIEN_GACH    = 0.34   # gạch chân vàng chạy ra, trước để 0,55
 HIEN_PHU_DE  = 0.18   # phụ đề dưới đáy, trước để 0,30
+# Qua mốc này thì mọi thứ trong lớp chữ đã đứng yên hoàn toàn -> dựng một lần rồi
+# dùng lại cho các khung sau. Đây là mẹo làm nhanh gấp mấy lần, xem ghi chú ở main().
+XONG_HIEN    = 0.40
 
 RA = sys.argv[1] if len(sys.argv) > 1 else "video-ra.mp4"
 THU_MUC_CANH = sys.argv[2] if len(sys.argv) > 2 else None
@@ -146,8 +149,8 @@ def tim_file_canh(so):
     return None
 
 
-def nap_nen_canh(duong_dan, so_khung):
-    """Đọc file cảnh ra danh sách ảnh nền 1080x1920.
+def mo_nen_canh(duong_dan, so_khung):
+    """Mở file cảnh, trả về MỘT DÒNG khung hình nền 1080x1920 đọc dần.
 
     Video/ảnh NGANG được cắt thông minh: phóng cho đầy chiều ngang khung dọc rồi
     cắt phần thừa theo chiều cao, lấy hơi lệch lên trên — vì chủ thể (người, sản phẩm)
@@ -172,27 +175,38 @@ def nap_nen_canh(duong_dan, so_khung):
     else:
         dau_vao = ["-stream_loop", "-1"]
 
-    try:
-        p = subprocess.run(
-            ["ffmpeg", "-v", "error"] + dau_vao + ["-i", duong_dan,
-             "-t", "%.3f" % (so_khung / FPS),      # -t ở mức lệnh, chốt chặn thứ nhất
-             "-vf", loc + ",fps=%d" % FPS,
-             "-frames:v", str(so_khung),           # chốt chặn thứ hai: đếm đủ khung là dừng
-             "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-            capture_output=True, timeout=90)       # chốt chặn thứ ba: quá 90 giây là cắt
-    except subprocess.TimeoutExpired:
-        print("   (!) %s xử lý quá 90 giây — bỏ qua, cảnh này dùng màu thương hiệu."
-              % os.path.basename(duong_dan))
-        return None
+    # ĐỌC TỚI ĐÂU DÙNG TỚI ĐÓ — không nuốt cả cảnh vào bộ nhớ.
+    # Một khung 1080x1920 nặng 6,2 MB. Cảnh 4 giây là 120 khung = 750 MB. Video 69 cảnh
+    # thì máy phải cõng đi cõng lại từng ấy, chậm tới mức quá 1800 giây bị cắt ngang.
+    # Đã dính thật ở video 25 năm Luật Gia Phạm.
+    p = subprocess.Popen(
+        ["ffmpeg", "-v", "error"] + dau_vao + ["-i", duong_dan,
+         "-t", "%.3f" % (so_khung / FPS),      # -t ở mức lệnh, chốt chặn thứ nhất
+         "-vf", loc + ",fps=%d" % FPS,
+         "-frames:v", str(so_khung),           # chốt chặn thứ hai: đếm đủ khung là dừng
+         "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     n = W * H * 3
-    khung = [p.stdout[i * n:(i + 1) * n] for i in range(len(p.stdout) // n)]
-    if not khung:
+    dau = p.stdout.read(n)
+    if len(dau) < n:                           # không đọc nổi cả một khung -> hỏng
+        p.kill()
         print("   (!) Không đọc được %s — cảnh này dùng lại màu thương hiệu." % duong_dan)
         return None
-    while len(khung) < so_khung:      # file ngắn hơn cảnh thì giữ khung cuối
-        khung.append(khung[-1])
-    return khung
+
+    def dong_khung():
+        cuoi = dau
+        yield dau
+        for _ in range(so_khung - 1):
+            k = p.stdout.read(n)
+            if len(k) < n:                     # file ngắn hơn cảnh thì giữ khung cuối
+                k = cuoi
+            cuoi = k
+            yield k
+        p.stdout.close()
+        p.wait()
+
+    return dong_khung()
 
 
 _MAN = None
@@ -283,8 +297,6 @@ def ve_chu(i, t, nen_that=False):
             d.rounded_rectangle([50, 80, 70 + (bb[2] - bb[0]) + 20, 96 + fb.size + 14], 14,
                                 fill=(0, 0, 0, 140))
         d.text((70, 96), "BẢO GẤU BÔNG", font=fb, fill=VANG + (240,))
-        d.rectangle([0, H - 12, W, H], fill=(255, 255, 255, 46))
-        d.rectangle([0, H - 12, int(W * t / DAI), H], fill=VANG + (255,))
         return ov
 
     # Màn tối phủ lên video thật: đậm ở hai đầu khung nơi có chữ, nhạt ở giữa
@@ -334,10 +346,19 @@ def ve_chu(i, t, nen_that=False):
         d.rounded_rectangle([50, 80, 70 + (bb[2] - bb[0]) + 20, 96 + fb.size + 14], 14,
                             fill=(0, 0, 0, 140))
     d.text((70, 96), "BẢO GẤU BÔNG", font=fb, fill=mau_ten + (240,))
-
-    d.rectangle([0, H - 12, W, H], fill=(255, 255, 255, 46))
-    d.rectangle([0, H - 12, int(W * t / DAI), H], fill=VANG + (255,))
     return ov
+
+
+def ve_thanh_tien_do(im, t):
+    """Vẽ thanh tiến độ đáy khung, vẽ thẳng lên ảnh nền.
+
+    Trước đây thanh này nằm trong lớp chữ. Mà nó đổi từng khung, nên lớp chữ không
+    bao giờ đứng yên, không dùng lại được — mỗi khung phải vẽ lại toàn bộ chữ.
+    Tách nó ra đây là chìa khoá để dùng lại lớp chữ.
+    """
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, H - 12, W, H], fill=(214, 214, 214))
+    d.rectangle([0, H - 12, int(W * t / DAI), H], fill=VANG)
 
 
 def main():
@@ -351,18 +372,33 @@ def main():
     for i, (a, b, nhan, to, phu, kieu) in enumerate(CANH):
         so_khung = int(round((b - a) * FPS))
         f = tim_file_canh(i + 1)
-        nen_that = nap_nen_canh(f, so_khung) if f else None
-        if nen_that:
+        dong_nen = mo_nen_canh(f, so_khung) if f else None
+        co_nen = dong_nen is not None
+        if co_nen:
             co_that += 1
             print("   cảnh %02d: dùng %s" % (i + 1, os.path.basename(f)), flush=True)
         mau_nen = NEN[kieu][0]
+        lop_chu_dung_yen = None
         for k in range(so_khung):
             t = a + k / FPS
-            nen = (Image.frombytes("RGB", (W, H), nen_that[k]) if nen_that
+            # DỰNG LỚP CHỮ MỘT LẦN RỒI DÙNG LẠI.
+            # Chữ chỉ nhúc nhích trong 0,4 giây mờ dần đầu cảnh. Qua mốc đó là đứng yên
+            # tuyệt đối, mà vẽ lại chữ có viền trên khung 1080x1920 là việc nặng nhất
+            # trong cả bộ dựng. Cảnh 3 giây có 90 khung thì 78 khung dùng lại được.
+            if t - a >= XONG_HIEN:
+                if lop_chu_dung_yen is None:
+                    lop_chu_dung_yen = ve_chu(i, t, co_nen)
+                lop_chu = lop_chu_dung_yen
+            else:
+                lop_chu = ve_chu(i, t, co_nen)
+
+            nen = (Image.frombytes("RGB", (W, H), next(dong_nen)) if co_nen
                    else Image.new("RGB", (W, H), mau_nen))
-            im = Image.alpha_composite(nen.convert("RGBA"),
-                                       ve_chu(i, t, nen_that is not None)).convert("RGB")
-            p.stdin.write(im.tobytes())
+            # Dán thẳng lớp chữ lên ảnh nền, lấy chính nó làm mặt nạ. Cách này bỏ được
+            # hai lần đổi màu tốn kém: nền RGB -> RGBA rồi kết quả RGBA -> RGB.
+            nen.paste(lop_chu, (0, 0), lop_chu)
+            ve_thanh_tien_do(nen, t)
+            p.stdin.write(nen.tobytes())
 
     p.stdin.close()
     if p.wait() != 0:

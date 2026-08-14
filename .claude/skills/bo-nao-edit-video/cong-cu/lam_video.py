@@ -191,7 +191,7 @@ def dung_hinh(canh, moc, thu_muc_canh, ra_mp4, lam_mo=False):
     tam = os.path.join(os.path.dirname(ra_mp4), "_bo-dung-tam.py")
     open(tam, "w", encoding="utf-8").write(t)
     lenh = [sys.executable, tam, ra_mp4, thu_muc_canh] + (["mo"] if lam_mo else [])
-    r = subprocess.run(lenh, capture_output=True, text=True, timeout=1800)
+    r = subprocess.run(lenh, capture_output=True, text=True, timeout=7200)
     for d in r.stdout.splitlines()[-3:]:
         print("   " + d.strip())
     if not os.path.exists(ra_mp4):

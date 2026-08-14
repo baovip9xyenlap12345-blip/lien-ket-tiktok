@@ -319,6 +319,39 @@ Tám con số dưới đây là **toàn bộ chỗ chỉnh nhịp**. Muốn nhan
 
 ---
 
+## 9d. VIDEO DÀI — BA CHỖ NGHẼN ĐÃ CHỮA ⭐
+
+Video ngắn 17 cảnh chạy trơn. Đến video **69 cảnh, gần 5 phút** thì bộ dựng **chạy quá
+1800 giây bị cắt ngang**, không ra file. Ba chỗ nghẽn và cách chữa — nhớ để lần sau khỏi dính:
+
+**1. Nuốt cả cảnh vào bộ nhớ.**
+Một khung 1080×1920 nặng **6,2 MB**. Cảnh 4 giây là 120 khung = **750 MB**. Video 69 cảnh thì
+máy cõng đi cõng lại từng ấy, chậm tới mức nghẽn cứng.
+→ Chữa: `mo_nen_canh()` **đọc tới đâu dùng tới đó**, trả về một dòng khung hình thay vì cả
+danh sách. Bộ nhớ dùng lúc nào cũng chỉ một khung.
+
+**2. Vẽ lại chữ cho từng khung.**
+Vẽ chữ có viền lên khung 1080×1920 là **việc nặng nhất trong cả bộ dựng**. Mà chữ chỉ nhúc
+nhích trong **0,4 giây mờ dần** đầu cảnh, sau đó đứng yên tuyệt đối.
+→ Chữa: qua mốc `XONG_HIEN = 0,40` thì **dựng lớp chữ một lần rồi dùng lại**. Cảnh 3 giây có
+90 khung thì **78 khung dùng lại được**.
+
+⚠️ Muốn dùng lại được lớp chữ thì **thanh tiến độ phải tách ra khỏi lớp chữ** — nó đổi từng
+khung nên giữ nó trong đó là lớp chữ không bao giờ đứng yên. Nay có hàm `ve_thanh_tien_do()`
+vẽ thẳng lên ảnh nền, chỉ một dải 1080×12, gần như không tốn gì.
+
+**3. Đổi màu hai lần mỗi khung.**
+Cách cũ: nền RGB → RGBA, ghép, rồi RGBA → RGB. Hai lần chép nguyên khung 2 triệu điểm ảnh.
+→ Chữa: `nen.paste(lop_chu, (0,0), lop_chu)` — dán thẳng, lấy chính lớp chữ làm mặt nạ.
+
+**Đo được:** 15 giây video dựng mất **36,5 giây** → cả video 296 giây mất khoảng **12 phút**.
+Trước đó cùng nội dung chạy **quá 30 phút vẫn chưa xong**. Nhanh hơn ít nhất **2,5 lần**.
+
+Kèm theo: hạn giờ của bước dựng trong `lam_video.py` nâng **1800 → 7200 giây**, để video dài
+có chỗ thở chứ không bị cắt ngang lần nữa.
+
+---
+
 ## 7. NHỮNG BẪY ĐÃ DÍNH THẬT TRONG PHIÊN NÀY
 
 | Bẫy | Dấu hiệu | Cách tránh |
