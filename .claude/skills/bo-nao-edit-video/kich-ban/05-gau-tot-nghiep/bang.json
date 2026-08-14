@@ -1,0 +1,31 @@
+{
+ "ten": "gau-tot-nghiep",
+ "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
+ "lam_mo": false,
+ "canh": [
+  {"to":"LỄ TỐT NGHIỆP XONG\nQUÀ VỨT Ở ĐÂU?", "nhan":"", "loi":"Lễ tốt nghiệp năm nào trường cũng tặng quà.", "kieu":"hook",
+   "hinh":"graduation caps thrown sky ceremony"},
+  {"to":"SỔ TAY · BÚT · MÓC KHOÁ", "nhan":"QUÀ QUEN THUỘC", "loi":"Sổ tay, bút, móc khoá. Vài hôm là không biết ở đâu.", "kieu":"dau",
+   "hinh":"notebook pen desk stationery"},
+  {"to":"HỌC SINH KHÔNG GIỮ", "nhan":"", "loi":"Các em không giữ, vì nó chẳng có gì của riêng mình.", "kieu":"dau",
+   "hinh":"empty school classroom desks"},
+  {"to":"GẤU TỐT NGHIỆP\nTHÌ KHÁC", "nhan":"", "loi":"Con gấu tốt nghiệp thì khác.", "kieu":"hieu",
+   "hinh":"teddy bear plush toy closeup soft"},
+  {"to":"CÓ TÊN TRƯỜNG", "nhan":"ÁO CỬ NHÂN · NIÊN KHOÁ", "loi":"Áo cử nhân, thêu tên trường, tên lớp, niên khoá.", "kieu":"giai",
+   "hinh":"embroidery machine stitching letters closeup"},
+  {"to":"KHÔNG PHẢI QUÀ\nLÀ KỶ NIỆM", "nhan":"", "loi":"Nó không phải món quà. Nó là kỷ niệm.", "kieu":"hieu",
+   "hinh":"teddy bear on shelf bedroom"},
+  {"to":"MƯỜI NĂM SAU VẪN CÒN", "nhan":"", "loi":"Mười năm sau vẫn còn trên kệ sách.", "kieu":"giai",
+   "hinh":"bookshelf books home cozy"},
+  {"to":"HỌC SINH KHOE LÊN MẠNG", "nhan":"PHỤ HUYNH CHỤP ẢNH", "loi":"Phụ huynh chụp ảnh, các em khoe lên mạng.", "kieu":"giai",
+   "hinh":"hands holding smartphone taking photo"},
+  {"to":"TRƯỜNG ĐƯỢC NHẮC TÊN", "nhan":"KHÔNG TỐN ĐỒNG QUẢNG CÁO", "loi":"Trường được nhắc tên mà không tốn đồng quảng cáo nào.", "kieu":"giai",
+   "hinh":"many teddy bears plush toys together"},
+  {"to":"BẢO GẤU BÔNG", "nhan":"XƯỞNG TRỰC TIẾP", "loi":"Bảo Gấu Bông là xưởng trực tiếp, thêu theo yêu cầu của trường.", "kieu":"hieu",
+   "hinh":"sewing machine stitching fabric factory"},
+  {"to":"GỬI LOGO TRƯỜNG\nCÓ DEMO", "nhan":"MIỄN PHÍ", "loi":"Gửi logo trường, bên em lên demo miễn phí.", "kieu":"giai",
+   "hinh":"designer working laptop desk bright"},
+  {"to":"NHẮN TIN\nGỬI LOGO", "nhan":"", "loi":"Nhắn tin gửi logo và ngày làm lễ, bên em báo giá ngay.", "kieu":"cta",
+   "hinh":"hands typing smartphone message bright"}
+ ]
+}
