@@ -196,15 +196,23 @@ def mo_nen_canh(duong_dan, so_khung):
 
     def dong_khung():
         cuoi = dau
-        yield dau
-        for _ in range(so_khung - 1):
-            k = p.stdout.read(n)
-            if len(k) < n:                     # file ngắn hơn cảnh thì giữ khung cuối
-                k = cuoi
-            cuoi = k
-            yield k
-        p.stdout.close()
-        p.wait()
+        try:
+            yield dau
+            for _ in range(so_khung - 1):
+                k = p.stdout.read(n)
+                if len(k) < n:                 # file ngắn hơn cảnh thì giữ khung cuối
+                    k = cuoi
+                cuoi = k
+                yield k
+        finally:
+            # Dọn kể cả khi bị đóng sớm. Không dọn thì mỗi cảnh bỏ lại một tiến trình
+            # ffmpeg đứng chờ với một ống đầy dữ liệu chưa ai đọc — 69 cảnh là 69 cái.
+            try:
+                p.stdout.close()
+            except Exception:
+                pass
+            p.kill()
+            p.wait()
 
     return dong_khung()
 
@@ -362,11 +370,17 @@ def ve_thanh_tien_do(im, t):
 
 
 def main():
+    # ⚠️ BÁO LỖI CỦA MÁY NÉN PHẢI GHI RA FILE, TUYỆT ĐỐI KHÔNG DÙNG ĐƯỜNG ỐNG.
+    # Đã dính thật ở video 69 cảnh: để stderr=PIPE thì ta chỉ đọc ống đó lúc CUỐI,
+    # nên khi máy nén in đủ 64 KB cảnh báo là ống đầy -> máy nén đứng chờ ta đọc,
+    # còn ta thì đứng chờ máy nén nuốt khung hình. Hai bên chờ nhau, treo vĩnh viễn.
+    # Nhìn ra bằng cách xem /proc/<pid>/wchan: cả hai đều là anon_pipe_write.
+    tep_loi = open(RA + ".loi.txt", "w+b")
     p = subprocess.Popen(
         ["ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H),
          "-r", str(FPS), "-i", "-", "-an", "-c:v", "libx264", "-preset", "medium",
          "-crf", "19", "-pix_fmt", "yuv420p", "-movflags", "+faststart", RA],
-        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=tep_loi)
 
     co_that = 0
     for i, (a, b, nhan, to, phu, kieu) in enumerate(CANH):
@@ -399,10 +413,17 @@ def main():
             nen.paste(lop_chu, (0, 0), lop_chu)
             ve_thanh_tien_do(nen, t)
             p.stdin.write(nen.tobytes())
+        if dong_nen is not None:
+            dong_nen.close()                   # đóng ngay, đừng để tiến trình rác
 
     p.stdin.close()
-    if p.wait() != 0:
-        print(p.stderr.read().decode()[-1500:]); sys.exit(1)
+    ma = p.wait()
+    tep_loi.seek(0)
+    loi = tep_loi.read().decode("utf-8", "replace")
+    tep_loi.close()
+    if ma != 0:
+        print(loi[-1500:]); sys.exit(1)
+    os.remove(RA + ".loi.txt")
     print(">> Xong phần hình: %s — %.1f giây, %d cảnh (%d cảnh có video thật)"
           % (RA, DAI, len(CANH), co_that))
 
