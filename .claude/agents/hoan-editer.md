@@ -28,23 +28,36 @@ Chữ hook, câu chốt cuối, lời thoại — đều là **nội dung bán h
 ⚠️ Riêng **tên khách hàng thật** và **cam kết đơn gấp 24–72 giờ**: hồ sơ ghi rõ là phải hỏi
 chủ doanh nghiệp trước, không tự đưa vào nội dung công khai.
 
-### 0.1 ẢNH BÌA — LUẬT ĐỨNG, ÁP CHO MỌI VIDEO SAU NÀY ⭐
+### 0.1 ẢNH BÌA — LUẬT ĐỨNG, ÁP CHO MỌI VIDEO DỌC ⭐
 
-Chủ doanh nghiệp chốt ngày 14/08/2026: **mọi video từ nay về sau đều phải có ảnh bìa** đúng
-một kiểu, không được làm khác:
+Chủ doanh nghiệp chốt ngày 14/08/2026, có gửi kèm ảnh mẫu: **mọi video dọc từ nay đều phải mở
+bằng một cảnh bìa** đúng một kiểu, không được làm khác.
 
 | Thứ | Bắt buộc |
 |---|---|
-| Nội dung chữ | **Câu HOOK gây chú ý** — câu làm người lướt phải dừng lại |
-| Nền | **Vàng** (255, 193, 7) |
-| Chữ | **Đen** (16, 16, 16) |
-| Font | **Anton** — `/usr/share/fonts/truetype/anton/Anton-Regular.ttf` |
+| Nền bìa | **một khung hình ĐẸP lấy từ chính video** — sản phẩm rõ, sáng |
+| Dải chữ 1 | nền **VÀNG**, chữ **ĐEN** |
+| Dải chữ 2 (ngay dưới) | nền **XANH DƯƠNG**, chữ **TRẮNG** |
+| Font cả hai dải | **Anton** — `/usr/share/fonts/truetype/anton/Anton-Regular.ttf` |
+| Nội dung chữ | **câu HOOK gây chú ý** — câu làm người lướt phải dừng lại |
+| Thời lượng | **2–3 giây** ở đầu video |
 
-Cách làm trong bảng phân cảnh: cảnh đầu tiên đặt `"kieu": "bia"`, và **cố ý KHÔNG khai `hinh`**
-— khai hình nền thì nền vàng bị đè mất, bìa hỏng. Bộ dựng tự đặt chữ giữa khung, cỡ 165.
+Cách làm trong bảng phân cảnh — cảnh đầu đặt `"kieu": "bia"`, **dòng 1 vào dải vàng, dòng 2 vào
+dải xanh**, và lời đọc phải NGẮN (dưới 2,7 giây) vì dây chuyền chặn cứng cảnh bìa ở 3,0 giây:
+
+```json
+{"to":"1 CON GẤU QUA 11 CÔNG ĐOẠN\nXEM XƯỞNG LÀM TRỰC TIẾP", "nhan":"", "kieu":"bia",
+ "loi":"Gấu bông in logo, làm qua mười một công đoạn."}
+```
+
+⚠️ Hình nền bìa **chọn tay**, đặt vào `canh/canh-01.jpg` — **không để máy tải Pexels**. Bìa là
+mặt tiền của video, không dùng ảnh người lạ. Chọn khung có chủ thể ở **nửa trên**, vì hai dải
+chữ ăn từ 50% xuống 78% chiều cao.
 
 ⚠️ Khung giây 0,0 chính là ảnh nền tảng lấy làm ảnh đại diện, nên cảnh bìa **phải hiện đủ chữ
 ngay từ khung đầu**, không được mờ dần vào (đã dính lỗi này thật một lần).
+
+Chi tiết đầy đủ + số đo: mục **9b** của `.claude/skills/bo-nao-edit-video/QUY-TRINH-TOI-UU.md`.
 
 ---
 

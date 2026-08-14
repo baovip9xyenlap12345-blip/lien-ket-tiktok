@@ -35,6 +35,15 @@ TOI       = (14, 20, 17)
 TRANG     = (255, 255, 255)
 VANG      = (255, 193, 7)
 XAM       = (150, 168, 158)
+XANH_BIA  = (32, 130, 245)     # xanh dương của dải chữ thứ hai trên ẢNH BÌA
+
+# ẢNH BÌA — chủ doanh nghiệp chốt 14/08, gửi kèm ảnh mẫu.
+# Nền là MỘT KHUNG HÌNH ĐẸP LẤY TỪ CHÍNH VIDEO, đè lên hai dải chữ chạy hết bề ngang:
+#   dải trên  = nền VÀNG,  chữ ĐEN
+#   dải dưới  = nền XANH DƯƠNG, chữ TRẮNG
+# Hai dải nằm ở khoảng giữa-dưới khung để không che mặt/chủ thể ở nửa trên.
+BIA_BAT_DAU = 0.505            # dải vàng bắt đầu ở 50,5% chiều cao
+BIA_CAO_DAI = 0.140            # mỗi dải cao 14% chiều cao khung
 
 # Bảng phân cảnh — bám hồ sơ khách hàng chuyên sâu (bản 11/08/2026).
 # Nỗi đau lấy từ mục 5.4 "Nỗi đau về tiến độ" và 5.6 "sợ bị quy trách nhiệm cá nhân".
@@ -69,8 +78,9 @@ NEN = {
  "hieu": (XANH,     TRANG,    VANG,     TRANG,    (0, 0, 0, 110)),
  "giai": (XANH_SAU, TRANG,    VANG,     TRANG,    (0, 0, 0, 120)),
  "cta":  (VANG,     XANH_SAU, XANH_SAU, XANH_SAU, (255, 255, 255, 170)),
- # ẢNH BÌA: nền vàng, chữ ĐEN. Đây là khung giây 0,0 — nền tảng lấy làm ảnh đại diện.
- "bia":  (VANG,     (16, 16, 16), (70, 55, 0), (16, 16, 16), (255, 255, 255, 0)),
+ # ẢNH BÌA: nền là khung hình thật, chữ nằm trong hai dải màu. Màu ở đây chỉ dùng
+ # khi KHÔNG tìm được file hình cho cảnh bìa — lúc đó nền lùi về màu thương hiệu.
+ "bia":  (TOI,      TRANG,    VANG,     TRANG,    (0, 0, 0, 150)),
 }
 
 
@@ -208,6 +218,35 @@ def man_toi():
     return _MAN
 
 
+def ve_bia(d, to, mo):
+    """Vẽ hai dải chữ của ẢNH BÌA lên khung hình thật.
+
+    Dòng 1 của `to` -> dải VÀNG chữ ĐEN. Dòng 2 -> dải XANH DƯƠNG chữ TRẮNG.
+    Dải chạy hết bề ngang khung, chữ căn giữa theo cả hai chiều, font Anton.
+    Đây là kiểu bìa chủ doanh nghiệp gửi ảnh mẫu ngày 14/08 — bắt chước đúng.
+    """
+    dong = (to.split("\n") + ["", ""])[:2]
+    cao = int(H * BIA_CAO_DAI)
+    y0 = int(H * BIA_BAT_DAU)
+    a = int(255 * min(1.0, mo))
+    for k, (chu, nen, mau) in enumerate(((dong[0], VANG,     (16, 16, 16)),
+                                         (dong[1], XANH_BIA, TRANG))):
+        chu = chu.strip()
+        if not chu:
+            continue
+        y = y0 + k * cao
+        d.rectangle([0, y, W, y + cao], fill=nen + (a,))
+        # Cỡ chữ chặn theo CẢ chiều cao dải lẫn bề ngang khung — dải cao 268 điểm ảnh
+        # thì chữ tối đa 168, còn thiếu chỗ cho dấu tiếng Việt là chạm mép dải.
+        ft = fit(chu, int(cao * 0.62), W - 70, FONT_BIA)
+        bb = ft.getbbox(chu)
+        x = (W - (bb[2] - bb[0])) // 2 - bb[0]
+        # Căn giữa theo chiều dọc bằng hộp bao THẬT của chuỗi, không lấy cỡ font.
+        # Lấy cỡ font thì dòng có dấu (Ấ, Ộ) tụt xuống, dòng không dấu lại nhô lên.
+        y_chu = y + (cao - (bb[3] - bb[1])) // 2 - bb[1]
+        d.text((x, y_chu), chu, font=ft, fill=mau + (a,))
+
+
 def ve_chu(i, t, nen_that=False):
     """Vẽ lớp chữ trong suốt cho một khung.
 
@@ -223,27 +262,33 @@ def ve_chu(i, t, nen_that=False):
     ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
 
-    # Màn tối phủ lên video thật: đậm ở giữa khung nơi có chữ, nhạt dần ra hai đầu
-    # để vẫn nhìn rõ cảnh quay. Không có lớp này thì chữ chìm mất trên cảnh sáng.
-    if nen_that:
-        ov.paste(man_toi(), (0, 0))
-
     # Cảnh đầu hiện đủ ngay khung 0,0 — nền tảng lấy khung này làm ảnh đại diện.
     mo = 1.0 if i == 0 else min(1.0, trong_canh / 0.35)
     nhich = int((1 - mo) * 26)
 
     if kieu == "bia":
-        # ẢNH BÌA: chữ to đặt GIỮA khung cho cân, font Anton, cỡ lớn hẳn.
-        ft = fit(to, 165, W - 110, FONT_BIA)
-        so_dong = len(to.split("\n"))
-        cao_khoi = (so_dong - 1) * int(ft.size * 1.18) + int(ft.size * 1.15)
-        y_to = (H - cao_khoi) // 2
-    else:
-        # Chữ to nằm ở ĐỈNH khung, ngay dưới tên thương hiệu. Cỡ hạ 150 -> 118
-        # để đỡ chiếm chỗ — khúc giữa phải để trống cho thấy sản phẩm.
-        ft = fit(to, 118, W - 140)
-        so_dong = len(to.split("\n"))
-        y_to = 300 + nhich
+        # ẢNH BÌA đi đường riêng: KHÔNG phủ màn tối (che mất khung hình đẹp),
+        # KHÔNG có nhãn nhỏ, KHÔNG có phụ đề. Chỉ hai dải màu + tên thương hiệu.
+        ve_bia(d, to, mo)
+        fb = ImageFont.truetype(FONT, 40)
+        if nen_that:
+            bb = fb.getbbox("BẢO GẤU BÔNG")
+            d.rounded_rectangle([50, 80, 70 + (bb[2] - bb[0]) + 20, 96 + fb.size + 14], 14,
+                                fill=(0, 0, 0, 140))
+        d.text((70, 96), "BẢO GẤU BÔNG", font=fb, fill=VANG + (240,))
+        d.rectangle([0, H - 12, W, H], fill=(255, 255, 255, 46))
+        d.rectangle([0, H - 12, int(W * t / DAI), H], fill=VANG + (255,))
+        return ov
+
+    # Màn tối phủ lên video thật: đậm ở hai đầu khung nơi có chữ, nhạt ở giữa
+    # để vẫn nhìn rõ sản phẩm. Không có lớp này thì chữ chìm mất trên cảnh sáng.
+    if nen_that:
+        ov.paste(man_toi(), (0, 0))
+
+    # Chữ to nằm ở ĐỈNH khung, ngay dưới tên thương hiệu. Cỡ hạ 150 -> 118
+    # để đỡ chiếm chỗ — khúc giữa phải để trống cho thấy sản phẩm.
+    ft = fit(to, 118, W - 140)
+    y_to = 300 + nhich
 
     if nhan:
         nhan_gian = " ".join(nhan)          # phải đo đúng chuỗi sắp vẽ

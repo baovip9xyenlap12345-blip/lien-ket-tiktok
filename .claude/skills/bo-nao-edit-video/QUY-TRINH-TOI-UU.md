@@ -216,35 +216,60 @@ nhìn rõ ảnh sản phẩm"*. Từ nay theo bố cục này:
 
 ## 9b. ẢNH BÌA BẮT BUỘC — chủ doanh nghiệp chốt 14/08/2026 ⭐
 
-Nguyên văn lệnh: *"lưu tất cả ảnh bìa của video sau này đều có từ hook, nội dung hook gây chú ý,
-ở ảnh bìa nền vàng chữ đen, font chữ Anton"*.
+Chủ doanh nghiệp gửi **ảnh mẫu** một video đang chạy tốt và nói: *"tất cả các video sau này
+cần sử dụng ảnh bìa dạng như này — lấy 1 hình ảnh đẹp trong video làm ảnh bìa, sau đó nền vàng
+chữ đen, và nền xanh chữ trắng ở dưới... và ảnh nền này cũng nên để 2-3 giây ở đầu video"*.
 
-**Từ nay MỌI video đều phải mở bằng một cảnh bìa**, không có ngoại lệ:
+**Áp cho MỌI video dọc, không có ngoại lệ.**
 
-| Thứ | Bắt buộc | Ghi trong mã |
-|---|---|---|
-| Chữ trên bìa | câu **HOOK gây chú ý** | trường `to` của cảnh 1 |
-| Nền | **vàng** | `VANG = (255, 193, 7)` |
-| Chữ | **đen** | `(16, 16, 16)` |
-| Font | **Anton** | `FONT_BIA` trong `dung-video.py` |
-| Cỡ chữ | 165, tự thu nhỏ cho vừa khung | hàm `fit(..., FONT_BIA)` |
-| Vị trí | **giữa khung** (bìa là ngoại lệ của bố cục trên-dưới) | nhánh `if kieu == "bia"` |
-
-Cách viết trong bảng phân cảnh:
-
-```json
-{"to":"1 CON GẤU\nQUA 11 CÔNG ĐOẠN", "nhan":"", "kieu":"bia",
- "loi":"Một con gấu bông in logo, trước khi tới tay khách, phải đi qua mười một công đoạn."}
+```
+┌──────────────────────┐
+│ BẢO GẤU BÔNG         │
+│                      │
+│   KHUNG HÌNH ĐẸP     │  ← lấy từ CHÍNH video: sản phẩm rõ, sáng, không mặt người
+│   NHÌN RÕ SẢN PHẨM   │
+│                      │
+├──────────────────────┤  ← 50,5% chiều cao
+│ CHỮ ĐEN TRÊN NỀN VÀNG│  ← dải 1, cao 14% khung, chạy hết bề ngang
+├──────────────────────┤  ← 64,5%
+│CHỮ TRẮNG NỀN XANH DƯƠNG│ ← dải 2, cao 14% khung
+├──────────────────────┤  ← 78,5%
+│   (còn thấy hình)    │
+└──────────────────────┘
 ```
 
-⚠️ **Cảnh bìa CỐ Ý không khai `hinh`.** Khai từ khoá hình thì bộ dựng lấy video thật làm nền,
-bật cờ `nen_that`, đổi chữ sang trắng và phủ màn tối — nền vàng mất sạch, bìa hỏng.
+| Thứ | Bắt buộc | Chỗ chỉnh trong mã |
+|---|---|---|
+| Nền bìa | **một khung hình đẹp lấy từ chính video** | đặt tay file `canh/canh-01.jpg` |
+| Dải 1 | nền **vàng** `(255,193,7)`, chữ **đen** `(16,16,16)` | hàm `ve_bia()` |
+| Dải 2 | nền **xanh dương** `(32,130,245)`, chữ **trắng** | hàm `ve_bia()` |
+| Font cả hai dải | **Anton** | `FONT_BIA` |
+| Vị trí dải | bắt đầu 50,5% chiều cao, mỗi dải cao 14% | `BIA_BAT_DAU`, `BIA_CAO_DAI` |
+| Thời lượng bìa | **2–3 giây** ở đầu video | `lam_video.py` tự chặn ở 3,0 giây |
+
+Cách viết trong bảng phân cảnh — **dòng 1 vào dải vàng, dòng 2 vào dải xanh**:
+
+```json
+{"to":"1 CON GẤU QUA 11 CÔNG ĐOẠN\nXEM XƯỞNG LÀM TRỰC TIẾP", "nhan":"", "kieu":"bia",
+ "loi":"Gấu bông in logo, làm qua mười một công đoạn."}
+```
+
+**Bốn điều dễ làm sai:**
+
+1. **Lời cảnh bìa phải NGẮN — dưới 2,7 giây đọc.** Dây chuyền chặn cứng cảnh bìa ở 3,0 giây;
+   viết dài hơn là bị cắt cụt tiếng. Nó có in dòng cảnh báo, đọc log là thấy.
+2. **Cảnh bìa KHÔNG khai `hinh`.** Hình nền bìa phải chọn tay từ kho ảnh thật của xưởng, không
+   để máy tải Pexels — bìa là mặt tiền của video, không được dùng ảnh người lạ.
+3. **Chọn khung có chủ thể ở NỬA TRÊN.** Hai dải chữ ăn từ 50% xuống 78% chiều cao. Ảnh nào có
+   logo hoặc mặt gấu nằm ở khoảng đó là bị che mất.
+4. **Cảnh bìa đi đường riêng trong `ve_chu()`**: không phủ màn tối, không nhãn nhỏ, không phụ đề.
+   Chỉ hai dải + tên thương hiệu + thanh tiến độ, rồi `return` luôn.
 
 ⚠️ **Font Anton phải có sẵn trên máy.** Kiểm bằng:
 `ls /usr/share/fonts/truetype/anton/Anton-Regular.ttf`
 Không có thì tải: `curl -L -o <đường dẫn> https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf`
-(⚠️ đã dính thật: tải qua `github.com/google/fonts/raw/...` ra một file hỏng 378 byte —
-file thật nặng khoảng 170 KB. Tải xong phải xem kích thước.)
+(⚠️ đã dính thật: tải qua `github.com/google/fonts/raw/...` ra file hỏng 378 byte — file thật
+nặng khoảng 170 KB. Tải xong phải xem kích thước.)
 Đã thử 50 ký tự tiếng Việt khó (ộ ầ ế ữ ợ ẫ ể ỗ ừ ẹ ọ ụ ỹ): **Anton đủ hết**, không ra ô vuông.
 Thiếu font thì bộ dựng in dòng báo rồi dùng tạm font thường — **không im lặng**.
 

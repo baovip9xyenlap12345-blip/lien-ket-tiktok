@@ -117,6 +117,13 @@ def doc_giong(canh, ma_giong, thu_muc, khoa):
         d = dai_tep(sach)
         # Cảnh dài bằng câu nói + 0,32 giây thở. Tối thiểu 2 giây kẻo cảnh loé lên khó chịu.
         canh_dai = max(2.0, d + 0.32)
+        # ẢNH BÌA chốt cứng 2-3 giây: lâu hơn thì người xem sốt ruột lướt qua,
+        # ngắn hơn thì chưa kịp đọc hết hai dải chữ. Lệnh của chủ doanh nghiệp 14/08.
+        if c.get("kieu") == "bia" and canh_dai > 3.0:
+            print("   (!) Lời cảnh bìa dài %.2f giây — cắt còn 3,0 giây theo luật ảnh bìa."
+                  % canh_dai)
+            print("       Viết lại lời cảnh bìa ngắn hơn (dưới 2,7 giây) kẻo cụt tiếng.")
+            canh_dai = 3.0
         moc.append({"canh": i, "bat": round(t, 2), "ket": round(t + canh_dai, 2), "tep": sach})
         print("   %2d: đọc ra %.2f giây → cảnh %.2f giây | %s" % (i, d, canh_dai, loi[:40]))
         t += canh_dai

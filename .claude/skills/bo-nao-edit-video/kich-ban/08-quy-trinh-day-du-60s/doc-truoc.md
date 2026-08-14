@@ -7,10 +7,10 @@ Dựng ngày 14/08/2026 theo yêu cầu của chủ doanh nghiệp: gộp **quy 
 |---|---|
 | File | `quy-trinh-day-du-60s-9x16.mp4` |
 | Khung hình | 1080 × 1920, 30 hình/giây |
-| Dài | 57,3 giây |
-| Nặng | 25,8 MB |
+| Dài | 57,0 giây |
+| Nặng | 26,6 MB |
 | Số cảnh | 17 (1 bìa + 4 bước bán hàng + 11 công đoạn + 1 câu chốt) |
-| Tiếng trung bình | −16,6 dB · đỉnh −1,3 dB (dưới trần, không rè) |
+| Tiếng trung bình | −16,5 dB · đỉnh −1,3 dB (dưới trần, không rè) |
 | Nhạc thấp hơn giọng | 21 dB (luật bộ não: 18–25 dB) |
 | Giọng đọc | Cartesia, giọng "Bảo Gấu Bông", mẫu `sonic-3` |
 
@@ -29,7 +29,7 @@ hình **trước khi** dựng, đúng Điều cấm số 2 (cấm hình có mặ
 
 | Cảnh | Nội dung | Nguồn |
 |---|---|---|
-| 1 | ẢNH BÌA — nền vàng chữ đen font Anton | không có hình, cố ý để trống |
+| 1 | ẢNH BÌA — dải vàng chữ đen + dải xanh chữ trắng | **Ảnh thật** — gấu áo VNPT HEART |
 | 2 | Tiếp nhận logo | Pexels — gõ máy tính |
 | 3 | Lên mẫu demo | **Ảnh thật của xưởng** — gấu BlueSky trên tay |
 | 4 | Báo giá | Pexels — giấy tờ, máy tính bỏ túi |
@@ -47,7 +47,7 @@ hình **trước khi** dựng, đúng Điều cấm số 2 (cấm hình có mặ
 | 16 | Đóng hàng | **Ảnh thật** — gấu xếp trong túi |
 | 17 | Câu chốt | **Video thật** — gấu áo hồng thành phẩm |
 
-**7 trên 17 cảnh là hình thật của xưởng.** Cảnh Pexels chỉ dùng cho công đoạn chưa có tư liệu quay.
+**8 trên 17 cảnh là hình thật của xưởng.** Cảnh Pexels chỉ dùng cho công đoạn chưa có tư liệu quay.
 
 ## Còn thiếu gì
 

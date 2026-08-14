@@ -3,13 +3,14 @@
  "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
  "ghi_chu": [
   "Nội dung do chủ doanh nghiệp đọc ra ngày 14/08: 11 công đoạn sản xuất + 4 bước bán hàng.",
-  "Cảnh 1 kiểu 'bia' — ẢNH BÌA nền vàng chữ đen font Anton. Luật chủ chốt: MỌI video sau này",
-  "đều phải có ảnh bìa dạng này, chữ trên bìa là câu HOOK gây chú ý.",
-  "Cảnh 1 CỐ Ý không khai 'hinh' — có hình nền thì nền vàng bị đè mất."
+  "Cảnh 1 kiểu 'bia' — ẢNH BÌA theo mẫu chủ doanh nghiệp gửi: nền là MỘT KHUNG HÌNH ĐẸP",
+  "lấy từ chính video, đè lên dải VÀNG chữ ĐEN rồi dải XANH DƯƠNG chữ TRẮNG, font Anton.",
+  "Dòng 1 của 'to' vào dải vàng, dòng 2 vào dải xanh. Bìa giữ 2-3 giây đầu video.",
+  "Hình nền bìa đặt tay ở canh/canh-01.jpg — chọn khung đẹp nhất, KHÔNG lấy Pexels."
  ],
  "canh": [
-  {"to":"1 CON GẤU\nQUA 11 CÔNG ĐOẠN", "nhan":"", "kieu":"bia",
-   "loi":"Một con gấu bông in logo, trước khi tới tay khách, phải đi qua mười một công đoạn."},
+  {"to":"1 CON GẤU QUA 11 CÔNG ĐOẠN\nXEM XƯỞNG LÀM TRỰC TIẾP", "nhan":"", "kieu":"bia",
+   "loi":"Gấu bông in logo, làm qua mười một công đoạn."},
 
   {"to":"TIẾP NHẬN LOGO", "nhan":"BƯỚC 1", "kieu":"hieu",
    "loi":"Bắt đầu từ bước một. Anh chị gửi logo, bên em tiếp nhận."},
