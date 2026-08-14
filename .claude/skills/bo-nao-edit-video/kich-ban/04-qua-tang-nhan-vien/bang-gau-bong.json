@@ -1,0 +1,77 @@
+{
+ "ten": "qua-tang-nhan-vien-gau-bong",
+ "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
+ "lam_mo": false,
+ "canh": [
+  {
+   "to": "PHÁT QUÀ CHO ĐỦ\nAI CŨNG QUÊN",
+   "nhan": "",
+   "loi": "Cuối năm, công ty phát quà cho nhân viên.",
+   "kieu": "hook",
+   "hinh": "gift boxes stacked christmas"
+  },
+  {
+   "to": "NHẬN XONG ĐỂ ĐÓ",
+   "nhan": "CHUYỆN QUEN THUỘC",
+   "loi": "Nhận xong để đó, vài hôm là quên.",
+   "kieu": "dau",
+   "hinh": "cardboard box opening empty"
+  },
+  {
+   "to": "TIỀN VẪN MẤT",
+   "nhan": "",
+   "loi": "Tiền thì vẫn mất, mà chẳng ai nhớ gì.",
+   "kieu": "dau",
+   "hinh": "teddy bear alone on floor"
+  },
+  {
+   "to": "VÌ QUÀ KHÔNG CÓ TÊN HỌ",
+   "nhan": "LÝ DO THẬT",
+   "loi": "Vì món quà đó không có gì của riêng họ.",
+   "kieu": "dau",
+   "hinh": "plain white gift box ribbon"
+  },
+  {
+   "to": "QUÀ CÓ LOGO\nTHÌ KHÁC",
+   "nhan": "",
+   "loi": "Món quà mang logo công ty thì khác hẳn.",
+   "kieu": "hieu",
+   "hinh": "teddy bear plush toy closeup soft"
+  },
+  {
+   "to": "MANG VỀ NHÀ",
+   "nhan": "NGƯỜI TA GIỮ LẠI",
+   "loi": "Người ta mang về nhà, để trên bàn, cho con ôm.",
+   "kieu": "giai",
+   "hinh": "teddy bear on bed bedroom"
+  },
+  {
+   "to": "CẢM GIÁC THUỘC VỀ",
+   "nhan": "THỨ ĐÁNG TIỀN NHẤT",
+   "loi": "Đó là lúc nhân viên thấy mình thuộc về công ty.",
+   "kieu": "giai",
+   "hinh": "child hands holding teddy bear"
+  },
+  {
+   "to": "KHÔNG PHẢI PHÁT CHO ĐỦ",
+   "nhan": "",
+   "loi": "Tặng quà nhân viên không phải để phát cho đủ.",
+   "kieu": "giai",
+   "hinh": "many teddy bears plush toys together"
+  },
+  {
+   "to": "BẢO GẤU BÔNG",
+   "nhan": "XƯỞNG TRỰC TIẾP",
+   "loi": "Bảo Gấu Bông là xưởng trực tiếp, in thêu logo theo yêu cầu.",
+   "kieu": "hieu",
+   "hinh": "sewing machine stitching fabric closeup"
+  },
+  {
+   "to": "GỬI LOGO\nCÓ DEMO",
+   "nhan": "MIỄN PHÍ",
+   "loi": "Nhắn tin gửi logo, bên em lên demo và báo giá ngay.",
+   "kieu": "cta",
+   "hinh": "hands typing smartphone message bright"
+  }
+ ]
+}
