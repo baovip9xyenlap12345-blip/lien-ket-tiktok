@@ -175,6 +175,45 @@ Rồi chuẩn hoá cả bản trộn về `loudnorm=I=-14:TP=-1.5`.
 
 ---
 
+## 9. BỐ CỤC KHUNG DỌC — chủ doanh nghiệp chốt 14/08/2026
+
+Bố cục cũ dồn chữ vào **giữa khung**, che mất sản phẩm. Chủ doanh nghiệp xem rồi nói thẳng:
+*"video hiện chữ lên nhiều quá... chữ sẽ nằm ở góc trên và góc dưới màn hình, hình ảnh video
+nhìn rõ ảnh sản phẩm"*. Từ nay theo bố cục này:
+
+```
+┌──────────────────────┐
+│ BẢO GẤU BÔNG         │  ← tên thương hiệu, góc trên trái
+│   NHÃN NHỎ           │  ← nhãn giãn chữ
+│   CHỮ TO             │  ← chữ chính, cỡ 118 (trước là 150)
+│   ────────           │  ← gạch chân vàng
+│                      │
+│                      │
+│    SẢN PHẨM          │  ← KHOẢNG GIỮA ĐỂ TRỐNG HẲN
+│    HIỆN RÕ           │     màn tối chỉ còn 25/255
+│                      │
+│                      │
+│  ┌────────────────┐  │
+│  │  phụ đề ở đáy  │  │  ← phụ đề xuống đáy khung
+│  └────────────────┘  │
+│▓▓▓▓▓░░░░░░░░░░░░░░░░│  ← thanh tiến độ
+└──────────────────────┘
+```
+
+**Ba thay đổi kèm theo, đều đúc từ lỗi soi ảnh thấy thật:**
+
+1. **Màn tối đảo ngược.** Trước đậm ở giữa (nơi có chữ), nay đậm ở hai đầu và gần trong suốt
+   ở giữa (nơi có hàng). Đỉnh 165 → giữa 25 → đáy 170.
+2. **Chữ phải có viền tối.** Khoảng giữa sáng lên thì chữ ở đỉnh dễ rơi trúng vùng sáng và
+   chìm mất — đã thấy thật ở câu "ÉP XONG KIỂM NGAY" nằm trên cánh tay sáng. Viền 4 điểm ảnh
+   cho chữ to, 3 cho nhãn và phụ đề, chỉ bật khi đè lên cảnh quay thật.
+3. **Hộp nền phụ đề mờ dần CÙNG chữ.** Trước hộp hiện trước chữ, soi ảnh ra một dải tối trống trơn.
+
+⚠️ Đổi này **ghi đè** dòng "phụ đề ở 58-64% chiều cao" trong bảng thông số của `CLAUDE.md`.
+Đây là **lệnh của chủ doanh nghiệp**, không phải tự đổi.
+
+---
+
 ## 7. NHỮNG BẪY ĐÃ DÍNH THẬT TRONG PHIÊN NÀY
 
 | Bẫy | Dấu hiệu | Cách tránh |

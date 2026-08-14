@@ -88,16 +88,23 @@ def boc_dong(chu, font, rong, max_tu=5):
     return dong
 
 
-def giua(d, y, chu, font, mau, giay_mo=1.0, gian=1.42):
+def giua(d, y, chu, font, mau, giay_mo=1.0, gian=1.42, vien=0):
     """Vẽ khối chữ căn giữa, trả về chiều cao khối.
-    gian=1.42 vì dấu tiếng Việt chồng tầng (Ử, Ấ, Ộ) cần chỗ thở."""
+
+    gian=1.42 vì dấu tiếng Việt chồng tầng (Ử, Ấ, Ộ) cần chỗ thở.
+    vien: bề dày viền tối quanh chữ. Bố cục mới để khoảng giữa sáng cho thấy sản phẩm,
+    nên chữ ở đỉnh dễ rơi trúng vùng sáng và chìm mất — đã soi ảnh thấy thật ở câu
+    "ÉP XONG KIỂM NGAY" nằm trên cánh tay sáng. Có viền thì đọc được trên mọi nền.
+    """
     dong = chu.split("\n")
     buoc = int(font.size * gian)
     if giay_mo > 0:
         a = int(255 * min(1.0, giay_mo))
         for i, dg in enumerate(dong):
             bb = font.getbbox(dg)
-            d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y + i * buoc), dg, font=font, fill=mau + (a,))
+            x = (W - (bb[2] - bb[0])) // 2 - bb[0]
+            d.text((x, y + i * buoc), dg, font=font, fill=mau + (a,),
+                   stroke_width=vien, stroke_fill=(6, 12, 9, int(a * 0.78)) if vien else None)
     return (len(dong) - 1) * buoc + int(font.size * 1.15)
 
 
@@ -176,14 +183,17 @@ def man_toi():
     if _MAN is None:
         m = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(m)
-        DAU, GIUA_1, GIUA_2 = 70, 560, 1460      # mờ ở mép, đậm 168 ở dải giữa
+        # BỐ CỤC MỚI (chủ doanh nghiệp chốt 14/08): chữ dồn lên ĐỈNH và xuống ĐÁY,
+        # KHÚC GIỮA ĐỂ TRỐNG cho nhìn rõ sản phẩm. Nên màn tối cũng phải đảo lại:
+        # đậm ở hai đầu nơi có chữ, gần như trong suốt ở giữa nơi có hàng.
+        DINH_HET, DAY_BAT = 620, 1340
         for y in range(H):
-            if y < GIUA_1:
-                a = DAU + (168 - DAU) * (y / GIUA_1)          # 70 -> 168, liền mạch
-            elif y < GIUA_2:
-                a = 168
-            else:
-                a = 168 - 78 * ((y - GIUA_2) / (H - GIUA_2))  # 168 -> 90, liền mạch
+            if y < DINH_HET:                       # đỉnh: đậm 165 rồi nhạt dần xuống 25
+                a = 165 - 140 * (y / DINH_HET)
+            elif y < DAY_BAT:                      # giữa: gần trong suốt, thấy rõ hàng
+                a = 25
+            else:                                  # đáy: nhạt 25 rồi đậm dần lên 170
+                a = 25 + 145 * ((y - DAY_BAT) / (H - DAY_BAT))
             d.line([(0, y), (W, y)], fill=(6, 12, 9, int(a)))
         _MAN = m
     return _MAN
@@ -213,15 +223,18 @@ def ve_chu(i, t, nen_that=False):
     mo = 1.0 if i == 0 else min(1.0, trong_canh / 0.35)
     nhich = int((1 - mo) * 26)
 
-    ft = fit(to, 150, W - 150)
+    # Chữ to nằm ở ĐỈNH khung, ngay dưới tên thương hiệu. Cỡ hạ từ 150 xuống 118
+    # để đỡ chiếm chỗ — khúc giữa phải để trống cho thấy sản phẩm.
+    ft = fit(to, 118, W - 140)
     so_dong = len(to.split("\n"))
-    y_to = 762 - (so_dong - 1) * int(ft.size * 0.71) + nhich
+    y_to = 300 + nhich
 
     if nhan:
         nhan_gian = " ".join(nhan)          # phải đo đúng chuỗi sắp vẽ
-        giua(d, y_to - 92, nhan_gian, fit(nhan_gian, 44, W - 200), m_nhan, mo, gian=1.2)
+        giua(d, y_to - 74, nhan_gian, fit(nhan_gian, 40, W - 200), m_nhan, mo, gian=1.2,
+             vien=3 if nen_that else 0)
 
-    cao_to = giua(d, y_to, to, ft, m_to, mo)
+    cao_to = giua(d, y_to, to, ft, m_to, mo, vien=4 if nen_that else 0)
 
     if kieu != "cta":
         rong_max = min(int((W - 150) * 0.62), 620)
@@ -231,13 +244,18 @@ def ve_chu(i, t, nen_that=False):
             d.rectangle([(W - rw) // 2, y_g, (W + rw) // 2, y_g + 9], fill=VANG + (int(235 * mo),))
 
     if phu:
-        fp = ImageFont.truetype(FONT, 52)
+        fp = ImageFont.truetype(FONT, 50)
         dong = boc_dong(phu, fp, W - 190, 5)
         cao = len(dong) * int(fp.size * 1.34)
-        y0 = int(H * 0.60)                 # đúng luật: phụ đề ở 58-64% chiều cao
-        d.rounded_rectangle([70, y0 - 34, W - 70, y0 + cao + 20], 26, fill=m_hop)
+        # Phụ đề xuống ĐÁY khung. Bộ não gốc ghi 58-64% chiều cao, nhưng chủ doanh
+        # nghiệp chốt đổi ngày 14/08 để chừa khoảng giữa cho sản phẩm. Đây là đổi
+        # theo lệnh chủ, không phải tự đổi.
+        y0 = H - cao - 230 - (len(dong) - 2) * 10
         mo_p = 1.0 if i == 0 else min(1.0, max(0.0, (trong_canh - 0.12) / 0.3))
-        giua(d, y0, "\n".join(dong), fp, m_phu, mo_p, gian=1.34)
+        # hộp nền mờ dần CÙNG chữ — trước đây hộp hiện trước, thấy một dải tối trống trơn
+        d.rounded_rectangle([70, y0 - 34, W - 70, y0 + cao + 20], 26,
+                            fill=m_hop[:3] + (int(m_hop[3] * mo_p),))
+        giua(d, y0, "\n".join(dong), fp, m_phu, mo_p, gian=1.34, vien=3 if nen_that else 0)
 
     # Tên thương hiệu góc trên. Trên cảnh quay thật PHẢI có nền lót — soi ảnh thấy chữ vàng
     # nằm trên ô cửa sáng thì chìm hẳn, đọc không ra.
