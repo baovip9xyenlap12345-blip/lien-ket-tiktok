@@ -119,6 +119,9 @@ Nên quy trình **bắt buộc** có hai chốt tự kiểm:
 ├─ cong-cu/
 │   ├─ edit_video_giaoduc.py  ← toàn bộ máy móc dựng video nằm ở đây
 │   ├─ doc_giong.py           ← biến chữ thành tiếng bằng giọng nhân bản của anh Bảo
+│   ├─ tim_canh.py            ← tra cảnh Pexels: XEM ảnh đại diện trước, tải sau
+│   ├─ ghep_canh.py           ← ghép nhiều cảnh (ảnh tĩnh lẫn clip) thành một dải có chuyển cảnh
+│   ├─ giai_ma_drive.py       ← lấy ảnh/video từ Google Drive về đĩa mà không tốn bộ nhớ
 │   ├─ fonts/                 ← Anton-Regular.ttf, kiểu chữ dùng xuyên suốt video
 │   └─ assets/                ← nhạc nền + tiếng động
 ├─ video-tho/                 ← BỎ VIDEO CẦN EDIT VÀO ĐÂY
@@ -251,7 +254,47 @@ gì bằng giọng anh. Giữ chìa như giữ chìa nhà.
 
 ---
 
-## 13. ĐỌC THÊM KHI CẦN
+## 13. BA CÔNG CỤ PHỤ — thêm 2026-08-14
+
+### `tim_canh.py` — tra cảnh minh hoạ trên Pexels
+
+```
+python cong-cu/tim_canh.py xem <tep-tu-khoa.txt> <bang-ra.jpg>   # dựng bảng ảnh đại diện để soi
+python cong-cu/tim_canh.py tai <tep-chon.txt>    <thu-muc-ra>    # tải đúng clip đã chọn
+```
+
+Luật số 4 bắt phải soi hình trước khi dựng. Tải hẳn clip về rồi mới xem thì mỗi lần đổi từ khoá
+mất vài phút. Công cụ này lấy **ảnh đại diện** Pexels trả sẵn, ghép thành một bảng để soi một lượt,
+chọn xong mới tải. Nhanh hơn nhiều lần.
+⚠️ Đừng cắt đầu ra bằng `head` — ống bị đóng sớm làm script chết giữa chừng. Dùng `tail`.
+
+### `ghep_canh.py` — ghép nhiều cảnh thành một dải
+
+```
+python cong-cu/ghep_canh.py <thu-muc-canh> <tong-so-giay> <file-ra.mp4>
+```
+
+Nhận **lẫn lộn ảnh tĩnh và cảnh quay**, đặt tên `canh-01`, `canh-02`… theo thứ tự muốn hiện.
+Chuyển cảnh mờ 0,4 giây. Ảnh tĩnh được lồng nguyên vẹn lên nền là chính nó phóng to làm mờ
+(**không cắt về 9:16** — cắt là chặt cụt logo) và cho **trôi chậm 6%**.
+
+> ⚠️ Trôi 6% là **ngoại lệ có phép** cho luật cấm phóng to ở mục 10, chỉ áp cho **ảnh tĩnh**.
+> Cảnh quay vẫn cấm phóng to như cũ. Anh Bảo chốt 2026-08-14.
+
+### `giai_ma_drive.py` — lấy ảnh/video từ Google Drive
+
+```
+python cong-cu/giai_ma_drive.py <thu-muc-ket-qua> <thu-muc-ra>
+```
+
+`drive.google.com` hay bị chính sách mạng chặn, không tải thẳng được. Đường vòng: gọi công cụ Drive
+tải từng file — khi kết quả quá lớn, hệ thống **tự lưu ra đĩa và chỉ trả lại đường dẫn**, nội dung
+không đi qua bộ nhớ. Công cụ này đọc đúng những file đó rồi giải mã ra ảnh thật, **tốn 0 token**.
+Nó in luôn thống kê khung ngang/dọc và cảnh báo ảnh nào quá nhỏ sẽ vỡ khi phóng lên 1080×1920.
+
+---
+
+## 14. ĐỌC THÊM KHI CẦN
 
 | Lúc nào | Mở file nào |
 |---|---|
