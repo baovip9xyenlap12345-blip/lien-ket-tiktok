@@ -169,13 +169,85 @@ def boc_loi_cartesia(wav):
     return words, gom_cau(words)
 
 
-def buoc_transcribe(video, may="tu-dong"):
+def doan_co_tieng(wav, nguong_db=-35.0, lang_toi_thieu=0.22):
+    """Dò các đoạn CÓ TIẾNG trong file (phần bù của các khoảng lặng)."""
+    r = subprocess.run(["ffmpeg", "-i", wav, "-af",
+                        "silencedetect=noise=%.0fdB:d=%.2f" % (nguong_db, lang_toi_thieu),
+                        "-f", "null", "-"], capture_output=True)
+    log = r.stderr.decode("utf-8", "replace")
+    lang, bd = [], None
+    for dong in log.splitlines():
+        if "silence_start:" in dong:
+            bd = float(dong.split("silence_start:")[1].split()[0])
+        elif "silence_end:" in dong and bd is not None:
+            lang.append((bd, float(dong.split("silence_end:")[1].split()[0])))
+            bd = None
+    tong = ffprobe_dur(wav)
+    if bd is not None:
+        lang.append((bd, tong))
+    doan, moc = [], 0.0
+    for s, e in lang:
+        if s - moc > 0.05:
+            doan.append((moc, s))
+        moc = e
+    if tong - moc > 0.05:
+        doan.append((moc, tong))
+    return doan or [(0.0, tong)]
+
+
+def boc_loi_co_san(wav, tep_loi):
+    """ĐƯỜNG THỨ BA — dùng khi ĐÃ BIẾT TRƯỚC từng chữ trong lời đọc (2026-08-14).
+
+    VÌ SAO CÓ: video lồng tiếng bằng máy đọc thì lời nói chính là văn bản mình vừa đưa vào —
+    đem đi bóc lời lần nữa là vừa tốn tiền vừa SINH RA LỖI (máy nghe nhầm chính chữ của mình).
+    Đã dính thật: đang dựng thì dịch vụ bóc lời trả 402 rồi 401, cả dây chuyền tắc, trong khi
+    lời đọc thì nằm sẵn trong tay.
+
+    Cách căn giờ: dò các đoạn có tiếng bằng silencedetect, rồi rải chữ vào ĐÚNG các đoạn đó
+    theo độ dài từng chữ. Chữ không bao giờ rơi vào khoảng lặng, nên phụ đề nảy đúng nhịp nói.
+    Không cần mạng, không cần chìa khoá, không tốn tiền."""
+    chu = " ".join(open(tep_loi, encoding="utf-8", errors="replace").read().split())
+    tu = [t for t in chu.split(" ") if t]
+    doan = doan_co_tieng(wav)
+    tong_tieng = sum(e - s for s, e in doan)
+    nang = [max(1.0, len(t)) for t in tu]
+    tong_nang = sum(nang)
+    print(">> Lời có sẵn: %d chữ · %d đoạn có tiếng · tổng %.1f giây tiếng nói"
+          % (len(tu), len(doan), tong_tieng))
+
+    words, i_doan, trong_doan = [], 0, 0.0
+    for t, w in zip(tu, nang):
+        dai = w / tong_nang * tong_tieng
+        s_abs = doan[i_doan][0] + trong_doan
+        con = dai
+        while con > 1e-6 and i_doan < len(doan):
+            trong = (doan[i_doan][1] - doan[i_doan][0]) - trong_doan
+            if con <= trong + 1e-9:
+                trong_doan += con
+                con = 0.0
+            else:
+                con -= trong
+                i_doan += 1
+                trong_doan = 0.0
+                if i_doan >= len(doan):
+                    i_doan = len(doan) - 1
+                    trong_doan = doan[i_doan][1] - doan[i_doan][0]
+                    break
+        e_abs = doan[i_doan][0] + trong_doan
+        words.append({"w": t, "s": round(s_abs, 3), "e": round(max(e_abs, s_abs + 0.04), 3)})
+    return words, gom_cau(words)
+
+
+def buoc_transcribe(video, may="tu-dong", tep_loi=None):
     root, _ = du_an_dir(video)
     work = os.path.join(root, "work")
     wav = os.path.join(work, "goc.wav")
     print(">> Tách tiếng...")
     subprocess.run(["ffmpeg", "-y", "-i", video, "-ar", "16000", "-ac", "1", wav], check=True, capture_output=True)
 
+    if tep_loi:
+        words, cues = boc_loi_co_san(wav, tep_loi)
+        return ghi_ban_boc_loi(video, work, words, cues)
     if may == "cartesia":
         words, cues = boc_loi_cartesia(wav)
         return ghi_ban_boc_loi(video, work, words, cues)
@@ -1293,6 +1365,10 @@ def main():
     ap.add_argument("buoc", choices=["soi", "transcribe", "dexuat", "dung"])
     ap.add_argument("--may-boc-loi", choices=["tu-dong", "whisper", "cartesia"], default="tu-dong",
                     help="Máy bóc lời. tu-dong = thử faster-whisper trước, hỏng thì quay sang Cartesia")
+    ap.add_argument("--loi", default=None,
+                    help="Tệp .txt chứa ĐÚNG lời đọc trong video (khi lồng tiếng bằng máy đọc). "
+                         "Có tệp này thì KHÔNG bóc lời nữa — căn giờ thẳng từ lời có sẵn, "
+                         "vừa nhanh vừa khỏi sinh lỗi nghe nhầm.")
     ap.add_argument("video")
     ap.add_argument("--nhac", default=None)
     ap.add_argument("--toc-do", type=float, default=TOC_DO_MAC_DINH)
@@ -1325,7 +1401,7 @@ def main():
     if a.buoc == "soi":
         buoc_soi(a.video)
     elif a.buoc == "transcribe":
-        buoc_transcribe(a.video, a.may_boc_loi)
+        buoc_transcribe(a.video, a.may_boc_loi, a.loi)
     elif a.buoc == "dexuat":
         buoc_dexuat(a.video)
     elif a.buoc == "dung":
