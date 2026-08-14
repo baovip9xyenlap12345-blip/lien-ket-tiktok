@@ -1,0 +1,21 @@
+{
+ "ten": "xuong-that-gau-in-logo",
+ "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
+ "lam_mo": false,
+ "canh": [
+  {"to":"AI CŨNG NÓI MÌNH\nLÀ XƯỞNG TRỰC TIẾP", "nhan":"", "loi":"Ai bán quà tặng cũng nói mình là xưởng trực tiếp.", "kieu":"hook",
+   "hinh":"warehouse boxes storage shelves"},
+  {"to":"NHƯNG AI CHO XEM?", "nhan":"CÂU HỎI THẬT", "loi":"Nhưng anh chị đã bao giờ được nhìn thấy xưởng chưa?", "kieu":"dau"},
+  {"to":"ĐÂY LÀ XƯỞNG BÊN EM", "nhan":"MÁY ÉP NHIỆT", "loi":"Đây là máy ép nhiệt bên em, đang in logo lên áo.", "kieu":"hieu"},
+  {"to":"ÉP XONG KIỂM NGAY", "nhan":"TỪNG CÁI MỘT", "loi":"Từng cái áo, ép xong là kiểm ngay tại chỗ.", "kieu":"giai"},
+  {"to":"LOGO IN RA\nLÀ THẾ NÀY", "nhan":"", "loi":"Logo anh chị gửi, in ra là đúng như thế này.", "kieu":"giai"},
+  {"to":"MẶC ÁO CHO GẤU", "nhan":"CÔNG ĐOẠN CUỐI", "loi":"Còn đây là công đoạn mặc áo cho từng con gấu.", "kieu":"hieu"},
+  {"to":"KHÔNG MÁY NÀO\nLÀM THAY ĐƯỢC", "nhan":"NGỒI MẶC TỪNG CON", "loi":"Ngồi mặc từng con một, không có máy nào làm thay.", "kieu":"giai"},
+  {"to":"HÀNG NGHÌN CON\nVẪN ĐỀU NHAU", "nhan":"", "loi":"Hàng nghìn con vẫn phải đều nhau như một.", "kieu":"giai"},
+  {"to":"GIÁ TẬN XƯỞNG", "nhan":"KHÔNG QUA TRUNG GIAN", "loi":"Không qua trung gian, nên giá là giá tận xưởng.", "kieu":"giai"},
+  {"to":"KHÔNG CHỈ CÓ GẤU", "nhan":"GỐI CỔ · ÁO · TÚI", "loi":"Bên em làm cả gối cổ, áo, túi, in thêu theo yêu cầu.", "kieu":"giai"},
+  {"to":"SAI THÌ LÀM LẠI", "nhan":"VÌ CHÍNH BÊN EM LÀM", "loi":"Sai mẫu thì bên em làm lại, vì chính bên em làm.", "kieu":"hieu"},
+  {"to":"NHẮN TIN\nGỬI LOGO", "nhan":"CÓ DEMO MIỄN PHÍ", "loi":"Nhắn tin gửi logo, bên em lên demo và báo giá ngay.", "kieu":"cta",
+   "hinh":"hands typing smartphone message bright"}
+ ]
+}

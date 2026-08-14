@@ -156,10 +156,13 @@ def dung_hinh(canh, moc, thu_muc_canh, ra_mp4, lam_mo=False):
     XD = chr(92) + "n"                    # hai ký tự: gạch chéo + n, để xuống dòng trong chữ to
     dong = ["CANH = ["]
     for c, m in zip(canh, moc):
-        to = (c.get("to") or "").replace("\n", XD)
+        # Dấu ngoặc kép trong chữ phải đổi thành ngoặc đơn, nếu không nó cắt đứt chuỗi
+        # trong mã sinh ra và cả bộ dựng vỡ. Đã dính thật ở câu hook có chữ trong ngoặc kép.
+        sach = lambda s: (s or "").replace('"', "'")
+        to = sach(c.get("to")).replace("\n", XD)
         dong.append(' (%.2f, %.2f, "%s", "%s", "%s", "%s"),'
-                    % (m["bat"], m["ket"], c.get("nhan", ""), to,
-                       (c.get("loi") or "").replace('"', "'"), c.get("kieu", "giai")))
+                    % (m["bat"], m["ket"], sach(c.get("nhan")), to,
+                       sach(c.get("loi")), c.get("kieu", "giai")))
     dong.append("]")
     # dùng hàm thay thế để dấu gạch chéo không bị nuốt
     t = re.sub(r"CANH = \[.*?\n\]", lambda m: "\n".join(dong), t, flags=re.S)
