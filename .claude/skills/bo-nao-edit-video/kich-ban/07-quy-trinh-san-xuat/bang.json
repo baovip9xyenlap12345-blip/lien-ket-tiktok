@@ -1,0 +1,21 @@
+{
+ "ten": "quy-trinh-san-xuat",
+ "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
+ "canh": [
+  {"to":"TỪ CÁI LOGO\nĐẾN CON GẤU", "nhan":"", "loi":"Từ cái logo anh chị gửi, đến con gấu ôm được.", "kieu":"hook",
+   "hinh":"designer working laptop logo desk"},
+  {"to":"ĐI QUA NHỮNG GÌ?", "nhan":"BỐN CÔNG ĐOẠN", "loi":"Nó phải đi qua bốn công đoạn.", "kieu":"dau",
+   "hinh":"factory production line industrial"},
+  {"to":"1. IN LOGO LÊN ÁO", "nhan":"MÁY ÉP NHIỆT", "loi":"Một. Máy ép nhiệt in logo lên áo.", "kieu":"hieu"},
+  {"to":"NHIỆT VÀ LỰC\nPHẢI ĐỦ", "nhan":"", "loi":"Nhiệt và lực phải đủ, thiếu là logo bong ngay.", "kieu":"giai"},
+  {"to":"2. KIỂM TỪNG CÁI", "nhan":"ÉP XONG SOI NGAY", "loi":"Hai. Ép xong soi từng cái một tại chỗ.", "kieu":"hieu"},
+  {"to":"LỆCH MÀU LÀ BỎ", "nhan":"KHÔNG CHO QUA", "loi":"Lệch màu hay lem chữ là bỏ, không cho qua.", "kieu":"giai"},
+  {"to":"3. MẶC ÁO CHO GẤU", "nhan":"LÀM TAY HOÀN TOÀN", "loi":"Ba. Mặc áo cho gấu, làm tay hoàn toàn.", "kieu":"hieu"},
+  {"to":"KHÔNG MÁY NÀO\nLÀM THAY", "nhan":"NGỒI MẶC TỪNG CON", "loi":"Ngồi mặc từng con, không có máy nào làm thay.", "kieu":"giai"},
+  {"to":"4. XẾP VÀ ĐÓNG GÓI", "nhan":"ĐẾM ĐỦ SỐ", "loi":"Bốn. Xếp, đếm đủ số rồi đóng gói.", "kieu":"hieu"},
+  {"to":"HÀNG NGHÌN CON\nĐỀU NHƯ MỘT", "nhan":"THÀNH PHẨM", "loi":"Hàng nghìn con ra vẫn đều nhau như một.", "kieu":"giai"},
+  {"to":"BỐN CÔNG ĐOẠN\nMỘT XƯỞNG LÀM", "nhan":"KHÔNG QUA TRUNG GIAN", "loi":"Bốn công đoạn, một xưởng làm hết, không qua trung gian.", "kieu":"giai"},
+  {"to":"NHẮN TIN\nGỬI LOGO", "nhan":"CÓ DEMO MIỄN PHÍ", "loi":"Nhắn tin gửi logo, bên em lên demo và báo giá ngay.", "kieu":"cta",
+   "hinh":"hands typing smartphone message bright"}
+ ]
+}
