@@ -24,6 +24,13 @@ import os as _os
 if not _os.path.exists(FONT_BIA):
     print("   (!) Không thấy font Anton — ảnh bìa sẽ dùng tạm font thường.")
     FONT_BIA = FONT
+# NHỊP HIỆN CHỮ — chủ doanh nghiệp chốt 14/08: "tỷ lệ chuyển cảnh nhanh hơn".
+# Cảnh nay ngắn hơn hẳn, chữ mà còn hiện thong thả thì vừa đọc xong đã đổi cảnh.
+# Ba con số này là thời gian (giây) để chữ hiện ĐỦ kể từ lúc vào cảnh.
+HIEN_CHU_TO  = 0.22   # chữ to + nhãn nhỏ, trước để 0,35
+HIEN_GACH    = 0.34   # gạch chân vàng chạy ra, trước để 0,55
+HIEN_PHU_DE  = 0.18   # phụ đề dưới đáy, trước để 0,30
+
 RA = sys.argv[1] if len(sys.argv) > 1 else "video-ra.mp4"
 THU_MUC_CANH = sys.argv[2] if len(sys.argv) > 2 else None
 # Thêm chữ "mo" ở cuối lệnh -> làm nhoè cảnh quay thật (giấu khẩu hình khi lồng giọng khác)
@@ -263,7 +270,7 @@ def ve_chu(i, t, nen_that=False):
     d = ImageDraw.Draw(ov)
 
     # Cảnh đầu hiện đủ ngay khung 0,0 — nền tảng lấy khung này làm ảnh đại diện.
-    mo = 1.0 if i == 0 else min(1.0, trong_canh / 0.35)
+    mo = 1.0 if i == 0 else min(1.0, trong_canh / HIEN_CHU_TO)
     nhich = int((1 - mo) * 26)
 
     if kieu == "bia":
@@ -299,7 +306,7 @@ def ve_chu(i, t, nen_that=False):
 
     if kieu != "cta":
         rong_max = min(int((W - 150) * 0.62), 620)
-        rw = int(rong_max * min(1.0, trong_canh / 0.55))
+        rw = int(rong_max * min(1.0, trong_canh / HIEN_GACH))
         if rw >= 6:
             y_g = y_to + cao_to + 22
             d.rectangle([(W - rw) // 2, y_g, (W + rw) // 2, y_g + 9], fill=VANG + (int(235 * mo),))
@@ -312,7 +319,7 @@ def ve_chu(i, t, nen_that=False):
         # nghiệp chốt đổi ngày 14/08 để chừa khoảng giữa cho sản phẩm. Đây là đổi
         # theo lệnh chủ, không phải tự đổi.
         y0 = H - cao - 230 - (len(dong) - 2) * 10
-        mo_p = 1.0 if i == 0 else min(1.0, max(0.0, (trong_canh - 0.12) / 0.3))
+        mo_p = 1.0 if i == 0 else min(1.0, max(0.0, (trong_canh - 0.06) / HIEN_PHU_DE))
         # hộp nền mờ dần CÙNG chữ — trước đây hộp hiện trước, thấy một dải tối trống trơn
         d.rounded_rectangle([70, y0 - 34, W - 70, y0 + cao + 20], 26,
                             fill=m_hop[:3] + (int(m_hop[3] * mo_p),))

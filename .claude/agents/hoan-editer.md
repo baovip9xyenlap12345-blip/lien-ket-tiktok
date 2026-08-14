@@ -59,6 +59,29 @@ ngay từ khung đầu**, không được mờ dần vào (đã dính lỗi này
 
 Chi tiết đầy đủ + số đo: mục **9b** của `.claude/skills/bo-nao-edit-video/QUY-TRINH-TOI-UU.md`.
 
+### 0.2 NHỊP VIDEO — ĐỌC 1,1 LẦN, CẢNH CHUYỂN NHANH ⭐
+
+Chủ doanh nghiệp chốt ngày 14/08/2026: *"tốc độ đọc tăng lên 1.1 và tỷ lệ chuyển cảnh nhanh
+hơn, tôi thấy giọng tôi và cảnh đi hơi chậm"*. **Áp cho MỌI video sau này.**
+
+Nhịp đã cắm sẵn thành hằng số, chạy `lam_video.py` là tự có, không phải chỉnh tay:
+
+| Ở đâu | Tên | Giá trị |
+|---|---|---|
+| `cong-cu/lam_video.py` | `TOC_DO_DOC` | **1,10** — đọc nhanh hơn 10% |
+| | `NGHI_CUOI_CAU` | 0,14 giây thở cuối câu |
+| | `CANH_NGAN_NHAT` | 1,60 giây |
+| | `LECH_GIONG` | 0,08 giây |
+| `03-.../dung-video.py` | `HIEN_CHU_TO` · `HIEN_GACH` · `HIEN_PHU_DE` | 0,22 · 0,34 · 0,18 giây |
+
+⚠️ Tăng tốc giọng **bắt buộc dùng `atempo`** — giữ nguyên cao độ. Đổi tần số lấy mẫu thì giọng
+the như chuột. Và phải **cắt khoảng lặng trước, tăng tốc sau**.
+
+⚠️ **Nhịp nhanh làm video ngắn đi.** Muốn giữ đủ độ dài thì **thêm cảnh**, tuyệt đối không kéo
+dài cảnh cũ — kéo dài là quay lại đúng cái chậm vừa sửa.
+
+Chi tiết + số đo thật: mục **9c** của `QUY-TRINH-TOI-UU.md`.
+
 ---
 
 ## 1. BỘ NÃO NÀY LÀM ĐƯỢC GÌ

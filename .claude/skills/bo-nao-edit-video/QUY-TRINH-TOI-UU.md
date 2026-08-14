@@ -275,6 +275,50 @@ Thiếu font thì bộ dựng in dòng báo rồi dùng tạm font thường —
 
 ---
 
+## 9c. NHỊP VIDEO — chủ doanh nghiệp chốt 14/08/2026 ⭐
+
+Nguyên văn: *"tốc độ đọc tăng lên 1.1 và tỷ lệ chuyển cảnh nhanh hơn, tôi thấy giọng tôi và
+cảnh đi hơi chậm"*. **Áp cho MỌI video sau này.**
+
+Tám con số dưới đây là **toàn bộ chỗ chỉnh nhịp**. Muốn nhanh/chậm hơn thì sửa đúng ở đây,
+đừng đi sửa rải rác trong mã.
+
+**Trong `cong-cu/lam_video.py` — nhịp GIỌNG và nhịp CẢNH:**
+
+| Tên | Nay | Trước | Nó làm gì |
+|---|---|---|---|
+| `TOC_DO_DOC` | **1,10** | 1,00 | Đọc nhanh hơn 10% |
+| `NGHI_CUOI_CAU` | **0,14 giây** | 0,32 | Khoảng thở cuối mỗi câu trước khi đổi cảnh |
+| `CANH_NGAN_NHAT` | **1,60 giây** | 2,00 | Cảnh ngắn nhất được phép |
+| `LECH_GIONG` | **0,08 giây** | 0,16 | Giọng vào sau khi đổi cảnh bao lâu |
+| `BIA_DAI_NHAT` | **3,00 giây** | — | Chặn cứng thời lượng ảnh bìa |
+
+**Trong `kich-ban/03-qua-in-logo-thuong-hieu/dung-video.py` — nhịp HIỆN CHỮ:**
+
+| Tên | Nay | Trước | Nó làm gì |
+|---|---|---|---|
+| `HIEN_CHU_TO` | **0,22 giây** | 0,35 | Chữ to + nhãn nhỏ hiện đủ sau bao lâu |
+| `HIEN_GACH` | **0,34 giây** | 0,55 | Gạch chân vàng chạy hết bề ngang |
+| `HIEN_PHU_DE` | **0,18 giây** | 0,30 | Phụ đề dưới đáy hiện đủ |
+
+**Ba điều phải nhớ khi động vào mấy số này:**
+
+1. **Tăng tốc giọng phải dùng `atempo`, KHÔNG đổi tần số lấy mẫu.** `atempo` giữ nguyên cao độ.
+   Đổi tần số lấy mẫu (kiểu `asetrate`) thì giọng the như chuột — hỏng cả video.
+2. **Cắt khoảng lặng TRƯỚC, tăng tốc SAU.** Làm ngược lại thì ngưỡng −45 dB đo trên tiếng đã
+   bị nén thời gian, cắt sai chỗ, nghe như nuốt chữ.
+3. **Nhịp chữ phải theo nhịp cảnh.** Cảnh rút từ ~3,4 xuống ~2,8 giây mà chữ vẫn hiện thong thả
+   0,35 giây thì vừa đọc xong đã đổi cảnh. Rút cảnh thì phải rút cả ba số hiện chữ.
+
+**Kết quả đo được trên video 08** (cùng một bảng phân cảnh, chỉ đổi nhịp):
+57,0 giây → **48,8 giây**, ngắn đi 8,2 giây mà không bỏ một chữ nội dung nào.
+Đã kiểm tỉ lệ tăng tốc thật bằng số: 2,690 giây → 2,455 giây = **1,096 lần**.
+
+⚠️ **Đánh đổi phải nói thẳng:** nhịp nhanh làm video ngắn đi. Muốn giữ đủ ~60 giây thì phải
+**thêm cảnh**, không phải kéo dài cảnh cũ — kéo dài là quay lại đúng cái chậm vừa sửa.
+
+---
+
 ## 7. NHỮNG BẪY ĐÃ DÍNH THẬT TRONG PHIÊN NÀY
 
 | Bẫy | Dấu hiệu | Cách tránh |

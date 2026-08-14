@@ -31,6 +31,18 @@ ASSETS = os.path.join(GOC, "assets")
 BO_DUNG_MAU = os.path.join(BO_NAO, "kich-ban", "03-qua-in-logo-thuong-hieu", "dung-video.py")
 MAU_GIONG = "sonic-3"          # mẫu DUY NHẤT đọc được tiếng Việt, ba mẫu kia đều từ chối
 
+# ---------------------------------------------------------------------------
+# NHỊP VIDEO — chủ doanh nghiệp chốt 14/08/2026
+# Nguyên văn: "tốc độ đọc tăng lên 1.1 và tỷ lệ chuyển cảnh nhanh hơn, tôi thấy
+# giọng tôi và cảnh đi hơi chậm". Bốn con số dưới đây là chỗ chỉnh nhịp, áp cho
+# MỌI video sau này. Muốn đổi thì đổi ở đây, đừng sửa rải rác trong mã.
+# ---------------------------------------------------------------------------
+TOC_DO_DOC     = 1.10   # đọc nhanh hơn 10%. Dùng atempo nên KHÔNG bị the giọng
+NGHI_CUOI_CAU  = 0.14   # giây thở cuối mỗi câu, trước để 0,32 -> cảnh bị lê
+CANH_NGAN_NHAT = 1.60   # cảnh ngắn nhất, trước để 2,00
+LECH_GIONG     = 0.08   # giọng vào sau khi đổi cảnh bao lâu, trước để 0,16
+BIA_DAI_NHAT   = 3.00   # ảnh bìa chốt cứng 2-3 giây
+
 
 def chia(ten_bien, ten_dong):
     v = os.environ.get(ten_bien)
@@ -73,7 +85,7 @@ def doc_giong(canh, ma_giong, thu_muc, khoa):
     for i, c in enumerate(canh, 1):
         loi = (c.get("loi") or "").strip()
         if not loi:                       # cảnh không có lời (ví dụ cảnh chữ tiêu đề)
-            canh_dai = 3.0
+            canh_dai = BIA_DAI_NHAT
             moc.append({"canh": i, "bat": round(t, 2), "ket": round(t + canh_dai, 2), "tep": None})
             print("   %2d: (không có lời) — để %.1f giây" % (i, canh_dai))
             t += canh_dai
@@ -110,20 +122,23 @@ def doc_giong(canh, ma_giong, thu_muc, khoa):
             subprocess.run(["espeak-ng", "-v", "vi", "-s", "150", "-w", tho, loi],
                            capture_output=True)
         sach = os.path.join(thu_muc, "c-%02d.wav" % i)
+        # Cắt khoảng lặng TRƯỚC rồi mới tăng tốc — làm ngược lại thì ngưỡng -45 dB
+        # đo trên tiếng đã méo, cắt sai chỗ.
+        # atempo giữ nguyên cao độ giọng, khác hẳn đổi tần số lấy mẫu (nghe the như chuột).
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", tho, "-af",
             "silenceremove=start_periods=1:start_silence=0.12:start_threshold=-45dB:"
-            "stop_periods=-1:stop_silence=0.12:stop_threshold=-45dB",
+            "stop_periods=-1:stop_silence=0.12:stop_threshold=-45dB,"
+            "atempo=%.3f" % TOC_DO_DOC,
             "-c:a", "pcm_s16le", sach], check=True)
         d = dai_tep(sach)
-        # Cảnh dài bằng câu nói + 0,32 giây thở. Tối thiểu 2 giây kẻo cảnh loé lên khó chịu.
-        canh_dai = max(2.0, d + 0.32)
+        canh_dai = max(CANH_NGAN_NHAT, d + NGHI_CUOI_CAU)
         # ẢNH BÌA chốt cứng 2-3 giây: lâu hơn thì người xem sốt ruột lướt qua,
         # ngắn hơn thì chưa kịp đọc hết hai dải chữ. Lệnh của chủ doanh nghiệp 14/08.
-        if c.get("kieu") == "bia" and canh_dai > 3.0:
-            print("   (!) Lời cảnh bìa dài %.2f giây — cắt còn 3,0 giây theo luật ảnh bìa."
-                  % canh_dai)
-            print("       Viết lại lời cảnh bìa ngắn hơn (dưới 2,7 giây) kẻo cụt tiếng.")
-            canh_dai = 3.0
+        if c.get("kieu") == "bia" and canh_dai > BIA_DAI_NHAT:
+            print("   (!) Lời cảnh bìa dài %.2f giây — cắt còn %.1f giây theo luật ảnh bìa."
+                  % (canh_dai, BIA_DAI_NHAT))
+            print("       Viết lại lời cảnh bìa ngắn hơn kẻo cụt tiếng.")
+            canh_dai = BIA_DAI_NHAT
         moc.append({"canh": i, "bat": round(t, 2), "ket": round(t + canh_dai, 2), "tep": sach})
         print("   %2d: đọc ra %.2f giây → cảnh %.2f giây | %s" % (i, d, canh_dai, loi[:40]))
         t += canh_dai
@@ -193,7 +208,7 @@ def tron_tieng(moc, tong_dai, ra_wav, moc_tieng_dong):
     ins, fc, nh = [], [], []
     for k, m in enumerate(co_loi):
         ins += ["-i", m["tep"]]
-        ms = int(round((m["bat"] + 0.16) * 1000))
+        ms = int(round((m["bat"] + LECH_GIONG) * 1000))
         fc.append("[%d:a]aresample=44100,adelay=%d|%d[v%d]" % (k, ms, ms, k))
         nh.append("[v%d]" % k)
     fc.append("".join(nh) + "amix=inputs=%d:duration=longest:normalize=0,volume=2.2[g]" % len(co_loi))

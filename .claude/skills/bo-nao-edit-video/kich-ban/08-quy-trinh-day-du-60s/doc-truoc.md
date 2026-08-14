@@ -7,12 +7,12 @@ Dựng ngày 14/08/2026 theo yêu cầu của chủ doanh nghiệp: gộp **quy 
 |---|---|
 | File | `quy-trinh-day-du-60s-9x16.mp4` |
 | Khung hình | 1080 × 1920, 30 hình/giây |
-| Dài | 57,0 giây |
-| Nặng | 26,6 MB |
+| Dài | 48,8 giây |
+| Nặng | 22,6 MB |
 | Số cảnh | 17 (1 bìa + 4 bước bán hàng + 11 công đoạn + 1 câu chốt) |
-| Tiếng trung bình | −16,5 dB · đỉnh −1,3 dB (dưới trần, không rè) |
+| Tiếng trung bình | −16,4 dB · đỉnh −1,3 dB (dưới trần, không rè) |
 | Nhạc thấp hơn giọng | 21 dB (luật bộ não: 18–25 dB) |
-| Giọng đọc | Cartesia, giọng "Bảo Gấu Bông", mẫu `sonic-3` |
+| Giọng đọc | Cartesia, giọng "Bảo Gấu Bông", mẫu `sonic-3`, tốc độ **1,10 lần** |
 
 ## Chạy lại
 
