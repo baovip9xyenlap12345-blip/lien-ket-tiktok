@@ -214,6 +214,42 @@ nhìn rõ ảnh sản phẩm"*. Từ nay theo bố cục này:
 
 ---
 
+## 9b. ẢNH BÌA BẮT BUỘC — chủ doanh nghiệp chốt 14/08/2026 ⭐
+
+Nguyên văn lệnh: *"lưu tất cả ảnh bìa của video sau này đều có từ hook, nội dung hook gây chú ý,
+ở ảnh bìa nền vàng chữ đen, font chữ Anton"*.
+
+**Từ nay MỌI video đều phải mở bằng một cảnh bìa**, không có ngoại lệ:
+
+| Thứ | Bắt buộc | Ghi trong mã |
+|---|---|---|
+| Chữ trên bìa | câu **HOOK gây chú ý** | trường `to` của cảnh 1 |
+| Nền | **vàng** | `VANG = (255, 193, 7)` |
+| Chữ | **đen** | `(16, 16, 16)` |
+| Font | **Anton** | `FONT_BIA` trong `dung-video.py` |
+| Cỡ chữ | 165, tự thu nhỏ cho vừa khung | hàm `fit(..., FONT_BIA)` |
+| Vị trí | **giữa khung** (bìa là ngoại lệ của bố cục trên-dưới) | nhánh `if kieu == "bia"` |
+
+Cách viết trong bảng phân cảnh:
+
+```json
+{"to":"1 CON GẤU\nQUA 11 CÔNG ĐOẠN", "nhan":"", "kieu":"bia",
+ "loi":"Một con gấu bông in logo, trước khi tới tay khách, phải đi qua mười một công đoạn."}
+```
+
+⚠️ **Cảnh bìa CỐ Ý không khai `hinh`.** Khai từ khoá hình thì bộ dựng lấy video thật làm nền,
+bật cờ `nen_that`, đổi chữ sang trắng và phủ màn tối — nền vàng mất sạch, bìa hỏng.
+
+⚠️ **Font Anton phải có sẵn trên máy.** Kiểm bằng:
+`ls /usr/share/fonts/truetype/anton/Anton-Regular.ttf`
+Không có thì tải: `curl -L -o <đường dẫn> https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf`
+(⚠️ đã dính thật: tải qua `github.com/google/fonts/raw/...` ra một file hỏng 378 byte —
+file thật nặng khoảng 170 KB. Tải xong phải xem kích thước.)
+Đã thử 50 ký tự tiếng Việt khó (ộ ầ ế ữ ợ ẫ ể ỗ ừ ẹ ọ ụ ỹ): **Anton đủ hết**, không ra ô vuông.
+Thiếu font thì bộ dựng in dòng báo rồi dùng tạm font thường — **không im lặng**.
+
+---
+
 ## 7. NHỮNG BẪY ĐÃ DÍNH THẬT TRONG PHIÊN NÀY
 
 | Bẫy | Dấu hiệu | Cách tránh |

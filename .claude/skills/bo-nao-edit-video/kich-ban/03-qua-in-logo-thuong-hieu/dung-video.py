@@ -17,6 +17,13 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+# Font riêng cho ẢNH BÌA — chủ doanh nghiệp chốt 14/08: bìa nền vàng, chữ đen, font Anton.
+# Đã thử 50 ký tự tiếng Việt khó (ộ ầ ế ữ ợ ẫ ể ỗ ừ ẹ ọ ụ ỹ): Anton đủ hết, không ô vuông.
+FONT_BIA = "/usr/share/fonts/truetype/anton/Anton-Regular.ttf"
+import os as _os
+if not _os.path.exists(FONT_BIA):
+    print("   (!) Không thấy font Anton — ảnh bìa sẽ dùng tạm font thường.")
+    FONT_BIA = FONT
 RA = sys.argv[1] if len(sys.argv) > 1 else "video-ra.mp4"
 THU_MUC_CANH = sys.argv[2] if len(sys.argv) > 2 else None
 # Thêm chữ "mo" ở cuối lệnh -> làm nhoè cảnh quay thật (giấu khẩu hình khi lồng giọng khác)
@@ -62,17 +69,19 @@ NEN = {
  "hieu": (XANH,     TRANG,    VANG,     TRANG,    (0, 0, 0, 110)),
  "giai": (XANH_SAU, TRANG,    VANG,     TRANG,    (0, 0, 0, 120)),
  "cta":  (VANG,     XANH_SAU, XANH_SAU, XANH_SAU, (255, 255, 255, 170)),
+ # ẢNH BÌA: nền vàng, chữ ĐEN. Đây là khung giây 0,0 — nền tảng lấy làm ảnh đại diện.
+ "bia":  (VANG,     (16, 16, 16), (70, 55, 0), (16, 16, 16), (255, 255, 255, 0)),
 }
 
 
-def fit(chu, co_toi_da, rong_toi_da):
+def fit(chu, co_toi_da, rong_toi_da, duong_font=None):
     co = co_toi_da
     while co > 20:
-        f = ImageFont.truetype(FONT, co)
+        f = ImageFont.truetype(duong_font or FONT, co)
         if max(f.getbbox(d)[2] - f.getbbox(d)[0] for d in chu.split("\n")) <= rong_toi_da:
             return f
         co -= 4
-    return ImageFont.truetype(FONT, 20)
+    return ImageFont.truetype(duong_font or FONT, 20)
 
 
 def boc_dong(chu, font, rong, max_tu=5):
@@ -223,11 +232,18 @@ def ve_chu(i, t, nen_that=False):
     mo = 1.0 if i == 0 else min(1.0, trong_canh / 0.35)
     nhich = int((1 - mo) * 26)
 
-    # Chữ to nằm ở ĐỈNH khung, ngay dưới tên thương hiệu. Cỡ hạ từ 150 xuống 118
-    # để đỡ chiếm chỗ — khúc giữa phải để trống cho thấy sản phẩm.
-    ft = fit(to, 118, W - 140)
-    so_dong = len(to.split("\n"))
-    y_to = 300 + nhich
+    if kieu == "bia":
+        # ẢNH BÌA: chữ to đặt GIỮA khung cho cân, font Anton, cỡ lớn hẳn.
+        ft = fit(to, 165, W - 110, FONT_BIA)
+        so_dong = len(to.split("\n"))
+        cao_khoi = (so_dong - 1) * int(ft.size * 1.18) + int(ft.size * 1.15)
+        y_to = (H - cao_khoi) // 2
+    else:
+        # Chữ to nằm ở ĐỈNH khung, ngay dưới tên thương hiệu. Cỡ hạ 150 -> 118
+        # để đỡ chiếm chỗ — khúc giữa phải để trống cho thấy sản phẩm.
+        ft = fit(to, 118, W - 140)
+        so_dong = len(to.split("\n"))
+        y_to = 300 + nhich
 
     if nhan:
         nhan_gian = " ".join(nhan)          # phải đo đúng chuỗi sắp vẽ

@@ -28,6 +28,24 @@ Chữ hook, câu chốt cuối, lời thoại — đều là **nội dung bán h
 ⚠️ Riêng **tên khách hàng thật** và **cam kết đơn gấp 24–72 giờ**: hồ sơ ghi rõ là phải hỏi
 chủ doanh nghiệp trước, không tự đưa vào nội dung công khai.
 
+### 0.1 ẢNH BÌA — LUẬT ĐỨNG, ÁP CHO MỌI VIDEO SAU NÀY ⭐
+
+Chủ doanh nghiệp chốt ngày 14/08/2026: **mọi video từ nay về sau đều phải có ảnh bìa** đúng
+một kiểu, không được làm khác:
+
+| Thứ | Bắt buộc |
+|---|---|
+| Nội dung chữ | **Câu HOOK gây chú ý** — câu làm người lướt phải dừng lại |
+| Nền | **Vàng** (255, 193, 7) |
+| Chữ | **Đen** (16, 16, 16) |
+| Font | **Anton** — `/usr/share/fonts/truetype/anton/Anton-Regular.ttf` |
+
+Cách làm trong bảng phân cảnh: cảnh đầu tiên đặt `"kieu": "bia"`, và **cố ý KHÔNG khai `hinh`**
+— khai hình nền thì nền vàng bị đè mất, bìa hỏng. Bộ dựng tự đặt chữ giữa khung, cỡ 165.
+
+⚠️ Khung giây 0,0 chính là ảnh nền tảng lấy làm ảnh đại diện, nên cảnh bìa **phải hiện đủ chữ
+ngay từ khung đầu**, không được mờ dần vào (đã dính lỗi này thật một lần).
+
 ---
 
 ## 1. BỘ NÃO NÀY LÀM ĐƯỢC GÌ

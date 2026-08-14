@@ -1,0 +1,49 @@
+{
+ "ten": "quy-trinh-day-du-60s",
+ "giong": "929e69c2-c9ab-481a-bffb-cd16565f867c",
+ "ghi_chu": [
+  "Nội dung do chủ doanh nghiệp đọc ra ngày 14/08: 11 công đoạn sản xuất + 4 bước bán hàng.",
+  "Cảnh 1 kiểu 'bia' — ẢNH BÌA nền vàng chữ đen font Anton. Luật chủ chốt: MỌI video sau này",
+  "đều phải có ảnh bìa dạng này, chữ trên bìa là câu HOOK gây chú ý.",
+  "Cảnh 1 CỐ Ý không khai 'hinh' — có hình nền thì nền vàng bị đè mất."
+ ],
+ "canh": [
+  {"to":"1 CON GẤU\nQUA 11 CÔNG ĐOẠN", "nhan":"", "kieu":"bia",
+   "loi":"Một con gấu bông in logo, trước khi tới tay khách, phải đi qua mười một công đoạn."},
+
+  {"to":"TIẾP NHẬN LOGO", "nhan":"BƯỚC 1", "kieu":"hieu",
+   "loi":"Bắt đầu từ bước một. Anh chị gửi logo, bên em tiếp nhận."},
+  {"to":"LÊN MẪU DEMO", "nhan":"BƯỚC 2 · MIỄN PHÍ", "kieu":"giai",
+   "loi":"Bước hai. Bên em lên mẫu demo cho anh chị xem trước."},
+  {"to":"BÁO GIÁ RÕ RÀNG", "nhan":"BƯỚC 3", "kieu":"giai",
+   "loi":"Bước ba. Báo giá rõ ràng, anh chị duyệt xong mới làm."},
+  {"to":"TIẾN HÀNH SẢN XUẤT", "nhan":"BƯỚC 4 · VÀO XƯỞNG", "kieu":"hieu",
+   "loi":"Bước bốn, vào xưởng sản xuất. Từ đây là mười một công đoạn làm gấu."},
+
+  {"to":"1. CHỌN VẢI", "nhan":"SỜ TAY TỪNG CÂY", "kieu":"giai",
+   "loi":"Một. Chọn vải. Sờ tay từng cây, lông phải mềm và đều."},
+  {"to":"2. VẼ SƠ ĐỒ", "nhan":"CẮT SAO CHO ĐỦ", "kieu":"giai",
+   "loi":"Hai. Vẽ sơ đồ cắt, tính sao cho đủ mà không phí vải."},
+  {"to":"3. THÊU LOGO", "nhan":"ĐÚNG MÃ MÀU CHỈ", "kieu":"giai",
+   "loi":"Ba. Thêu logo. Chỉ phải đúng mã màu của thương hiệu."},
+  {"to":"4. MAY THÂN GẤU", "nhan":"ĐƯỜNG KIM PHẢI KÍN", "kieu":"giai",
+   "loi":"Bốn. May thân gấu, đường kim phải kín, không được hở."},
+  {"to":"5. KIỂM ĐƯỜNG MAY", "nhan":"HỞ LÀ MAY LẠI", "kieu":"giai",
+   "loi":"Năm. Kiểm đường may. Hở một đoạn là trả về may lại."},
+  {"to":"6. PHỤT BÔNG", "nhan":"ĐỦ TAY MỚI ĐỨNG DÁNG", "kieu":"giai",
+   "loi":"Sáu. Phụt bông. Bông đủ tay thì con gấu mới đứng dáng."},
+  {"to":"7. GẮN MẮT MŨI", "nhan":"LÀM TAY TỪNG CON", "kieu":"giai",
+   "loi":"Bảy. Gắn mắt, gắn mũi và phụ kiện. Làm tay từng con."},
+  {"to":"8. IN LÊN ÁO", "nhan":"MÁY ÉP NHIỆT", "kieu":"hieu",
+   "loi":"Tám. Máy ép nhiệt in logo lên áo. Nhiệt và lực phải đủ."},
+  {"to":"9. MẶC ÁO CHO GẤU", "nhan":"KHÔNG MÁY NÀO THAY", "kieu":"giai",
+   "loi":"Chín. Mặc áo cho gấu. Ngồi mặc tay từng con một."},
+  {"to":"10. KIỂM LẦN CUỐI", "nhan":"LỆCH MÀU LÀ LOẠI", "kieu":"giai",
+   "loi":"Mười. Kiểm lần cuối. Lệch màu hay lem chữ là loại ra."},
+  {"to":"11. ĐÓNG HÀNG", "nhan":"ĐẾM ĐỦ · GỬI KHÁCH", "kieu":"hieu",
+   "loi":"Mười một. Đếm đủ số, đóng gói rồi gửi tới tận tay anh chị."},
+
+  {"to":"GỬI LOGO\nCÓ DEMO NGAY", "nhan":"XƯỞNG TRỰC TIẾP", "kieu":"cta",
+   "loi":"Anh chị nhắn tin gửi logo, bên em lên demo và báo giá ngay hôm nay."}
+ ]
+}
