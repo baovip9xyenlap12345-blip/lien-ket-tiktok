@@ -385,16 +385,57 @@ def gop_khoang_cat(danh_sach, tong_do_dai):
     return [g for g in giu if g[1] - g[0] > 0.05]
 
 
+GIOI_HAN_MOT_LENH = 8      # trên ngưỡng này thì cắt từng mảnh ra file, đừng dồn vào một lệnh
+
+
 def cat_va_noi(video, khoang_giu, out_path):
-    parts_v, parts_a, labels = [], [], []
+    """Cắt bỏ các khoảng không cần rồi nối phần còn lại.
+
+    HAI ĐƯỜNG, chọn theo số mảnh:
+
+    - **Ít mảnh** (≤ 8): dồn vào một lệnh filter_complex, nhanh nhất.
+    - **Nhiều mảnh**: cắt từng mảnh ra file riêng rồi nối bằng concat. Chậm hơn chút nhưng
+      tốn rất ít bộ nhớ.
+
+    ⚠️ VÌ SAO PHẢI CÓ ĐƯỜNG THỨ HAI (2026-08-14): bản cũ luôn dồn tất cả vào MỘT lệnh. Mỗi mảnh
+    là một nhánh `trim` đọc lại từ đầu nguồn, nên N mảnh = N lần giải mã song song cùng một video.
+    Đã dính thật: video 204 giây có 59 chỗ cắt sinh ra 120 nhánh, ffmpeg bị hệ điều hành GIẾT
+    (SIGKILL) vì ngốn hết RAM — máy 16 GB vẫn chết. Không có thông báo lỗi nào của ffmpeg, chỉ
+    thấy tiến trình biến mất, rất khó đoán ra nguyên nhân."""
+    if len(khoang_giu) <= GIOI_HAN_MOT_LENH:
+        parts_v, parts_a, labels = [], [], []
+        for i, (s, e) in enumerate(khoang_giu):
+            parts_v.append("[0:v]trim=start=%.3f:end=%.3f,setpts=PTS-STARTPTS[v%d]" % (s, e, i))
+            parts_a.append("[0:a]atrim=start=%.3f:end=%.3f,asetpts=PTS-STARTPTS[a%d]" % (s, e, i))
+            labels += ["[v%d][a%d]" % (i, i)]
+        concat = "%sconcat=n=%d:v=1:a=1[v][a]" % ("".join(labels), len(khoang_giu))
+        fc = ";".join(parts_v + parts_a + [concat])
+        subprocess.run(["ffmpeg", "-y", "-i", video, "-filter_complex", fc,
+                        "-map", "[v]", "-map", "[a]",
+                        *venc(), "-c:a", "aac", "-b:a", "192k", out_path],
+                       check=True, capture_output=True)
+        return
+
+    import shutil
+    tam = out_path + "-manh"
+    shutil.rmtree(tam, ignore_errors=True)
+    os.makedirs(tam)
+    print(">> %d mảnh — cắt từng mảnh ra file cho đỡ tốn bộ nhớ..." % len(khoang_giu))
+    ds = []
     for i, (s, e) in enumerate(khoang_giu):
-        parts_v.append("[0:v]trim=start=%.3f:end=%.3f,setpts=PTS-STARTPTS[v%d]" % (s, e, i))
-        parts_a.append("[0:a]atrim=start=%.3f:end=%.3f,asetpts=PTS-STARTPTS[a%d]" % (s, e, i))
-        labels += ["[v%d][a%d]" % (i, i)]
-    concat = "%sconcat=n=%d:v=1:a=1[v][a]" % ("".join(labels), len(khoang_giu))
-    fc = ";".join(parts_v + parts_a + [concat])
-    subprocess.run(["ffmpeg", "-y", "-i", video, "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
-                     *venc(), "-c:a", "aac", "-b:a", "192k", out_path], check=True, capture_output=True)
+        p = os.path.join(tam, "m-%04d.mp4" % i)
+        sh(["ffmpeg", "-y", "-ss", "%.3f" % s, "-t", "%.3f" % max(0.04, e - s), "-i", video,
+            *venc(), "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
+            "-avoid_negative_ts", "make_zero", p])
+        ds.append(p)
+        if (i + 1) % 20 == 0:
+            print("   ... %d/%d mảnh" % (i + 1, len(khoang_giu)))
+    lst = os.path.join(tam, "danh-sach.txt")
+    with open(lst, "w", encoding="utf-8") as f:
+        for p in ds:
+            f.write("file '%s'\n" % os.path.abspath(p))
+    sh(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", out_path])
+    shutil.rmtree(tam, ignore_errors=True)
 
 
 def dich_chuyen_moc_chu(words, khoang_giu):
