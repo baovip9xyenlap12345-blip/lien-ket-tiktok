@@ -14,6 +14,7 @@ description: Bộ não edit video ngắn của anh Hoàn — nạp một video t
 |---|---|
 | **Luật bắt buộc — đọc đầu tiên** | `CLAUDE.md` |
 | **Quy trình tối ưu — hai đường A/B, thời gian thật, bẫy đã dính** | `QUY-TRINH-TOI-UU.md` |
+| **Chạy ngay trên máy tính của anh Hoàn (Windows)** | `CHAY-TREN-MAY-TINH.md` |
 | Chọn nỗi đau, câu chữ, số liệu được phép nói | `.claude/skills/ho-so-khach-hang/` |
 | Người mới, chưa biết bộ này là gì | `BAT-DAU-TU-DAY.md` |
 | Cài Python, ffmpeg, máy bóc lời | `huong-dan/01-cai-dat-may.md` |

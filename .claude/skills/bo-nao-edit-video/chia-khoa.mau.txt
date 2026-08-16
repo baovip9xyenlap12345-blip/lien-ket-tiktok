@@ -24,6 +24,14 @@
 
 ------------------------------------------------------------------------------
 
+ CARTESIA — GIỌNG ĐỌC TIẾNG VIỆT. Đây là chìa để máy đọc lời thoại thành giọng nói.
+ ⚠️ Chỉ mẫu `sonic-3` đọc được tiếng Việt. Ba mẫu kia (sonic, sonic-2, sonic-turbo)
+    đều từ chối với câu "The language is not supported by this model".
+ Lấy chìa ở: play.cartesia.ai  ->  API Keys
+ CARTESIA_KEY=<dan chia cua ban vao day>
+
+------------------------------------------------------------------------------
+
  GIỮ CHO AN TOÀN:
  - Chìa là của riêng bạn. Đừng gửi file này cho ai, đừng đăng lên mạng.
  - Muốn tặng lại bộ não này cho người khác thì XOÁ chìa đi, trả file về như lúc đầu.

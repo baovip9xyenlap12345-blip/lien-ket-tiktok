@@ -16,14 +16,43 @@ import os, subprocess, sys, glob
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-# Font riêng cho ẢNH BÌA — chủ doanh nghiệp chốt 14/08: bìa nền vàng, chữ đen, font Anton.
+
+# ---------------------------------------------------------------------------
+# TÌM FONT — CHẠY ĐƯỢC TRÊN CẢ WINDOWS, MAC VÀ LINUX
+# Trước đây hai đường dẫn font viết cứng kiểu Linux (/usr/share/fonts/...).
+# Đem sang máy Windows là hỏng ngay: không có thư mục đó, bộ dựng chết từ dòng đầu.
+# Nay font ĐI KÈM LUÔN trong cong-cu/fonts/ nên máy nào cũng ra chữ giống hệt nhau.
+# ---------------------------------------------------------------------------
+def tim_font(ten_tep, *du_phong):
+    """Tìm file font: ưu tiên bản đi kèm trong bộ não, không có thì mò trong máy."""
+    goc = os.path.dirname(os.path.abspath(__file__))
+    bo_nao = os.path.dirname(os.path.dirname(goc))          # .../bo-nao-edit-video
+    cho_tim = [os.path.join(bo_nao, "cong-cu", "fonts", ten_tep)] + list(du_phong)
+    for d in cho_tim:
+        if d and os.path.exists(d):
+            return d
+    print("   (!) Không thấy font %s. Đã tìm ở:" % ten_tep)
+    for d in cho_tim:
+        print("       - %s" % d)
+    return None
+
+
+FONT = tim_font("DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                r"C:\Windows\Fonts\arialbd.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf")
+if FONT is None:
+    print("!! Không có font chữ nào dùng được. Chép DejaVuSans-Bold.ttf vào cong-cu/fonts/")
+    sys.exit(1)
+
+# Font riêng cho ẢNH BÌA — chủ doanh nghiệp chốt 14/08: bìa chữ font Anton.
 # Đã thử 50 ký tự tiếng Việt khó (ộ ầ ế ữ ợ ẫ ể ỗ ừ ẹ ọ ụ ỹ): Anton đủ hết, không ô vuông.
-FONT_BIA = "/usr/share/fonts/truetype/anton/Anton-Regular.ttf"
-import os as _os
-if not _os.path.exists(FONT_BIA):
-    print("   (!) Không thấy font Anton — ảnh bìa sẽ dùng tạm font thường.")
+FONT_BIA = tim_font("Anton-Regular.ttf",
+                    "/usr/share/fonts/truetype/anton/Anton-Regular.ttf")
+if FONT_BIA is None:
+    print("   (!) Ảnh bìa sẽ dùng tạm font thường — chữ bìa sẽ không giống mẫu đã chốt.")
     FONT_BIA = FONT
+
 # NHỊP HIỆN CHỮ — chủ doanh nghiệp chốt 14/08: "tỷ lệ chuyển cảnh nhanh hơn".
 # Cảnh nay ngắn hơn hẳn, chữ mà còn hiện thong thả thì vừa đọc xong đã đổi cảnh.
 # Ba con số này là thời gian (giây) để chữ hiện ĐỦ kể từ lúc vào cảnh.
