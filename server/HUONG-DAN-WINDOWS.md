@@ -173,3 +173,29 @@ Cuối cùng vào **Giao diện → Menu** thêm trang này vào menu chính.
 - File `.env` chứa mật khẩu thật. Nó đã được loại trừ khỏi Git, **đừng gửi nó cho ai**, kể cả qua chat.
 - Mật khẩu ứng dụng có **toàn quyền như tài khoản đó** qua REST API — giữ như mật khẩu thật.
 - Lỡ gửi ra ngoài rồi thì coi như đã lộ: vào **Người dùng → Hồ sơ → Application Passwords** bấm **Revoke**, tạo cái mới.
+
+---
+
+## Web bị lỗi giao diện điện thoại? Chạy lệnh chẩn đoán
+
+Lệnh này **không cần mật khẩu**, chỉ đọc trang công khai:
+
+```
+node web-chan-doan.js --url https://buihuubao.vn
+```
+
+Nó kiểm tra 5 thứ:
+
+1. Máy chủ có trả mã khác nhau cho điện thoại và máy tính không (dấu hiệu cache riêng bản mobile)
+2. Có file CSS/JS nào **hỏng hoặc rỗng** không — đây thường là thủ phạm
+3. Nút menu có bị kẹt ở trạng thái "đã mở" (`aria-expanded="true"`) không
+4. Có lớp phủ trong suốt nào đang che mất nút bấm không
+5. Đang cài plugin cache/gộp file nào
+
+Chạy xong nó lưu 3 file vào thư mục `chan-doan`:
+
+- `bao-cao.txt` — kết quả đọc được
+- `trang-dien-thoai.html` — mã trang bản điện thoại
+- `trang-may-tinh.html` — mã trang bản máy tính
+
+Gửi 3 file này cho người hỗ trợ là họ chỉ được đúng dòng đang hỏng.
