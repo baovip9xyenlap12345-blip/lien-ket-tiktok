@@ -372,3 +372,119 @@ export async function taoHoacSuaTrang({ slug, title, content, status = 'draft' }
 }
 
 export const wpFields = { account: ACCOUNT_FIELDS, settings: SETTINGS_FIELDS };
+
+// ---- Dem so luong muc (WordPress tra tong so o header X-WP-Total) ----
+export async function demSoLuong(path, query = {}) {
+  if (!wpConfigured()) throw new WpError('Chua cau hinh ket noi WordPress.', 500, 'wp_not_configured');
+  const url = new URL(WP_URL + '/wp-json' + path);
+  url.searchParams.set('per_page', '1');
+  for (const [k, v] of Object.entries(query)) url.searchParams.set(k, String(v));
+
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), WP_TIMEOUT_MS);
+  try {
+    const r = await fetch(url, { headers: { Authorization: authHeader(), Accept: 'application/json' }, signal: ac.signal });
+    if (!r.ok) return null;                       // loai noi dung nay khong ton tai / khong co quyen
+    const n = parseInt(r.headers.get('x-wp-total') || '', 10);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---- Khao sat site: co gi, dung gi, tai khoan lam duoc gi ----
+export async function khaoSat() {
+  const goc = await wpFetch('/');
+  const ns = goc?.namespaces || [];
+
+  const nhanDien = {
+    wooCommerce: ns.some(n => /^wc\//.test(n)),
+    yoastSeo: ns.some(n => /^yoast\//.test(n)),
+    rankMath: ns.some(n => /^rankmath\//.test(n)),
+    elementor: ns.some(n => /^elementor\//.test(n)),
+    jetpack: ns.some(n => /^jetpack\//.test(n)),
+    contactForm7: ns.some(n => /^contact-form-7\//.test(n)),
+  };
+
+  let loaiNoiDung = {};
+  try { loaiNoiDung = await wpFetch('/wp/v2/types', { query: { context: 'edit' } }); } catch {}
+
+  const dem = {};
+  for (const [ten, duong] of [['baiViet', '/wp/v2/posts'], ['trang', '/wp/v2/pages'], ['anh', '/wp/v2/media']]) {
+    dem[ten] = await demSoLuong(duong, { status: 'publish,draft,pending,private' });
+  }
+  if (nhanDien.wooCommerce) dem.sanPham = await demSoLuong('/wp/v2/product', { status: 'publish,draft' });
+
+  let chuyenMuc = [], the = [];
+  try { chuyenMuc = await wpFetch('/wp/v2/categories', { query: { per_page: 100, orderby: 'count', order: 'desc' } }); } catch {}
+  try { the = await wpFetch('/wp/v2/tags', { query: { per_page: 50, orderby: 'count', order: 'desc' } }); } catch {}
+
+  let giaoDien = null;
+  try {
+    const ds = await wpFetch('/wp/v2/themes', { query: { status: 'active' } });
+    giaoDien = ds?.[0] ? { ten: ds[0].name?.rendered || ds[0].name, phienBan: ds[0].version } : null;
+  } catch {}
+
+  return {
+    site: { ten: goc?.name, moTa: goc?.description, url: goc?.url || goc?.home },
+    namespaces: ns,
+    nhanDien,
+    giaoDien,
+    loaiNoiDung: Object.values(loaiNoiDung || {})
+      .filter(t => t?.slug && !['attachment', 'nav_menu_item', 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation', 'wp_global_styles', 'wp_font_family', 'wp_font_face'].includes(t.slug))
+      .map(t => ({ slug: t.slug, ten: t.name, restBase: t.rest_base })),
+    dem,
+    chuyenMuc: (chuyenMuc || []).map(c => ({ id: c.id, ten: c.name, slug: c.slug, soBai: c.count })),
+    the: (the || []).map(t => ({ ten: t.name, slug: t.slug, soBai: t.count })),
+  };
+}
+
+// ---- Chuyen muc / the: tim theo ten, chua co thi tao moi ----
+async function timHoacTao(duong, ten) {
+  const t = String(ten).trim();
+  if (!t) return null;
+  const co = await wpFetch(duong, { query: { search: t, per_page: 100 } });
+  const khop = (co || []).find(x => (x.name || '').toLowerCase() === t.toLowerCase());
+  if (khop) return khop.id;
+  const moi = await wpFetch(duong, { method: 'POST', body: { name: t } });
+  return moi.id;
+}
+export const timHoacTaoChuyenMuc = ten => timHoacTao('/wp/v2/categories', ten);
+export const timHoacTaoThe = ten => timHoacTao('/wp/v2/tags', ten);
+
+// ---- Bai viet (Post) ----
+export async function timBaiViet(slug) {
+  const rows = await wpFetch('/wp/v2/posts', {
+    query: { slug, status: 'publish,draft,pending,private,future', context: 'edit', per_page: 1 },
+  });
+  return rows?.[0] || null;
+}
+
+// Tao bai moi, hoac ghi de bai cu neu da co slug do
+export async function taoHoacSuaBaiViet({ slug, title, content, excerpt, status = 'draft', chuyenMuc = [], the = [], anhBia, ngayDang }) {
+  const cu = await timBaiViet(slug);
+
+  const body = { title, content, status };
+  if (excerpt) body.excerpt = excerpt;
+  if (anhBia) body.featured_media = anhBia;
+  if (ngayDang) body.date = ngayDang;          // hen gio dang: kem status 'future'
+  if (!cu) body.slug = slug;
+
+  if (chuyenMuc.length) body.categories = (await Promise.all(chuyenMuc.map(timHoacTaoChuyenMuc))).filter(Boolean);
+  if (the.length) body.tags = (await Promise.all(the.map(timHoacTaoThe))).filter(Boolean);
+
+  const b = cu
+    ? await wpFetch(`/wp/v2/posts/${cu.id}`, { method: 'POST', body })
+    : await wpFetch('/wp/v2/posts', { method: 'POST', body });
+
+  return {
+    id: b.id,
+    daCo: !!cu,
+    status: b.status,
+    link: b.link,
+    linkSua: `${WP_URL}/wp-admin/post.php?post=${b.id}&action=edit`,
+    linkXem: b.status === 'publish' ? b.link : `${b.link}${b.link.includes('?') ? '&' : '?'}preview=true`,
+  };
+}

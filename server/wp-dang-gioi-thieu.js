@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as wp from './wordpress.js';
+import { docSangKhoi, khoiThuVienAnh } from './noi-dung.js';
 
 // Windows: phai dung fileURLToPath, khong duoc lay .pathname (se ra "/C:/..." sai duong dan)
 const thuMucGoc = path.dirname(fileURLToPath(import.meta.url));
@@ -114,50 +115,9 @@ if (dsAnh.length) {
 }
 
 // ---- Dung noi dung trang theo dinh dang khoi cua WordPress ----
-const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-// Escape truoc roi moi doi **dam** / *nghieng* -> the HTML (dau * khong bi escape nen an toan)
-const inline = s => esc(s)
-  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-
-function khoiAnh(a) {
-  return `<!-- wp:image {"id":${a.id},"sizeSlug":"large","linkDestination":"none"} -->\n` +
-    `<figure class="wp-block-image size-large">` +
-    `<img src="${esc(a.url)}" alt="${esc(a.alt)}" class="wp-image-${a.id}"/></figure>\n` +
-    `<!-- /wp:image -->`;
-}
-
-// Chuyen van ban sang khoi. Ho tro: "## tieu de phu", "> trich dan", "[ANH]" chen anh, con lai la doan van
-const khoi = [];
-let stt = 0;
-for (const doan of vanBan.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean)) {
-  if (doan === '[ANH]') {
-    if (daTai[stt]) khoi.push(khoiAnh(daTai[stt++]));
-    continue;
-  }
-  if (/^##\s+/.test(doan)) {
-    khoi.push(`<!-- wp:heading -->\n<h2 class="wp-block-heading">${inline(doan.replace(/^##\s+/, ''))}</h2>\n<!-- /wp:heading -->`);
-    continue;
-  }
-  if (/^>\s+/.test(doan)) {
-    const t = doan.split('\n').map(l => l.replace(/^>\s?/, '')).join(' ');
-    khoi.push(`<!-- wp:quote -->\n<blockquote class="wp-block-quote"><p>${inline(t)}</p></blockquote>\n<!-- /wp:quote -->`);
-    continue;
-  }
-  khoi.push(`<!-- wp:paragraph -->\n<p>${inline(doan.replace(/\n/g, ' '))}</p>\n<!-- /wp:paragraph -->`);
-}
-
-// Anh chua dung toi thi gom thanh thu vien anh cuoi trang
-const conLai = daTai.slice(stt);
-if (conLai.length === 1) {
-  khoi.push(khoiAnh(conLai[0]));
-} else if (conLai.length > 1) {
-  khoi.push(
-    `<!-- wp:gallery {"linkTo":"none"} -->\n` +
-    `<figure class="wp-block-gallery has-nested-images columns-default is-cropped">\n` +
-    conLai.map(khoiAnh).join('\n') + `\n</figure>\n<!-- /wp:gallery -->`
-  );
-}
+const { noiDung, soAnhDaDung } = docSangKhoi(vanBan, daTai);
+// Anh chua duoc [ANH] goi toi thi gom thanh thu vien anh cuoi trang
+const noiDungTrang = [noiDung, khoiThuVienAnh(daTai.slice(soAnhDaDung))].filter(Boolean).join('\n\n');
 
 // ---- Tao / cap nhat trang ----
 console.log('\n--- Dang tao trang ---');
@@ -166,7 +126,7 @@ try {
   trang = await wp.taoHoacSuaTrang({
     slug,
     title: tieuDe,
-    content: khoi.join('\n\n'),
+    content: noiDungTrang,
     status: dangCongKhai ? 'publish' : 'draft',
   });
 } catch (err) {

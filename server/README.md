@@ -167,6 +167,53 @@ Chạy lại lệnh **không** tạo trang trùng — nó cập nhật đúng tr
 
 Sau khi đăng, nhớ thêm trang vào menu: **Giao diện → Menu**.
 
+### Khảo sát website — chạy cái này trước tiên
+
+Xem site đang có gì, cài plugin nào, tài khoản làm được việc gì:
+
+```bash
+node wp-khao-sat.js
+```
+
+Kết quả in ra màn hình và lưu vào `khao-sat.txt` — gửi file đó cho người hỗ trợ là họ biết
+site bạn có WooCommerce chưa, có bao nhiêu bài, bao nhiêu sản phẩm, chuyên mục nào đang dùng.
+
+### Đăng bài viết blog
+
+```bash
+node wp-dang-bai.js --bai bai-viet\ten-file.md --anh "F:\Ảnh sản phẩm"
+node wp-dang-bai.js --thu-muc bai-viet --anh "F:\Ảnh sản phẩm"
+```
+
+Mỗi file `.md` trong thư mục `bai-viet` thành một bài. Xem `bai-viet/HUONG-DAN.md` để biết cách viết,
+và `bai-viet/MAU-bai-viet.md` là bản mẫu chép ra dùng.
+
+| Tuỳ chọn | Việc |
+|---|---|
+| `--bai <file>` | Đăng một file |
+| `--thu-muc <đường-dẫn>` | Đăng cả thư mục, mỗi file một bài |
+| `--anh <thư-mục>` | Thư mục ảnh dùng cho `Ảnh bìa:` và `[ANH]` |
+| `--dang` | Công khai ngay. Không có thì lưu **nháp** |
+| `--lich "2026-09-01 08:00"` | Hẹn giờ đăng |
+| `--thu` | Chỉ xem sẽ làm gì, không động đến website |
+
+Khối thông tin đặt ngay dưới dòng tiêu đề:
+
+```
+# Tiêu đề bài
+
+Chuyên mục: Quà tặng doanh nghiệp, Quà Tết
+Thẻ: quà tết, in logo
+Mô tả: Câu tóm tắt hiện trên Google.
+Ảnh bìa: anh-bia.jpg
+Ảnh: anh-1.jpg, anh-2.jpg
+
+Nội dung bắt đầu từ đây...
+```
+
+Chuyên mục và thẻ chưa có thì **tự tạo**. Bài có chỗ `{{...}}` chưa điền thì **bị bỏ qua**, không đăng lên.
+Chạy lại không tạo bài trùng — cập nhật đúng bài cũ theo đường dẫn.
+
 ### ⚠️ An toàn
 
 - **Không** đặt mật khẩu vào mã nguồn hay đưa lên Git. File `.env` đã nằm trong `.gitignore` và `.dockerignore`.
