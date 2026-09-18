@@ -39,8 +39,10 @@ if (fileBai) {
   dsBai = [fileBai];
 } else {
   if (!fs.existsSync(thuMucBai)) thoat(`Khong tim thay thu muc: ${thuMucBai}`);
+  // File mau va file huong dan khong phai bai viet -> khong dang len web
+  const BO_QUA = /^(MAU-|HUONG-DAN|_)/i;
   dsBai = fs.readdirSync(thuMucBai)
-    .filter(f => f.toLowerCase().endsWith('.md'))
+    .filter(f => f.toLowerCase().endsWith('.md') && !BO_QUA.test(f))
     .sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }))
     .map(f => path.join(thuMucBai, f));
   if (!dsBai.length) thoat(`Thu muc "${thuMucBai}" khong co file .md nao.`);
